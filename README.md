@@ -1,4 +1,4 @@
-# Painel Completo | Michelle
+# Power BI Painel Completo | Michelle
 
 Painel responsivo de inteligência operacional da Michelle, desenvolvido para demonstração pela Horizon.
 
