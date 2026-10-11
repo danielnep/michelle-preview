@@ -271,11 +271,21 @@
     desc = "Visão centralizada dos seus indicadores e resultados.",
   ) =>
     `<section class="overview-head"><div><div class="eyebrow">OPERAÇÕES</div><h1 class="title">${esc(title)}</h1><p class="subtitle">${esc(desc)}</p>${state.query ? `<div class="active-search">Busca nos registros: <strong>${esc(state.query)}</strong><button class="btn" data-clear-query>Limpar busca</button></div>` : ""}</div><div class="header-buttons">${state.page === "insight" || idSector(state.page) ? periodButtons() : ""}${["geral", ...sectors.map((s) => s.id)].includes(state.page) ? `<button class="btn" data-nav="report">${icon("report", 14)} Gerar relatório</button>${state.page !== "geral" ? `<button class="btn btn-primary" data-nav="data">${icon("up", 14)} Importar dados</button>` : ""}` : ""}</div></section>`;
+  function sourceHint(metric, rows) {
+    const selected = Object.hasOwn(D.types, metric.id) ? rows.filter(r => r.type === metric.id) : rows;
+    const allFiles = [...new Set(selected.map(r => r.source).filter(Boolean))];
+    const names = allFiles.slice(0, 2).join(" · ");
+    const unitText = metric.id === "cuc" ? "soma de eventos CUC"
+      : metric.id === "deslocamentos" ? "soma de deslocamentos"
+      : metric.id === "rate" ? "percentual de status reconhecidos"
+      : metric.id === "duration" ? "média em minutos" : "contagem de registros";
+    return `Unidade: ${unitText}. Fonte: ${names || "planilhas importadas"}${allFiles.length > 2 ? " e mais " + (allFiles.length - 2) + " arquivo(s)" : ""}.`;
+  }
   function statCards(rs, sector) {
     const ms = D.metricOptions(rs);
     if (!ms.length || !rs.length)
       return `<div class="empty-state card"><h3>${state.ready ? "Pronto para receber seus dados" : "Carregando seus dados"}</h3><p>Envie uma planilha Excel para alimentar os indicadores, análises e relatórios.</p><button class="btn btn-primary" data-nav="data">Enviar Dados Excel</button></div>`;
-    return `<div class="stats">${ms.map((m, i) => `<article class="card stat"><div class="stat-top"><span class="stat-label">${esc(m.label)}</span><span class="stat-icon">${icon(i === 0 ? "files" : "chart", 17)}</span></div><div class="stat-value">${fmtNum(Math.round(m.value * 100) / 100)}${m.id === "rate" ? "%" : ""}</div><div class="stat-footer">${m.id === "rate" ? "Somente status reconhecidos" : m.id === "duration" ? "Somente durações informadas" : "Dados importados neste recorte"}</div></article>`).join("")}</div>`;
+    return `<div class="stats">${ms.map((m, i) => `<article class="card stat"><div class="stat-top"><span class="stat-label">${esc(m.label)}</span><span class="stat-icon">${icon(i === 0 ? "files" : "chart", 17)}</span></div><div class="stat-value">${fmtNum(Math.round(m.value * 100) / 100)}${m.id === "rate" ? "%" : ""}</div><div class="stat-footer">${m.id === "rate" ? "Somente status reconhecidos" : m.id === "duration" ? "Somente durações informadas" : "Dados importados neste recorte"}</div><small class="stat-source-hint">${esc(sourceHint(m, rs))}</small></article>`).join("")}</div>`;
   }
   function histogram(rs) {
     let data = D.series(rs);
@@ -297,9 +307,12 @@
     return data;
   }
   function lineChart(rs) {
-    if (!D.series(rs).length)
+    const types = new Set(rs.map(r => r.type));
+    const chartRows = types.size > 1 ? rs.map(r => ({ ...r, type: "linha", value: 1 })) : rs;
+    const chartUnit = types.size > 1 ? "linhas importadas" : types.has("cuc") ? "eventos CUC" : types.has("deslocamentos") ? "deslocamentos" : "registros";
+    if (!D.series(chartRows).length)
       return '<div class="empty">A fonte não informa datas individuais para exibir evolução temporal.</div>';
-    let d = histogram(rs),
+    let d = histogram(chartRows),
       max = Math.max(4, ...d.map((x) => x.value)),
       W = 800,
       H = 260,
@@ -327,7 +340,7 @@
       })
       .join(
         "",
-      )}<path d="${area}" fill="url(#linefill)"/><path d="${line}" fill="none" stroke="var(--brand)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>${pts.map((p, i) => `<circle cx="${p.x}" cy="${p.y}" r="3.5" fill="var(--surface)" stroke="var(--brand)" stroke-width="2"><title>${d[i].label}: ${d[i].value} registros</title></circle>`).join("")}${d.map((e, i) => `<text x="${pts[i].x}" y="${H - 8}" fill="#9cabb9" font-size="10.5" text-anchor="middle">${esc(e.label)}</text>`).join("")}</svg></div>`;
+      )}<path d="${area}" fill="url(#linefill)"/><path d="${line}" fill="none" stroke="var(--brand)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>${pts.map((p, i) => `<circle cx="${p.x}" cy="${p.y}" r="3.5" fill="var(--surface)" stroke="var(--brand)" stroke-width="2"><title>${d[i].label}: ${d[i].value} ${chartUnit}</title></circle>`).join("")}${d.map((e, i) => `<text x="${pts[i].x}" y="${H - 8}" fill="#9cabb9" font-size="10.5" text-anchor="middle">${esc(e.label)}</text>`).join("")}</svg></div>`;
   }
   function bars(rs) {
     let d = sectors.map((s) => ({
@@ -411,10 +424,10 @@
       .slice(offset, offset + limit);
     if (!items.length)
       return `<div class="empty">Nenhum registro encontrado no período selecionado.</div>`;
-    return `<div class="table-wrap"><table class="tbl"><thead><tr><th>Identificação</th><th>Descrição / Conta</th><th>Setor</th><th>Data / competência</th><th>Quantidade</th><th>Status</th></tr></thead><tbody>${items.map((r) => `<tr><td><strong>${esc(r.id)}</strong></td><td><strong>${esc(r.title)}</strong><div class="table-detail">${esc(r.client)}</div></td><td>${esc(idSector(r.sector)?.name || r.sector)}</td><td>${r.date ? fmtDate(r.date) : fmtDate(r.periodStart) + " a " + fmtDate(r.periodEnd)}</td><td>${fmtNum(r.value)}</td><td>${statusBadge(r.status)}</td></tr>`).join("")}</tbody></table></div>`;
+    return `<div class="table-wrap"><table class="tbl"><thead><tr><th>Identificação</th><th>Descrição / Conta</th><th>Setor</th><th>Data / competência</th><th>Valor / unidade</th><th>Status</th></tr></thead><tbody>${items.map((r) => `<tr><td><strong>${esc(r.id)}</strong></td><td><strong>${esc(r.title)}</strong><div class="table-detail">${esc(r.client)}</div></td><td>${esc(idSector(r.sector)?.name || r.sector)}</td><td>${r.date ? fmtDate(r.date) : fmtDate(r.periodStart) + " a " + fmtDate(r.periodEnd)}</td><td><strong>${fmtNum(r.value)}</strong><small class="stat-source-hint">${esc(r.type === "cuc" ? "eventos CUC" : r.type === "deslocamentos" ? "deslocamentos" : r.type === "indicadores" ? "valor do indicador" : "1 registro")}</small></td><td>${statusBadge(r.status)}</td></tr>`).join("")}</tbody></table></div>`;
   }
   function graphPanels(rs, sec) {
-    return `<div class="chart-area"><section class="card panel"><div class="panel-head"><div><h3 class="panel-title">Evolução do volume</h3><div class="panel-sub">Volume de registros no período selecionado</div></div><span class="badge info">${state.period === "all" ? "Todos os dados" : state.period + " dias"}</span></div>${lineChart(rs)}<div class="legend"><span class="legend-item"><span class="legend-dot" style="background:var(--brand)"></span> Volume informado por data</span></div></section><section class="card panel"><div class="panel-head"><div><h3 class="panel-title">Distribuição de status</h3><div class="panel-sub">Situação das demandas</div></div>${icon("more", 18)}</div>${donut(rs)}</section></div>`;
+    return `<div class="chart-area"><section class="card panel"><div class="panel-head"><div><h3 class="panel-title">Evolução do volume</h3><div class="panel-sub">Volume de registros no período selecionado</div></div><span class="badge info">${state.period === "all" ? "Todos os dados" : state.period + " dias"}</span></div>${lineChart(rs)}<div class="legend"><span class="legend-item"><span class="legend-dot" style="background:var(--brand)"></span> ${new Set(rs.map(r => r.type)).size > 1 ? "Linhas por data (fontes diferentes não são somadas pela quantidade)" : rs[0]?.type === "cuc" ? "Eventos CUC por data" : rs[0]?.type === "deslocamentos" ? "Deslocamentos por data" : "Registros por data"}</span></div></section><section class="card panel"><div class="panel-head"><div><h3 class="panel-title">Distribuição de status</h3><div class="panel-sub">Situação das demandas</div></div>${icon("more", 18)}</div>${donut(rs)}</section></div>`;
   }
   function pageOverview() {
     const rs = recordsFor();
