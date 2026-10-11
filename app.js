@@ -245,7 +245,7 @@
           present: "Estúdio de apresentações",
           settings: "Configurações",
         }[state.page] || "Visão geral";
-    return `<div class="app"><div class="backdrop ${state.sidebar ? "open" : ""}" data-close="1"></div><aside class="sidebar ${state.sidebar ? "open" : ""}"><div class="brand"><div class="brand-logo-plate"><img src="assets/horizon-logo.png" alt="Horizon" class="brand-logo" width="208" height="72"></div><div class="brand-sub">OPERAÇÕES E INDICADORES</div></div><div class="nav-scroll"><div class="nav-group"><div class="side-label">PRINCIPAL</div>${nav("geral", "Visão Geral")}${nav("present", "Estúdio de Apresentações")}</div><div class="nav-group"><div class="side-label">DEPARTAMENTOS</div>${sectors.map((s) => nav(s.id, s.name)).join("")}</div><div class="nav-group"><div class="side-label">GESTÃO E DADOS</div>${nav("data", "Enviar Dados Excel")}${nav("report", "Relatórios")}${nav("insight", "Insights e análises")}${nav("settings", "Configurações")}</div></div><div class="side-bottom"><div class="side-status"><span class="online-dot"></span> ${state.ready ? "Dados salvos neste navegador" : "Carregando armazenamento"}</div><div class="side-credit">MC Power BI Painel Completo • v3.0</div></div></aside><div class="main"><header class="topbar"><div class="header-identity"><button aria-label="Abrir menu" class="small-icon-btn mob-toggle" data-toggle="1">${icon("menu", 19)}</button><div class="header-brand"><img src="assets/horizon-logo.png" alt="Horizon" width="96" height="34"></div><div class="crumb"><span class="owner-name">Michelle Cândido<small>Gerente Central de Operações Integradas</small></span><span class="app-caption">MC Power BI Painel Completo<span class="crumb-page"> · ${esc(title)}</span></span></div></div><div class="head-actions">${themeButton()}<button aria-label="Estúdio de Apresentações" class="btn studio-top-button" data-nav="present">${icon("report", 15)} Estúdio de Apresentações</button><label class="searchbox">${icon("search", 15)}<input aria-label="Pesquisar registros" id="global-search" placeholder="Buscar registros..." value="${esc(state.query)}" /></label><button type="button" class="top-assistant" data-assistant-open="1" aria-label="Abrir assistente">${icon("spark", 15)} <span>Assistente</span></button><span class="badge info" style="white-space:nowrap">${imports.length ? "Dados reais" : "Aguardando dados"}</span><div class="avatar">M</div></div></header><main class="content"><div class="print-header">POWER BI PAINEL COMPLETO | MICHELLE</div>${body()}</main><footer class="footer"><span>MC Power BI Painel Completo © 2026 • ${state.ready ? "Dados salvos neste navegador" : "Carregando armazenamento"}</span><span>Desenvolvido por Horizon</span></footer></div><nav class="mobile-nav" aria-label="Navegação principal">${[
+    return `<div class="app"><div class="backdrop ${state.sidebar ? "open" : ""}" data-close="1"></div><aside class="sidebar ${state.sidebar ? "open" : ""}"><div class="brand"><div class="brand-logo-plate"><img src="assets/horizon-logo.png" alt="Horizon" class="brand-logo" width="208" height="72"></div><div class="brand-sub">OPERAÇÕES E INDICADORES</div></div><div class="nav-scroll"><div class="nav-group"><div class="side-label">PRINCIPAL</div>${nav("geral", "Visão Geral")}${nav("present", "Estúdio de Apresentações")}</div><div class="nav-group"><div class="side-label">DEPARTAMENTOS</div>${sectors.map((s) => nav(s.id, s.name)).join("")}</div><div class="nav-group"><div class="side-label">GESTÃO E DADOS</div>${nav("data", "Enviar Dados Excel")}${nav("report", "Relatórios")}${nav("insight", "Insights e análises")}${nav("settings", "Configurações")}</div></div><div class="side-bottom"><div class="side-status"><span class="online-dot"></span> ${state.ready ? "Dados salvos neste navegador" : "Carregando armazenamento"}</div><div class="side-credit">MC Power BI Painel Completo • v3.1.1</div></div></aside><div class="main"><header class="topbar"><div class="header-identity"><button aria-label="Abrir menu" class="small-icon-btn mob-toggle" data-toggle="1">${icon("menu", 19)}</button><div class="header-brand"><img src="assets/horizon-logo.png" alt="Horizon" width="96" height="34"></div><div class="crumb"><span class="owner-name">Michelle Cândido<small>Gerente Central de Operações Integradas</small></span><span class="app-caption">MC Power BI Painel Completo<span class="crumb-page"> · ${esc(title)}</span></span></div></div><div class="head-actions">${themeButton()}<button aria-label="Estúdio de Apresentações" class="btn studio-top-button" data-nav="present">${icon("report", 15)} Estúdio de Apresentações</button><label class="searchbox">${icon("search", 15)}<input aria-label="Pesquisar registros" id="global-search" placeholder="Buscar registros..." value="${esc(state.query)}" /></label><button type="button" class="top-assistant" data-assistant-open="1" aria-label="Abrir assistente">${icon("spark", 15)} <span>Assistente</span></button><span class="badge info" style="white-space:nowrap">${imports.length ? "Dados reais" : "Aguardando dados"}</span><div class="avatar">M</div></div></header><main class="content"><div class="print-header">POWER BI PAINEL COMPLETO | MICHELLE</div>${body()}</main><footer class="footer"><span>MC Power BI Painel Completo © 2026 • ${state.ready ? "Dados salvos neste navegador" : "Carregando armazenamento"}</span><span>Desenvolvido por Horizon</span></footer></div><nav class="mobile-nav" aria-label="Navegação principal">${[
       ["geral", "Visão Geral", "grid"],
       ["data", "Enviar Dados", "up"],
       ["report", "Relatórios", "report"],
@@ -263,7 +263,7 @@
     title,
     desc = "Visão centralizada dos seus indicadores e resultados.",
   ) =>
-    `<section class="overview-head"><div><div class="eyebrow">HORIZON / OPERAÇÕES</div><h1 class="title">${esc(title)}</h1><p class="subtitle">${esc(desc)}</p></div><div class="header-buttons">${state.page === "geral" || state.page === "insight" || idSector(state.page) ? periodButtons() : ""}<button class="btn" data-nav="report">${icon("report", 14)} Gerar relatório</button><button class="btn btn-primary" data-nav="data">${icon("up", 14)} Importar dados</button></div></section>`;
+    `<section class="overview-head"><div><div class="eyebrow">HORIZON / OPERAÇÕES</div><h1 class="title">${esc(title)}</h1><p class="subtitle">${esc(desc)}</p></div><div class="header-buttons">${state.page === "geral" || state.page === "insight" || idSector(state.page) ? periodButtons() : ""}${["geral", ...sectors.map((s) => s.id)].includes(state.page) ? `<button class="btn" data-nav="report">${icon("report", 14)} Gerar relatório</button><button class="btn btn-primary" data-nav="data">${icon("up", 14)} Importar dados</button>` : ""}</div></section>`;
   const hero = (title, desc, rs) => {
     let c = counts(rs);
     return `<div class="hero"><div class="hero-left"><span class="hero-tag"><span class="online-dot" style="background:#8de6e2"></span> CENTRAL DE INDICADORES</span><h2>${esc(title)}</h2><p>${esc(desc)}</p></div><div class="hero-right"><div class="hero-metric"><b>${rate(rs) == null ? "—" : rate(rs) + "%"}</b><small>Índice de conclusão</small></div><div style="height:42px;width:1px;background:#ffffff30"></div><div class="hero-metric"><b>${fmtNum(c.total)}</b><small>Linhas no recorte</small></div></div></div>`;
@@ -843,26 +843,27 @@
             .map((n) => n.toString(16).padStart(2, "0"))
             .join(""),
           wb = XLSX.read(bytes, { type: "array", cellDates: false });
+        const detectedSheets = wb.SheetNames.map((name) => {
+          const ref = wb.Sheets[name]["!ref"];
+          if (!ref) return { name, score: 0 };
+          const bounds = XLSX.utils.decode_range(ref);
+          const sample = XLSX.utils.sheet_to_json(wb.Sheets[name], {
+            header: 1,
+            raw: false,
+            defval: "",
+            range: {
+              s: { r: 0, c: 0 },
+              e: { r: Math.min(49, bounds.e.r), c: bounds.e.c },
+            },
+          });
+          return { name, score: D.detect(sample).score };
+        }).sort((a, b) => b.score - a.score);
         Object.assign(item, {
           name: file.name,
           hash,
           bytes,
           wb,
-          sheet: [...wb.SheetNames].sort(
-            (a, z) =>
-              D.detect(
-                XLSX.utils.sheet_to_json(wb.Sheets[z], {
-                  header: 1,
-                  raw: false,
-                }),
-              ).score -
-              D.detect(
-                XLSX.utils.sheet_to_json(wb.Sheets[a], {
-                  header: 1,
-                  raw: false,
-                }),
-              ).score,
-          )[0],
+          sheet: detectedSheets[0]?.name,
           sector: "coi",
           type: "geral",
           periodStart: "",
@@ -1346,7 +1347,20 @@
     render();
   }
   function validatePending(p = state.pending) {
-    return D.parse(p.grid, { ...p, filename: p.name });
+    const key = JSON.stringify([
+      p.sheet,
+      p.headerRow,
+      p.mapping,
+      p.sector,
+      p.type,
+      p.periodStart,
+      p.periodEnd,
+    ]);
+    if (p.validationKey !== key) {
+      p.validationResult = D.parse(p.grid, { ...p, filename: p.name });
+      p.validationKey = key;
+    }
+    return p.validationResult;
   }
   function importWizard(p) {
     const h = p.grid[p.headerRow] || [],

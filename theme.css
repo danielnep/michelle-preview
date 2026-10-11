@@ -1174,3 +1174,21 @@ body {
     display: none !important;
   }
 }
+
+.insight {
+  margin: 10px 0;
+}
+.nav-scroll {
+  scrollbar-color: #687a8b #222b35;
+  scrollbar-width: thin;
+}
+.nav-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+.nav-scroll::-webkit-scrollbar-track {
+  background: #222b35;
+}
+.nav-scroll::-webkit-scrollbar-thumb {
+  background: #687a8b;
+  border-radius: 8px;
+}

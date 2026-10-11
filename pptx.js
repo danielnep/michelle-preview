@@ -298,9 +298,16 @@
         left = 36,
         bottom = 35,
         top = 15,
-        max = Math.max(1, ...series.flatMap((s) => s.vals)),
+        max = Math.max(0, ...series.flatMap((s) => s.vals)),
+        min = Math.min(0, ...series.flatMap((s) => s.vals)),
+        span = max - min || 1,
         n = Math.max(1, ...series.map((s) => s.vals.length));
+      const yValue = (value) =>
+        top + ((max - value) / span) * (ch - bottom - top);
+      const zero = yValue(0);
       let out = `<rect width="${cw}" height="${ch}" fill="white"/><path d="M${left} ${top}V${ch - bottom}H${cw - 8}" fill="none" stroke="#ccd5dd"/>`;
+      if (min < 0)
+        out += `<path d="M${left} ${zero}H${cw - 8}" fill="none" stroke="#8898a8"/>`;
       if (
         type?.localName === "pieChart" ||
         type?.localName === "doughnutChart"
@@ -330,7 +337,7 @@
         type?.localName === "areaChart"
       ) {
         series.forEach((s) => {
-          out += `<polyline points="${s.vals.map((v, i) => `${left + (i / Math.max(n - 1, 1)) * (cw - left - 12)},${ch - bottom - (v / max) * (ch - bottom - top)}`).join(" ")}" fill="none" stroke="${s.color}" stroke-width="3"/>`;
+          out += `<polyline points="${s.vals.map((v, i) => `${left + (i / Math.max(n - 1, 1)) * (cw - left - 12)},${yValue(v)}`).join(" ")}" fill="none" stroke="${s.color}" stroke-width="3"/>`;
         });
       } else {
         if (type?.localName !== "barChart")
@@ -341,8 +348,9 @@
           s.vals.forEach((v, i) => {
             const w = ((cw - left - 15) / n / Math.max(1, series.length)) * 0.8,
               x = left + (i * (cw - left - 15)) / n + j * w,
-              h = (v / max) * (ch - bottom - top);
-            out += `<rect x="${x}" y="${ch - bottom - h}" width="${w}" height="${Math.max(0, h)}" fill="${s.color}"/>`;
+              y = yValue(v),
+              h = Math.abs(zero - y);
+            out += `<rect x="${x}" y="${Math.min(zero, y)}" width="${w}" height="${h}" fill="${s.color}"/>`;
           }),
         );
       }
