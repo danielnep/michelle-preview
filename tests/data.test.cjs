@@ -15,6 +15,26 @@ const lot = (id, rows, extra = {}) => ({
   rows,
   ...extra,
 });
+test("cabeçalhos com células vazias não interrompem a identificação de ligações", () => {
+  const headers = [];
+  headers[1] = "Data / Hora";
+  headers[3] = "Completada";
+  headers[6] = "Duração";
+  const grid = [
+    headers,
+    [null, "01/09/2026 10:00:00", null, "Sim", null, null, "00:01:00"],
+  ];
+  const detected = D.detect(grid);
+  assert.equal(detected.headerRow, 0);
+  assert.equal(detected.type, "ligacoes");
+  assert.equal(detected.mapping.date, 1);
+  assert.equal(detected.mapping.status, 3);
+  assert.equal(
+    D.parse(grid, { ...detected, sector: "port", filename: "ligações.xlsx" })
+      .rows.length,
+    1,
+  );
+});
 test("cabeçalhos reais, datas brasileiras e valores agregados", () => {
   const cuc = parse(
     [

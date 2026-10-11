@@ -146,7 +146,7 @@
     return String(v).trim();
   }
   function suggest(headers) {
-    const h = headers.map(norm),
+    const h = Array.from(headers, norm),
       m = {};
     for (const [key, names] of Object.entries(fields)) {
       let i = h.findIndex((x) => names.some((n) => x === norm(n)));
@@ -194,7 +194,7 @@
     return m[k] >= 0 ? row[m[k]] : null;
   }
   function parse(grid, opts) {
-    const header = grid[opts.headerRow] || [],
+    const header = Array.from(grid[opts.headerRow] || []),
       mapping = opts.mapping || suggest(header),
       rows = [],
       errors = [],
