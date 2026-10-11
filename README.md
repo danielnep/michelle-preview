@@ -28,6 +28,8 @@ A renderização de PPTX é local, não é o motor do Microsoft PowerPoint. Font
 
 ## Envio de arquivos e aparência
 
+A Visão Geral começa com o Dashboard central. O botão **Adicionar dados** abre o fluxo real de importação de uma ou mais planilhas. Insights, indicadores, gráficos e atalhos por setor ficam reunidos no dashboard; o Estúdio e a atividade recente aparecem depois. Os insights continuam sendo o primeiro conteúdo após os títulos do dashboard.
+
 O quadro de envio aceita múltiplos arquivos por seleção ou arrastar e soltar. Cada planilha mantém sua configuração de aba, setor, tipo, colunas e competência. O botão de importação processa os arquivos independentes e deixa erros visíveis para correção. A lista no quadro mantém arquivos importados, quantidade de linhas, setor e botões de consulta e download do original, inclusive após recarregar.
 
 A identidade usa os arquivos oficiais fornecidos: logo transparente centralizada no cabeçalho e no menu, símbolo H, favicon, ícones de atalho e imagem de compartilhamento. A paleta escura usa preto e cinza neutro, branco e azul celeste nas ações. O modo escuro é o padrão para novos acessos; preferências já salvas são preservadas. O modo claro/escuro é persistido, a navegação móvel respeita a área segura e o menu pode ser fechado por botão ou Esc. Os resumos de insights usam três colunas no computador e uma no celular, com tipografia e foco de teclado consistentes. A aparência do aplicativo não modifica os temas das apresentações. A busca de registros fica no menu e está disponível também no celular, com indicação do filtro ativo e ação para limpar.

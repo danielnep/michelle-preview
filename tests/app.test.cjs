@@ -122,7 +122,7 @@ test("múltiplos arquivos: ligações, erro independente, deduplicação e lista
   const t = await boot();
   const { w, click } = t;
   const b = w.MichelleBridge;
-  b.navigate("data");
+  click('.central-dashboard [data-nav="data"]');
   assert.equal(w.document.querySelector("#file-upload").multiple, true);
   const wb = X.utils.book_new();
   X.utils.book_append_sheet(
