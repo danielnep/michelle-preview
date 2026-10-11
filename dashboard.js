@@ -155,7 +155,7 @@
     if (!m.rows.length) return empty("Nenhum dado neste recorte", "Importe planilhas ou ajuste os filtros.");
     const selected = m.metrics.filter(x => config.metrics.includes(x.id));
     if (!selected.length) return empty("Escolha seus indicadores", "Abra Personalizar e marque os indicadores que deseja ver.");
-    return `<div class="dash-metrics">${selected.map(x => `<div class="dash-metric" data-metric="${esc(x.id)}"><span>${esc(x.label)}</span><strong>${num(x.value)}${x.id === "rate" ? "%" : ""}</strong><small>${esc(metricDescription(x, m.rows))}</small>${metricOrigin(x, m.rows)}</div>`).join("")}</div>${m.mixed ? '<p class="dash-note">Fontes com unidades diferentes têm seus totais separados. Selecione uma fonte para ver conclusão e duração.</p>' : ""}`;
+    return `<div class="dash-metrics">${selected.map(x => `<div class="dash-metric" data-metric="${esc(x.id)}"><span>${esc(window.MCAnalysis?.metricLabel(x) || x.label)}</span><strong>${num(x.value)}${x.id === "rate" ? "%" : ""}</strong><small>${esc(metricDescription(x, m.rows))}</small>${metricOrigin(x, m.rows)}</div>`).join("")}</div>${m.mixed ? '<p class="dash-note">Fontes com unidades diferentes têm seus totais separados. Selecione uma fonte para ver conclusão e duração.</p>' : ""}`;
   }
   function empty(title, text = "") { return `<div class="dash-empty"><strong>${esc(title)}</strong>${text ? `<p>${esc(text)}</p>` : ""}</div>`; }
   function trend(m) {
@@ -200,7 +200,9 @@
   function insights(m) {
     const cards = m.intelligence.cards, types = new Set(), featured = cards.filter(c => { if (types.has(c.type)) return false; types.add(c.type); return true; });
     const extra = cards.filter(c => !featured.includes(c));
-    return `<p class="dash-note">Análise local recalculada com os filtros. Abra a evidência para conferir cada conclusão.</p><div class="dash-insights">${featured.map(insightCard).join("")}</div>${extra.length ? `<details class="dash-extra-insights"><summary>Mais ${extra.length} leituras do recorte</summary><div class="dash-insights">${extra.map(insightCard).join("")}</div></details>` : ""}`;
+    const advanced = window.MCAnalysis?.analyze(m.rows, b.getImports()).filter(c => ["comparison", "attention", "concentration"].includes(c.kind)).slice(0, 4) || [];
+    const trace = advanced.map(c => '<article class="mc-intelligence-card"><strong>' + esc(c.title) + '</strong><p>' + esc(c.text) + '</p><details><summary>Fórmula, fonte e limitações</summary><p>' + esc(c.basis) + '</p><p>' + esc(c.caveat) + '</p><p>' + c.evidence.map(x => esc(x.file) + ' · ' + esc(x.sheet) + (x.line ? ' · linha ' + x.line : '')).join('; ') + '</p></details></article>').join("");
+    return `<p class="dash-note">Análise local recalculada com os filtros. Abra a evidência para conferir cada conclusão.</p>${trace}<div class="dash-insights">${featured.map(insightCard).join("")}</div>${extra.length ? `<details class="dash-extra-insights"><summary>Mais ${extra.length} leituras do recorte</summary><div class="dash-insights">${extra.map(insightCard).join("")}</div></details>` : ""}`;
   }
   function insightCard(c) {
     return `<div class="dash-insight-card"><span>${icon(c.ico, 18)}</span><strong>${esc(c.title)}</strong><p>${esc(c.text)}</p><details><summary>Entender este insight</summary><p><b>Base do cálculo:</b> ${esc(c.basis)}</p><p><b>Limite:</b> ${esc(c.caveat)}</p>${c.evidence.length ? `<ul>${c.evidence.map(r => `<li>${esc(r.source)} · linha ${esc(r.line || "—")}</li>`).join("")}</ul>` : ""}</details>${c.type === "cross" ? '<button class="btn" data-dash-focus="crossings">Ver contas relacionadas</button>' : Object.hasOwn(D.types, c.type) ? `<button class="btn" data-dash-insight-type="${esc(c.type)}">Explorar esta fonte</button>` : ""}</div>`;
