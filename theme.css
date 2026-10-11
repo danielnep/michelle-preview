@@ -1481,6 +1481,9 @@ textarea:focus-visible,
   min-height: 156px;
   padding: 22px;
 }
+.stats > .card.stat {
+  border-top-color: var(--line) !important;
+}
 .stat-label {
   line-height: 1.5;
 }
@@ -1559,7 +1562,17 @@ textarea:focus-visible,
 .flow-list li + li {
   margin-top: 12px;
 }
-.position-dialog::backdrop,
+#position-dialog {
+  background: var(--surface);
+  color: var(--ink);
+  border-color: var(--line);
+  border-radius: 16px;
+}
+#position-dialog p {
+  color: var(--muted);
+  margin: 12px 0 18px;
+}
+#position-dialog::backdrop,
 .backdrop.open {
   background: #000000a8;
 }
@@ -1572,6 +1585,31 @@ textarea:focus-visible,
   color: var(--ink);
   background: var(--surface-raised);
   border: 1px solid var(--control-line);
+}
+.studio-container .studio-panel .studio-hint,
+.studio-container .studio-panel .studio-save-status {
+  color: var(--muted);
+  font-size: 13px;
+}
+.studio-container .studio-panel input,
+.studio-container .studio-panel select,
+.studio-container .studio-panel textarea {
+  box-shadow: none;
+}
+.settings-item strong,
+.settings-item small,
+.field label {
+  color: var(--ink);
+}
+.settings-item small,
+.field label {
+  color: var(--muted);
+}
+.progress {
+  background: var(--surface-alt);
+}
+.progress > div {
+  background: var(--brand);
 }
 .assistant-emblem,
 .assistant-mini-avatar,
@@ -1741,6 +1779,10 @@ textarea:focus-visible,
   }
   .sidebar.open {
     visibility: visible;
+  }
+  .app:has(.sidebar.open) ~ .assistant-fab,
+  .app:has(.sidebar.open) ~ .assistant-layer {
+    visibility: hidden;
   }
   .sidebar .brand-logo {
     height: 76px;

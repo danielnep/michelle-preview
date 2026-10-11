@@ -6,12 +6,22 @@
   <style>
     body {
       margin: 0;
-      background: #e8eef3;
+      background: #ededed;
       font: 14px system-ui;
-      color: #304d63;
+      color: #262626;
     }
     header {
       padding: 15px;
+    }
+    header label {
+      display: inline-flex;
+      gap: 8px;
+      margin: 12px 18px 0 0;
+      align-items: center;
+    }
+    select {
+      padding: 8px;
+      font: inherit;
     }
     main {
       display: flex;
@@ -27,34 +37,66 @@
     }
     iframe {
       display: block;
-      border: 1px solid #acbfce;
+      border: 1px solid #737373;
       background: #fff;
     }
   </style>
   <header>
-    Validação do aplicativo real em dois tamanhos de tela. Os dados são os
-    mesmos do painel.
+    <div>Validação do aplicativo real. Os dados são os mesmos do painel.</div>
+    <label
+      >Largura do celular
+      <select id="qa-mobile-width">
+        <option value="320">320 px</option>
+        <option value="360">360 px</option>
+        <option value="390" selected>390 px</option>
+        <option value="430">430 px</option>
+        <option value="768">768 px · tablet</option>
+      </select>
+    </label>
+    <label
+      >Largura do computador
+      <select id="qa-desktop-width">
+        <option value="1024">1024 px</option>
+        <option value="1280" selected>1280 px</option>
+        <option value="1600">1600 px</option>
+      </select>
+    </label>
   </header>
   <main>
     <section>
-      <h2>Celular · 390 × 844</h2>
+      <h2 id="qa-mobile-title">Celular · 390 × 844</h2>
       <iframe
         title="Painel no celular"
-        src="../?qa=mobile-v320"
+        src="../?qa=mobile-v321"
         width="390"
         height="844"
         allow="fullscreen"
       ></iframe>
     </section>
     <section>
-      <h2>Computador · 1280 × 900</h2>
+      <h2 id="qa-desktop-title">Computador · 1280 × 900</h2>
       <iframe
         title="Painel no computador"
-        src="../?qa=desktop-v320"
+        src="../?qa=desktop-v321"
         width="1280"
         height="900"
         allow="fullscreen"
       ></iframe>
     </section>
   </main>
+  <script>
+    for (const [id, label, title, height] of [
+      ["mobile", "Painel no celular", "Celular", 844],
+      ["desktop", "Painel no computador", "Computador", 900],
+    ]) {
+      document
+        .getElementById(`qa-${id}-width`)
+        .addEventListener("change", (event) => {
+          const width = Number(event.target.value);
+          document.querySelector(`iframe[title="${label}"]`).width = width;
+          document.getElementById(`qa-${id}-title`).textContent =
+            `${title} · ${width} × ${height}`;
+        });
+    }
+  </script>
 </html>
