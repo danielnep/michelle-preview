@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="pt-BR">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Validação responsiva · Horizon</title>
+  <style>
+    body {
+      margin: 0;
+      background: #e8eef3;
+      font: 14px system-ui;
+      color: #304d63;
+    }
+    header {
+      padding: 15px;
+    }
+    main {
+      display: flex;
+      gap: 20px;
+      padding: 15px;
+      align-items: flex-start;
+    }
+    section {
+      flex: none;
+    }
+    h2 {
+      font-size: 14px;
+    }
+    iframe {
+      display: block;
+      border: 1px solid #acbfce;
+      background: #fff;
+    }
+  </style>
+  <header>
+    Validação do aplicativo real em dois tamanhos de tela. Os dados são os
+    mesmos do painel.
+  </header>
+  <main>
+    <section>
+      <h2>Celular · 390 × 844</h2>
+      <iframe
+        title="Painel no celular"
+        src="../index.html"
+        width="390"
+        height="844"
+        allow="fullscreen"
+      ></iframe>
+    </section>
+    <section>
+      <h2>Computador · 1280 × 900</h2>
+      <iframe
+        title="Painel no computador"
+        src="../index.html"
+        width="1280"
+        height="900"
+        allow="fullscreen"
+      ></iframe>
+    </section>
+  </main>
+</html>
