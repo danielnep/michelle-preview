@@ -1578,6 +1578,10 @@
   }
 
   window.MichelleStudio = {
+    createFromImports() {
+      st.config = { ...defaultConfig(), period: "all", scope: "todos" };
+      generate();
+    },
     reload,
     importPptx,
     openPresentation,

@@ -1,4 +1,4 @@
-/* Horizon: importação, cálculos e persistência. Sem dados de demonstração. */
+/* Michelle: importação, cálculos e persistência. Sem dados de demonstração. */
 (function (root, factory) {
   const api = factory();
   if (typeof module === "object" && module.exports) module.exports = api;
@@ -51,12 +51,12 @@
     client: [
       "fantasia (razao social)",
       "razao social",
-      "nome",
       "cliente",
       "nome do cliente",
       "condominio",
       "unidade",
       "entidade",
+      "nome",
     ],
     company: ["empresa"],
     account: ["codigo da conta", "conta"],
@@ -149,7 +149,8 @@
     const h = Array.from(headers, norm),
       m = {};
     for (const [key, names] of Object.entries(fields)) {
-      let i = h.findIndex((x) => names.some((n) => x === norm(n)));
+      let i = -1;
+      for (const n of names) { const candidate = h.indexOf(norm(n)); if (candidate >= 0) { i = candidate; break; } }
       if (i < 0)
         i = h.findIndex(
           (x) =>
@@ -163,7 +164,44 @@
         );
       m[key] = i;
     }
+    if (m.id >= 0 && m.id === m.value) m.id = -1;
     return m;
+  }
+  function durationMinutes(value) {
+    const text = norm(value);
+    if (!text) return null;
+    if (/^\d+:\d{2}(:\d{2})?$/.test(text)) {
+      const parts = text.split(":").map(Number);
+      if (parts.slice(1).some(x => x >= 60)) return null;
+      return parts.length === 3 ? parts[0] * 60 + parts[1] + parts[2] / 60 : parts[0] + parts[1] / 60;
+    }
+    const units = /([\d.,]+)\s*(dias?|d|horas?|h|minutos?|mins?|min|m|segundos?|segs?|seg|s)\b/g;
+    let minutes = 0, found = false;
+    const rest = text.replace(units, (_, value, unit) => {
+      const amount = number(value); if (amount == null || amount < 0) return _;
+      minutes += amount * (/^d/.test(unit) ? 1440 : /^h/.test(unit) ? 60 : /^s/.test(unit) ? 1 / 60 : 1);
+      found = true; return "";
+    }).replace(/\s|\be\b/g, "");
+    if (found && !rest) return minutes;
+    const numeric = number(value); return numeric != null && numeric >= 0 ? numeric : null;
+  }
+  const rawField = (raw, names) => {
+    for (const name of names) {
+      const key = Object.keys(raw || {}).find(k => norm(k) === norm(name));
+      if (key != null) return raw[key];
+    }
+    return null;
+  };
+  function sourceContext(row) {
+    const raw = row.raw || {};
+    return {
+      ...row,
+      dateTime: row.dateTime ?? String(rawField(raw, fields.date) ?? ""),
+      closedTime: row.closedTime ?? String(rawField(raw, fields.closed) ?? ""),
+      sourceStatus: row.sourceStatus ?? String(rawField(raw, fields.status) ?? ""),
+      number: row.number ?? (row.type === "ligacoes" ? String(rawField(raw, ["Número"]) ?? "") : ""),
+      partyName: row.partyName ?? (row.type === "ligacoes" ? String(rawField(raw, ["Nome"]) ?? "") : ""),
+    };
   }
   function detect(grid) {
     let best = { headerRow: 0, score: 0, type: "geral", mapping: {} };
@@ -238,20 +276,14 @@
         errors.push({ line, message: "Número da ordem de serviço ausente." });
         return;
       }
-      let duration = number(cell(row, mapping, "duration"));
-      const durText = String(cell(row, mapping, "duration") ?? "");
-      if (/^\d+:\d{2}(:\d{2})?$/.test(durText)) {
-        const parts = durText.split(":").map(Number);
-        duration =
-          parts.length === 3
-            ? parts[0] * 60 + parts[1] + parts[2] / 60
-            : parts[0] + parts[1] / 60;
-      }
-      rows.push({
+      const duration = durationMinutes(cell(row, mapping, "duration"));
+      rows.push(sourceContext({
         id: String(rawId ?? `${opts.hash?.slice(0, 8) || "LINHA"}-${line}`),
         sector: opts.sector,
         type,
         date,
+        dateTime: rawDate == null ? "" : String(rawDate),
+        closedTime: String(cell(row, mapping, "closed") ?? ""),
         periodStart: date || day(opts.periodStart),
         periodEnd: date || day(opts.periodEnd),
         closed: day(cell(row, mapping, "closed")),
@@ -267,7 +299,8 @@
         source: opts.filename,
         line,
         raw,
-      });
+        interpretationVersion: 2,
+      }));
     });
     return { rows, errors, skipped, mapping };
   }
@@ -282,7 +315,7 @@
     const overlap = lots.filter(
       (l) =>
         !l.supersededBy &&
-        !l.archived &&
+        !l.archived && !l.deleted &&
         l.type === lot.type &&
         l.sector === lot.sector &&
         l.periodStart &&
@@ -294,13 +327,8 @@
   }
   function ingest(lots, lot, policy = "reject") {
     if (!lot.rows.length) throw Error("Não há linhas válidas para importar.");
-    if (
-      lot.rows.some((r) => !r.date) &&
-      (!day(lot.periodStart) ||
-        !day(lot.periodEnd) ||
-        lot.periodStart > lot.periodEnd)
-    )
-      throw Error("Informe o período de referência para as linhas sem data.");
+    if ((lot.periodStart && !day(lot.periodStart)) || (lot.periodEnd && !day(lot.periodEnd)) || (lot.periodStart && lot.periodEnd && lot.periodStart > lot.periodEnd))
+      throw Error("O período opcional informado é inválido.");
     const check = inspect(lots, lot);
     if (check.duplicate) return { lots, duplicate: true };
     if (check.overlap.length && lot.type !== "ordens" && policy === "reject")
@@ -326,9 +354,16 @@
     const result = [],
       orders = new Map();
     for (const l of lots) {
-      if (l.supersededBy || l.archived) continue;
+      if (l.supersededBy || l.archived || l.deleted) continue;
       for (const r of l.rows || []) {
-        const row = { ...r, lotId: l.id };
+        const row = sourceContext({ ...r, lotId: l.id });
+        if (!r.interpretationVersion && r.raw) {
+          const client = rawField(r.raw, ["Cliente"]), name = rawField(r.raw, ["Nome"]);
+          if (r.type === "ligacoes" && client != null && String(r.client || "") === String(name || "")) row.client = String(client);
+          if (r.duration == null) row.duration = durationMinutes(rawField(r.raw, ["Duração", "Tempo de execução"]));
+          const quantity = rawField(r.raw, ["Número de Eventos"]);
+          if (r.type === "cuc" && quantity != null && r.id === String(quantity)) row.id = `${l.hash?.slice(0, 8) || l.id}-${r.line}`;
+        }
         if (r.type === "ordens")
           orders.set([r.sector, r.company, r.id].join("|"), row);
         else result.push(row);
@@ -346,7 +381,7 @@
         (sector === "geral" || r.sector === sector) &&
         (!q ||
           norm(
-            [r.id, r.title, r.client, r.company, r.account, r.operator].join(
+            [r.id, r.title, r.client, r.company, r.account, r.operator, r.direction, r.number, r.partyName, r.sourceStatus].join(
               " ",
             ),
           ).includes(q)) &&
@@ -399,7 +434,7 @@
           value: arr.reduce(
             (n, r) =>
               n +
-              (["cuc", "deslocamentos", "indicadores"].includes(k)
+              (["cuc", "deslocamentos"].includes(k)
                 ? Number(r.value) || 0
                 : 1),
             0,
@@ -409,11 +444,12 @@
     const timed = rows.filter(
       (r) => r.duration != null && Number.isFinite(r.duration),
     );
+    const mixed = Object.keys(byType).length > 1;
     return {
       ...c,
       byType,
-      rate: c.known ? (100 * c.done) / c.known : null,
-      avg: timed.length
+      rate: c.known && !mixed ? (100 * c.done) / c.known : null,
+      avg: timed.length && !mixed
         ? timed.reduce((n, r) => n + r.duration, 0) / timed.length
         : null,
       timed: timed.length,
@@ -436,15 +472,16 @@
   function metricOptions(rows) {
     const s = stats(rows),
       out = [{ id: "records", label: "Linhas importadas", value: s.total }];
+    const mixed = Object.keys(s.byType).length > 1, calls = !mixed && s.byType.ligacoes;
     for (const [id, t] of Object.entries(s.byType))
-      out.push({ id, label: t.label, value: t.value });
-    if (s.known)
+      out.push({ id, label: id === "cuc" ? "Eventos CUC" : id === "indicadores" ? "Linhas de indicadores" : t.label, value: id === "indicadores" ? t.rows : t.value });
+    if (s.known && !mixed)
       out.push(
-        { id: "done", label: "Concluídos", value: s.done },
+        { id: "done", label: calls ? "Registros completados" : "Concluídos", value: s.done },
         { id: "pending", label: "Em aberto", value: s.pending + s.open },
-        { id: "rate", label: "Conclusão (%)", value: s.rate },
+        { id: "rate", label: calls ? "Registros completados (%)" : "Conclusão (%)", value: s.rate },
       );
-    if (s.timed)
+    if (s.timed && !mixed)
       out.push({ id: "duration", label: "Duração média (min)", value: s.avg });
     return out;
   }
@@ -477,7 +514,7 @@
             .join(" · "),
         },
       ];
-    if (s.known) {
+    if (s.known && Object.keys(s.byType).length === 1) {
       out.push({
         ico: "target",
         title: `Conclusão: ${s.rate.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`,
@@ -500,14 +537,14 @@
     if (unknown)
       out.push({
         ico: "clock",
-        title: `${unknown} linhas com totais por período`,
-        text: "Esses dados não informam o dia do evento. Participam apenas de recortes que abrangem sua competência inteira.",
+        title: `${unknown} linhas sem data individual`,
+        text: "Totais sem período informado aparecem no histórico completo. Quando a competência é informada, participam apenas de recortes que abrangem o intervalo inteiro.",
       });
     const amounts = new Map();
     rows.forEach((r) =>
       amounts.set(r.title, (amounts.get(r.title) || 0) + weight(r)),
     );
-    const top = [...amounts].sort((a, b) => b[1] - a[1])[0];
+    const top = Object.keys(s.byType).length === 1 ? [...amounts].sort((a, b) => b[1] - a[1])[0] : null;
     if (top)
       out.push({
         ico: "chart",
@@ -565,6 +602,8 @@
         Setor: r.sector,
         Tipo: types[r.type] || r.type,
         Data: r.date || "",
+        "Data / hora da fonte": r.dateTime || "",
+        "Fechamento da fonte": r.closedTime || "",
         "Período inicial": r.periodStart || "",
         "Período final": r.periodEnd || "",
         Descrição: r.title,
@@ -572,6 +611,11 @@
         Empresa: r.company,
         Conta: r.account,
         Status: r.status,
+        "Status original": r.sourceStatus || "",
+        "Número da ligação": r.number || "",
+        "Nome da ligação": r.partyName || "",
+        "Origem da ligação": r.direction || "",
+        "Usuário / operador": r.operator || "",
         "Quantidade / valor": r.value,
         "Duração (min)": r.duration ?? "",
         Arquivo: r.source,
@@ -610,6 +654,7 @@
     day,
     status,
     suggest,
+    durationMinutes,
     detect,
     parse,
     inspect,

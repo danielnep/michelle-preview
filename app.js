@@ -150,6 +150,9 @@
     ready: false,
     query: "",
     pending: null,
+    importReviewOpen: false,
+    importAdvancedOpen: false,
+    importSector: "",
     uploadQueue: [],
     readingFiles: false,
     chatModes: loadChats(),
@@ -346,6 +349,7 @@
       .join("")}</svg></div>`;
   }
   function donut(rs) {
+    if (new Set(rs.map(r => r.type)).size > 1) return `<div class="empty">Selecione uma fonte no dashboard para analisar os status com a unidade correta.</div>`;
     let c = counts(rs),
       data = [
         { name: "Concluídos", value: c.done, color: "#219f85" },
@@ -369,7 +373,7 @@
       )}</svg><div class="donut-center"><strong>${c.known ? percent(c.done, c.known) + "%" : "—"}</strong><span>Concluídos</span></div></div><div class="donut-legend">${data.map((d) => `<div><div class="line"><span class="legend-dot" style="background:${d.color}"></span>${d.name}</div><strong>${fmtNum(d.value)}</strong></div>`).join("")}</div></div>`;
   }
   function insights(rs, sector, detailed = false, range = {}) {
-    return D.insights(rs, {
+    const basic = D.insights(rs, {
       sector: sector || "geral",
       goals: settings.goals,
       all: getAll(),
@@ -377,6 +381,9 @@
       end: range.end ?? state.rangeEnd,
       detailed,
     });
+    if (!window.MCIntelligence) return basic;
+    const analytical = window.MCIntelligence.analyze(rs).cards.map(c => ({ ...c, text: `${c.text} Base: ${c.basis} ${c.caveat}` }));
+    return [...analytical, ...basic.filter(c => /^Meta de|Comparação/.test(c.title))];
   }
   const insightsPanel = (rs, sector, detailed = false, range = {}) =>
     `<section class="card panel operational-insights"><div class="panel-head"><div><h3 class="panel-title">Insights operacionais</h3><p class="panel-sub">Leitura dos dados da sua operação</p></div>${icon("insight", 18)}</div><div class="insights-grid">${insights(
@@ -438,6 +445,7 @@
     });
     return (
       header(sec.name, sec.long + " · Resultados das planilhas deste setor.") +
+      (sec.id === "coi" ? `<section class="card panel coi-entry"><h2>COI · Central de Operações Integradas</h2><p class="panel-sub">Importe as planilhas do COI e acompanhe os indicadores e insights.</p><div><button class="btn btn-primary" data-import-coi>Importar planilhas do COI</button><button class="btn" data-dashboard-coi>Visualizar dashboard do COI</button></div></section>` : "") +
       insightsPanel(rs, sec.id) +
       statCards(rs, sec.id) +
       (rank.size
@@ -457,43 +465,47 @@
     );
   }
   function uploadBox() {
+    const visibleImports = imports.filter(l => !l.deleted);
     const queued = state.uploadQueue.filter((p) => !p.lotId);
     const statuses = {
       reading: "Lendo arquivo",
       ready: "Pronto para importar",
       error: "Precisa de atenção",
     };
-    return `<div class="dropzone" id="dropzone"><div class="upload-prompt"><div class="drop-symbol">${icon("up", 25)}</div><h3>Suas planilhas, em um só lugar</h3><p>Arraste arquivos aqui ou selecione no seu dispositivo.</p><p class="upload-formats">XLSX, XLS ou CSV · até 50 MB por arquivo</p><label for="file-upload" class="btn btn-primary">${icon("plus", 18)} Selecionar arquivos</label><input class="file-input" type="file" id="file-upload" accept=".csv,.xlsx,.xls" multiple ${state.ready && !state.readingFiles && !state.importBusy ? "" : "disabled"}></div><div class="upload-file-list" aria-live="polite"><div class="upload-list-heading"><strong>Arquivos selecionados e importados</strong><span>${queued.length + imports.length}</span></div>${queued.map((p) => `<article class="upload-file ${p.status === "error" ? "has-error" : ""} ${state.pending === p ? "is-selected" : ""}"><span class="upload-file-icon">${icon("files", 20)}</span><div class="upload-file-info"><strong>${esc(p.name)}</strong><small>${esc(statuses[p.status] || p.status)}${p.grid ? ` · ${esc(idSector(p.sector)?.name)} · ${esc(D.types[p.type])}` : ""}</small>${p.error ? `<p class="upload-file-error">${esc(p.error)}</p>` : ""}<div class="upload-file-actions">${p.grid ? `<button class="btn" data-configure-file="${p.queueId}">Conferir dados</button>` : ""}${p.status !== "reading" ? `<button class="btn btn-quiet" data-remove-queued="${p.queueId}">Remover da seleção</button>` : ""}</div></div></article>`).join("")}${[
-      ...imports,
+    return `<div class="dropzone" id="dropzone"><div class="upload-prompt"><div class="drop-symbol">${icon("up", 25)}</div><h3>Suas planilhas, em um só lugar</h3><p>Arraste arquivos aqui ou selecione no seu dispositivo.</p><p class="upload-formats">XLSX, XLS ou CSV · até 50 MB por arquivo</p><label for="file-upload" class="btn btn-primary">${icon("plus", 18)} Selecionar arquivos</label><input class="file-input" type="file" id="file-upload" accept=".csv,.xlsx,.xls" multiple ${state.ready && !state.readingFiles && !state.importBusy ? "" : "disabled"}></div><div class="upload-file-list" aria-live="polite"><div class="upload-list-heading"><strong>Arquivos importados e selecionados</strong><span>${queued.length + visibleImports.length}</span></div>${queued.map((p) => `<article class="upload-file ${p.status === "error" ? "has-error" : ""} ${state.pending === p ? "is-selected" : ""}"><span class="upload-file-icon">${icon("files", 20)}</span><div class="upload-file-info"><strong>${esc(p.name)}</strong><small>${esc(statuses[p.status] || p.status)}${p.grid ? ` · ${esc(idSector(p.sector)?.name)} · ${esc(D.types[p.type])}` : ""}</small>${p.error ? `<p class="upload-file-error">${esc(p.error)}</p>` : ""}<div class="upload-file-actions">${p.grid ? `<button class="btn" data-configure-file="${p.queueId}">Conferir dados</button>` : ""}${p.status !== "reading" ? `<button class="btn btn-quiet" data-remove-queued="${p.queueId}">Remover da seleção</button>` : ""}</div></div></article>`).join("")}${[
+      ...visibleImports,
     ]
       .reverse()
       .map(
         (l) =>
-          `<article class="upload-file is-imported"><span class="upload-file-icon">${icon("check", 20)}</span><div class="upload-file-info"><strong>${esc(l.name)}</strong><small>${l.archived ? "Arquivado" : l.supersededBy ? "Versão anterior" : "Importado e salvo"} · ${fmtNum(l.rows.length)} linhas · ${esc(idSector(l.sector)?.name || l.sector)}</small><small>${esc(l.sheet)} · ${fmtDate(l.periodStart)} a ${fmtDate(l.periodEnd)}</small><div class="upload-file-actions"><button class="btn" data-view-lot="${l.id}">Consultar dados</button><button class="btn btn-quiet" data-original="${l.fileId || ""}" ${l.fileId ? "" : "disabled"}>${icon("down", 15)} Original</button></div></div></article>`,
+          `<article class="upload-file is-imported"><span class="upload-file-icon">${icon("check", 20)}</span><div class="upload-file-info"><strong>${esc(l.name)}</strong><small>${l.archived ? "Arquivado" : l.supersededBy ? "Versão anterior" : "Importado e salvo"} · ${fmtNum(l.rows.length)} linhas · ${esc(idSector(l.sector)?.name || l.sector)}</small><small>${esc(l.sheet)} · ${l.periodStart || l.periodEnd ? `${fmtDate(l.periodStart)} a ${fmtDate(l.periodEnd)}` : "Sem data na planilha"}</small><div class="upload-file-actions"><button class="btn" data-view-lot="${l.id}">Consultar dados</button><button class="btn btn-quiet" data-original="${l.fileId || ""}" ${l.fileId ? "" : "disabled"}>${icon("down", 15)} Original</button><button class="btn btn-quiet" data-delete-lot="${l.id}">Excluir arquivo</button></div></div></article>`,
       )
       .join(
         "",
-      )}${queued.length || imports.length ? "" : '<p class="upload-empty">Os arquivos aparecerão aqui e continuarão disponíveis depois da importação.</p>'}</div>${queued.length ? `<button class="btn btn-primary upload-confirm" data-import-queue ${state.importBusy || state.readingFiles || !queued.some((p) => p.grid) ? "disabled" : ""}>${icon("up", 18)} ${state.readingFiles ? "Lendo arquivos…" : state.importBusy ? "Importando…" : `Importar arquivos (${queued.filter((p) => p.grid).length})`}</button><p class="upload-hint">Confira o setor e a competência de cada arquivo. Erros ficam nesta lista para correção.</p>` : ""}</div>`;
+      )}${queued.length || visibleImports.length ? "" : '<p class="upload-empty">Os arquivos aparecerão aqui e continuarão disponíveis depois da importação.</p>'}</div>${queued.length ? `<button class="btn btn-primary upload-confirm" data-open-import ${state.importBusy || state.readingFiles || !queued.some((p) => p.grid) ? "disabled" : ""}>${icon("up", 18)} ${state.readingFiles ? "Lendo arquivos…" : state.importBusy ? "Importando…" : `Conferir e confirmar (${queued.filter((p) => p.grid).length})`}</button><p class="upload-hint">Leitura automática pronta. Confirme para anexar. Você pode conferir cada arquivo antes de importar.</p>` : ""}</div>`;
+  }
+  function deletedFiles() {
+    const deleted = imports.filter(l => l.deleted);
+    if (!deleted.length) return "";
+    return `<details class="deleted-files section-space"><summary>Arquivos excluídos (${deleted.length})</summary><p class="panel-sub">Estes arquivos não entram no painel. Restaure se quiser usá-los novamente.</p>${deleted.map(l => `<div class="file-row"><div><strong>${esc(l.name)}</strong><small>${l.rows.length} linhas · excluído</small></div><button class="btn" data-restore-lot="${l.id}">Restaurar arquivo</button></div>`).join("")}</details>`;
+  }
+  function dataNextActions() {
+    const enabled = getAll().length > 0;
+    return `<section class="data-next-actions"><h3>Continue com os arquivos importados</h3><div><button class="btn btn-primary" data-quick-report ${enabled ? "" : "disabled"}>${icon("report", 18)} Gerar relatório</button><button class="btn" data-nav="dashboard" ${enabled ? "" : "disabled"}>${icon("grid", 18)} Visualizar dashboard</button><button class="btn" data-create-presentation ${enabled ? "" : "disabled"}>${icon("plus", 18)} Gerar e criar apresentação</button></div></section>`;
   }
   function pageData() {
-    const p = state.pending;
-    return (
-      header(
-        "Enviar Dados Excel",
-        "As planilhas alimentam os indicadores, análises e relatórios do sistema.",
-      ) +
-      `<div class="notice">Os dados e arquivos ficam salvos neste navegador. Use o backup para transferir sua base ou guardar uma cópia.</div><div class="page-grid"><section class="card panel"><h3>Importar Dados</h3><p class="panel-sub">Selecione um ou mais arquivos e confira o destino de cada planilha.</p>${uploadBox()}<div class="backup-actions"><button class="btn" data-backup>Exportar backup completo</button><label class="btn">Restaurar backup<input type="file" id="restore-backup" accept=".json" hidden></label><button class="btn" data-export="geral" ${getAll().length ? "" : "disabled"}>Exportar Excel (.xlsx)</button></div></section><section id="import-configuration" class="card panel"><h3>${p ? "Configurar importação" : "Seu fluxo de dados"}</h3>${p ? importWizard(p) : `<ol class="flow-list"><li>Escolha um ou mais arquivos Excel.</li><li>Confira a aba, as colunas e o setor.</li><li>Valide os dados e confirme o envio.</li><li>Consulte indicadores, insights e relatórios atualizados.</li></ol>`}</section></div><section class="card panel section-space"><h3>Histórico de importações</h3>${
-        imports.length
-          ? `<div class="file-list">${[...imports]
-              .reverse()
-              .map(
-                (l) =>
-                  `<div class="file-row"><div><strong>${esc(l.name)}</strong><small>${esc(l.sheet)} · ${esc(idSector(l.sector)?.name || l.sector)} · ${l.rows.length} linhas · ${fmtDate(l.periodStart)} a ${fmtDate(l.periodEnd)} · ${l.archived ? "Arquivado" : l.supersededBy ? "Versão anterior" : "Ativo"}</small><small>${l.legacy ? "Importação antiga: dados originais para reconferência disponíveis no backup." : l.errors?.length ? l.errors.length + " linhas inválidas registradas" : ""}</small></div><div class="row"><button class="btn" data-view-lot="${l.id}">Consultar</button>${!l.supersededBy ? `<button class="btn" data-archive-lot="${l.id}">${l.archived ? "Reativar" : "Arquivar"}</button>` : ""}<button class="btn" data-original="${l.fileId || ""}" ${l.fileId ? "" : "disabled"}>Original</button></div></div>`,
-              )
-              .join("")}</div>`
-          : '<div class="empty">Nenhuma planilha importada.</div>'
-      }</section>${state.viewLot ? `<section id="lot-preview" class="card panel section-space"><h3>Dados do lote</h3>${table(imports.find((l) => l.id === state.viewLot)?.rows || [], 100)}</section>` : ""}`
-    );
+    return header(state.importSector === "coi" ? "Importar planilhas · COI" : "Importar planilhas", "Selecione, confira a leitura automática e confirme.") + `<section class="card panel data-import-panel">${uploadBox()}${dataNextActions()}<details class="section-space"><summary>Backup e histórico</summary><p class="panel-sub">Seus arquivos e dados ficam neste navegador. Exporte um backup para transferir a base.</p><div class="backup-actions"><button class="btn" data-backup>Exportar backup completo</button><label class="btn">Restaurar backup<input type="file" id="restore-backup" accept=".json" hidden></label><button class="btn" data-export="geral" ${getAll().length ? "" : "disabled"}>Exportar Excel (.xlsx)</button></div><div class="file-list">${imports.filter(l => !l.deleted).reverse().map(l => `<div class="file-row"><div><strong>${esc(l.name)}</strong><small>${l.rows.length} linhas · ${l.archived ? "Arquivado" : l.supersededBy ? "Versão anterior" : "Ativo"}</small></div><button class="btn" data-view-lot="${l.id}">Consultar</button>${!l.supersededBy ? `<button class="btn" data-archive-lot="${l.id}">${l.archived ? "Reativar" : "Arquivar"}</button>` : ""}</div>`).join("")}</div></details>${deletedFiles()}</section>${state.viewLot ? `<section id="lot-preview" class="card panel section-space"><h3>Dados do arquivo importado</h3>${table(D.allRows(imports.filter(l => l.id === state.viewLot)), 100)}</section>` : ""}`;
+  }
+  function importReview() {
+    if (!state.importReviewOpen) return "";
+    const files = state.uploadQueue.filter(p => !p.lotId), p = state.pending;
+    if (!files.length) return "";
+    return `<dialog id="import-review" class="import-review" aria-labelledby="import-review-title"><header><div><span class="eyebrow">PLANILHAS</span><h2 id="import-review-title">Importar e ler</h2><p>Leitura automática. Confira e confirme para anexar os arquivos.</p></div><button class="btn" data-close-import>Fechar</button></header><div class="import-review-body"><div class="import-review-files">${files.map(f => `<button class="btn ${p === f ? "active" : ""}" data-configure-file="${f.queueId}" ${f.grid ? "" : "disabled"}>${esc(f.name)} · ${f.status === "reading" ? "Lendo…" : f.status === "error" ? "Conferir" : "Lido"}</button>`).join("")}</div>${p?.grid ? importWizard(p) : '<p>Lendo os arquivos selecionados…</p>'}${files.filter(f => f.error).map(f => `<p class="import-file-error">${esc(f.name)}: ${esc(f.error)}</p>`).join("")}</div><footer><button class="btn" data-close-import>Voltar</button>${files.filter(f => f.grid).length > 1 ? `<button class="btn btn-primary" data-import-queue ${state.importBusy ? "disabled" : ""}>Confirmar ${files.filter(f => f.grid).length} arquivos lidos</button>` : `<button class="btn btn-primary" data-confirm-import ${p?.grid && validatePending(p).rows.length && !state.importBusy ? "" : "disabled"}>Confirmar importação</button>`}</footer></dialog>`;
+  }
+  function importWizard(p) {
+    const r = validatePending(p), dates = r.rows.map(x => x.date).filter(Boolean).sort();
+    const fields = p.grid[p.headerRow] || [];
+    return `<div class="import-reading-summary"><h3>${esc(p.name)}</h3><div class="import-summary-grid"><span><small>Fonte identificada</small><b>${esc(D.types[p.type])}</b></span><span><small>Registros lidos</small><b>${fmtNum(r.rows.length)}</b></span><span><small>Datas da planilha</small><b>${dates.length ? `${fmtDate(dates[0])} a ${fmtDate(dates.at(-1))}` : "Sem data na planilha"}</b></span><span><small>Destino sugerido</small><b>${esc(idSector(p.sector)?.name || p.sector)}</b></span></div><p class="panel-sub">${dates.length ? "Datas e horários originais foram preservados." : "Este arquivo pode ser importado sem definir datas. Os totais continuam disponíveis em Todo o histórico."}</p><p class="panel-sub">Aba: ${esc(p.sheet)} · ${r.errors.length} linhas inválidas · ${r.skipped.length} totais/resumos excluídos.</p><details class="import-reading"><summary>Ver a interpretação da planilha</summary><p>${esc(window.MCIntelligence?.semantics[p.type]?.meaning || "Confira as colunas reconhecidas.")}</p><p class="panel-sub">${esc(window.MCIntelligence?.semantics[p.type]?.limit || "")}</p><p class="panel-sub">Apenas esta aba será anexada. Abas de resumo não são somadas à base detalhada.</p></details><div class="table-wrap import-raw-preview"><table class="tbl"><thead><tr>${fields.map(h => `<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${r.rows.slice(0, 5).map(x => `<tr>${fields.map(h => `<td>${esc(x.raw[String(h)] ?? "")}</td>`).join("")}</tr>`).join("")}</tbody></table></div><details class="import-advanced" ${state.importAdvancedOpen ? "open" : ""}><summary>Ajustes opcionais e conferência de colunas</summary>${importAdvanced(p)}</details></div>`;
   }
   function previewRows(rows) {
     let cols = Object.keys(rows[0] || {}).slice(0, 6);
@@ -585,7 +597,7 @@
   }
   function render() {
     applyAppearance();
-    document.getElementById("app").innerHTML = shell();
+    document.getElementById("app").innerHTML = shell() + importReview();
     document
       .querySelectorAll("[data-assistant-messages]")
       .forEach((el) => (el.scrollTop = el.scrollHeight));
@@ -648,6 +660,8 @@
       s = D.stats(rows);
     if (!rows.length)
       return "Não há dados no recorte atual. Importe uma planilha ou ajuste os filtros.";
+    if (/cruz|insight|interpret|planilh|evento|cuc|desloc|duracao|horario/.test(v) && window.MCIntelligence)
+      return window.MCIntelligence.analyze(rows).cards.map(c => `${c.title}\n${c.text}\nBase: ${c.basis}\nLimite: ${c.caveat}`).join("\n\n");
     if (/pend|aberto|atras/.test(v))
       return `${s.pending} pendentes e ${s.open} em andamento. Cancelados (${s.cancelled}) e não atendidos (${s.unanswered}) ficam separados.`;
     if (/setor|departamento|maior volume/.test(v))
@@ -875,6 +889,7 @@
       }
     }
     state.readingFiles = false;
+    state.importReviewOpen = true;
     state.pending ||= state.uploadQueue.find((p) => p.grid && !p.lotId) || null;
     render();
   }
@@ -899,6 +914,9 @@
           name: p.name,
           filename: p.name,
           sheet: p.sheet,
+          headerRow: p.headerRow,
+          mapping: { ...result.mapping },
+          interpretationVersion: 2,
           hash: p.hash,
           sector: p.sector,
           type: p.type,
@@ -924,6 +942,7 @@
           "Este arquivo e destino já estão no histórico. Nenhuma linha foi duplicada.";
         state.pending =
           state.uploadQueue.find((x) => x.grid && !x.lotId && x !== p) || null;
+        state.importReviewOpen = !!state.pending;
         return;
       }
       await S.batch([
@@ -936,6 +955,7 @@
       p.error = "";
       state.pending =
         state.uploadQueue.find((x) => x.grid && !x.lotId && x !== p) || null;
+      state.importReviewOpen = !!state.pending;
       state.report = null;
       state.tablePage = 0;
       notify(
@@ -1009,6 +1029,38 @@
     });
   }
   function wire() {
+    document.querySelector("[data-import-coi]")?.addEventListener("click", () => { state.importSector = "coi"; navigate("data"); });
+    document.querySelector("[data-dashboard-coi]")?.addEventListener("click", () => window.MichelleDashboard?.openSector("coi"));
+    document.querySelectorAll("[data-delete-lot],[data-restore-lot]").forEach(el => el.addEventListener("click", async () => {
+      try {
+        const id = el.dataset.deleteLot || el.dataset.restoreLot, lot = imports.find(l => l.id === id);
+        const deleting = el.hasAttribute("data-delete-lot");
+        const next = { ...lot, deleted: deleting, archived: deleting ? true : !!lot.archivedBeforeDelete, deletedAt: deleting ? new Date().toISOString() : null, archivedBeforeDelete: deleting ? !!lot.archived : undefined };
+        await S.put("lots", next);
+        imports = imports.map(l => l.id === id ? next : l);
+        if (state.viewLot === id) state.viewLot = null;
+        invalidate(); render();
+        notify(deleting ? "Arquivo excluído do painel. Você pode restaurá-lo em Arquivos excluídos." : "Arquivo restaurado. Indicadores atualizados.");
+      } catch (e) { notify("Não foi possível alterar o arquivo: " + e.message, true); }
+    }));
+    document.querySelector(".import-advanced")?.addEventListener("toggle", e => { state.importAdvancedOpen = e.target.open; });
+    const review = document.getElementById("import-review");
+    if (review) {
+      if (review.showModal) review.showModal(); else review.setAttribute("open", "");
+      review.addEventListener("cancel", e => { e.preventDefault(); state.importReviewOpen = false; render(); });
+    }
+    document.querySelectorAll("[data-close-import]").forEach(el => el.addEventListener("click", () => { state.importReviewOpen = false; render(); document.getElementById("file-upload")?.focus(); }));
+    document.querySelector("[data-open-import]")?.addEventListener("click", () => { state.importReviewOpen = true; render(); });
+    document.querySelector("[data-quick-report]")?.addEventListener("click", () => {
+      state.query = ""; state.reportSector = state.importSector || "geral"; state.reportStart = state.reportEnd = "";
+      state.report = { rows: structuredClone(D.select(getAll(), { sector: state.reportSector })), sectorName: idSector(state.reportSector)?.name || "Todos os setores", start: "", end: "", generated: new Date().toISOString() };
+      navigate("report");
+    });
+    document.querySelector("[data-create-presentation]")?.addEventListener("click", () => {
+      state.query = "";
+      navigate("present");
+      window.MichelleStudio?.createFromImports();
+    });
     document
       .querySelector("[data-clear-query]")
       ?.addEventListener("click", () => {
@@ -1198,6 +1250,7 @@
           state.pending = state.uploadQueue.find(
             (p) => p.queueId === el.dataset.configureFile,
           );
+          state.importReviewOpen = true;
           render();
           document
             .getElementById("import-configuration")
@@ -1347,14 +1400,14 @@
     p.headerRow = a.headerRow;
     p.mapping = a.mapping;
     p.type = a.type;
-    p.sector =
+    p.sector = state.importSector || (
       p.type === "ligacoes"
         ? "port"
         : p.type === "cuc"
-          ? "qual"
+          ? "coi"
           : p.type === "ordens" || p.type === "deslocamentos"
             ? "tec"
-            : "coi";
+            : "coi");
     render();
   }
   function validatePending(p = state.pending) {
@@ -1373,7 +1426,14 @@
     }
     return p.validationResult;
   }
-  function importWizard(p) {
+  function importReading(p, result) {
+    const I = window.MCIntelligence;
+    if (!I) return "";
+    const meaning = I.semantics[p.type] || I.semantics.geral;
+    const headers = p.grid[p.headerRow] || [];
+    return `<details class="import-reading" open><summary>Leitura identificada: ${esc(D.types[p.type])}</summary><p>${esc(meaning.meaning)}</p><p class="panel-sub">${esc(meaning.limit)}</p><p class="panel-sub">Apenas a aba ${esc(p.sheet)} será importada. Abas de resumo não são somadas à base detalhada.</p><details><summary>Entender todas as colunas</summary><div class="table-scroll"><table><thead><tr><th>Coluna original</th><th>Significado</th><th>Associação escolhida</th></tr></thead><tbody>${headers.map((h, i) => `<tr><td>${esc(h)}</td><td>${esc(I.fieldPurpose(p.type, h))}</td><td>${Object.entries(p.mapping).filter(([k, n]) => n === i).map(([k]) => esc(D.labels[k])).join("; ") || "Campo original no detalhamento"}</td></tr>`).join("")}</tbody></table></div></details></details>`;
+  }
+  function importAdvanced(p) {
     const h = p.grid[p.headerRow] || [],
       r = validatePending();
     return `<p class="import-filename">${esc(p.name)}</p><div class="import-fields"><label>Aba<select id="imp-sheet" class="control">${p.wb.SheetNames.map((n) => `<option ${p.sheet === n ? "selected" : ""}>${esc(n)}</option>`).join("")}</select></label><label>Linha dos cabeçalhos<input id="imp-header" class="control" type="number" min="1" max="${p.grid.length}" value="${p.headerRow + 1}"></label><label>Setor<select id="imp-sector" class="control">${sectors.map((s) => `<option value="${s.id}" ${s.id === p.sector ? "selected" : ""}>${s.name}</option>`).join("")}</select></label><label>Tipo<select id="imp-type" class="control">${Object.entries(
@@ -1385,7 +1445,7 @@
       )
       .join(
         "",
-      )}</select></label><label>Período de referência: de<input type="date" id="imp-start" class="control" value="${esc(p.periodStart)}"></label><label>Até<input type="date" id="imp-end" class="control" value="${esc(p.periodEnd)}"></label></div><p class="panel-sub">Datas existentes são preservadas. Informe a competência das linhas sem data.</p><details open><summary>Associar colunas</summary><div class="mapping-grid">${Object.entries(
+      )}</select></label><label>Período de referência: de<input type="date" id="imp-start" class="control" value="${esc(p.periodStart)}"></label><label>Até<input type="date" id="imp-end" class="control" value="${esc(p.periodEnd)}"></label></div><p class="panel-sub">Ajustes opcionais. Datas existentes são preservadas. Você pode informar uma competência para linhas sem data quando souber o período correto. O setor é o destino de organização escolhido.</p><details><summary>Associar colunas</summary><div class="mapping-grid">${Object.entries(
       D.labels,
     )
       .map(
@@ -1414,7 +1474,7 @@
       )
       .join(
         "",
-      )}</select></label><p class="panel-sub">Arquivos idênticos não são reimportados. OS usam empresa + número, com histórico preservado.</p>${table(r.rows, 5)}<button class="btn btn-primary section-space" data-confirm-import ${r.rows.length && !state.importBusy ? "" : "disabled"}>Confirmar importação</button>`;
+      )}</select></label><p class="panel-sub">Arquivos idênticos não são reimportados. OS usam empresa + número, com histórico preservado.</p>`;
   }
   function downloadBlob(blob, name) {
     const url = URL.createObjectURL(blob),

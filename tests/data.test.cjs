@@ -132,7 +132,7 @@ test("duplicação, sobreposição, versionamento e reconciliação de OS", () =
   assert.equal(D.allRows([original, second]).length, 1);
   assert.equal(D.allRows([original, second])[0].status, "Concluído");
 });
-test("totais sem dia exigem competência e só entram no período inteiro", () => {
+test("totais sem dia podem ser importados e não ganham datas inventadas", () => {
   const p = parse(
     [
       ["CUC", "Número de Eventos"],
@@ -140,11 +140,10 @@ test("totais sem dia exigem competência e só entram no período inteiro", () =
     ],
     "cuc",
   );
-  assert.throws(
-    () =>
-      D.ingest([], lot("a", p.rows, { periodStart: null, periodEnd: null })),
-    /período/,
-  );
+  const imported = D.ingest([], lot("a", p.rows, { periodStart: null, periodEnd: null }));
+  assert.equal(imported.lots[0].rows[0].date, null);
+  assert.equal(D.select(imported.lots[0].rows).length, 1);
+  assert.equal(D.select(imported.lots[0].rows, { start: "2026-09-01" }).length, 0);
   const r = {
     ...p.rows[0],
     periodStart: "2026-09-01",

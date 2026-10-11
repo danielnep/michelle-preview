@@ -1,5 +1,67 @@
 /* Dashboard: mesmas superfícies, cores e tipografia do painel. */
 .interactive-dashboard { min-width: 0; }
+.dash-insight-card { min-width: 0; overflow-wrap: anywhere; }
+.dash-insight-card details { margin: 12px 0; font-size: 12px; line-height: 1.6; }
+.dash-insight-card summary, .dash-readings summary, .dash-extra-insights summary, .dash-cross-coverage summary, .dash-raw summary, .import-reading summary { cursor: pointer; min-height: 32px; font-weight: 600; }
+.dash-insight-card details p { margin: 8px 0; }
+.dash-insight-card ul { padding-left: 18px; color: var(--muted); }
+.dash-insight-card .btn { min-height: 44px; margin-top: 12px; }
+.dash-extra-insights { margin-top: 16px; }
+.dash-readings { display: grid; gap: 10px; }
+.dash-readings > details { border: 1px solid var(--line); border-radius: 6px; padding: 12px; min-width: 0; overflow-wrap: anywhere; }
+.dash-readings p { font-size: 13px; line-height: 1.6; margin: 10px 0; }
+.dash-table-scroll .dash-purpose { white-space: normal; min-width: 230px; max-width: 480px; line-height: 1.6; }
+.dash-cross-metrics { display: flex; flex-wrap: wrap; gap: 12px; margin: 12px 0; }
+.dash-cross-metrics > span { background: var(--surface-alt); border: 1px solid var(--line); border-radius: 6px; padding: 12px; display: grid; gap: 5px; font-size: 12px; }
+.dash-cross-metrics b { font-size: 21px; }
+.dash-cross-coverage { margin-top: 12px; font-size: 12px; line-height: 1.7; }
+.dash-raw { width: 290px; font-size: 12px; white-space: normal; }
+.dash-raw p { overflow-wrap: anywhere; }
+.dash-raw dl { display: grid; grid-template-columns: 100px minmax(0, 1fr); gap: 8px; line-height: 1.5; }
+.dash-raw dt { color: var(--muted); }
+.dash-raw dd { margin: 0; overflow-wrap: anywhere; }
+.import-reading { padding: 12px; background: var(--surface-alt); border: 1px solid var(--line); border-radius: 6px; margin-bottom: 14px; min-width: 0; }
+.import-reading p { font-size: 13px; line-height: 1.6; margin: 8px 0; }
+.import-reading .table-scroll { overflow: auto; max-width: 100%; }
+.import-reading table { min-width: 600px; font-size: 12px; }
+.data-import-panel { max-width: 1100px; margin: 0 auto; }
+.coi-entry { margin-bottom: 20px; }
+.coi-entry > div { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.coi-entry .btn { min-height: 44px; }
+.data-next-actions { border-top: 1px solid var(--line); margin-top: 24px; padding-top: 20px; }
+.data-next-actions > div { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.data-next-actions .btn { min-height: 44px; }
+.import-review { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); padding: 0; width: min(1000px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow: auto; }
+.import-review::backdrop { background: rgb(0 0 0 / .7); }
+.import-review > header { display: flex; justify-content: space-between; align-items: start; gap: 16px; padding: 20px; border-bottom: 1px solid var(--line); }
+.import-review h2 { font-size: 24px; margin: 3px 0 8px; }
+.import-review header p { color: var(--muted); margin: 0; font-size: 13px; }
+.import-review-body { padding: 20px; min-width: 0; }
+.import-review-files { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+.import-review-files .btn { white-space: normal; overflow-wrap: anywhere; text-align: left; min-height: 44px; }
+.import-review-files .active { border-color: var(--brand); color: var(--brand); }
+.import-review h3 { overflow-wrap: anywhere; }
+.import-review > footer { position: sticky; bottom: 0; display: flex; justify-content: end; gap: 10px; padding: 16px 20px; background: var(--surface); border-top: 1px solid var(--line); }
+.import-review .btn { min-height: 44px; }
+.import-summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 16px 0; }
+.import-summary-grid span { display: grid; gap: 5px; min-width: 0; background: var(--surface-alt); padding: 12px; border-radius: 6px; }
+.import-summary-grid small { color: var(--muted); }
+.import-summary-grid b { font-size: 13px; overflow-wrap: anywhere; }
+.import-advanced { margin-top: 16px; }
+.import-advanced > summary { cursor: pointer; min-height: 44px; padding-top: 12px; font-size: 13px; }
+.import-raw-preview { max-width: 100%; overflow: auto; max-height: 300px; }
+.import-review .import-fields { margin-top: 16px; }
+@media (max-width: 600px) {
+  .data-next-actions > div { display: grid; }
+  .data-next-actions .btn { width: 100%; white-space: normal; }
+  .import-review { width: calc(100vw - 16px); max-height: calc(100dvh - 16px); }
+  .import-review > header, .import-review-body { padding: 14px; }
+  .import-review > footer { padding: 14px; flex-wrap: wrap; }
+  .import-review-files { display: grid; grid-template-columns: minmax(0, 1fr); }
+  .import-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .import-review .panel-sub { overflow-wrap: anywhere; }
+  .dash-cross-metrics { display: grid; grid-template-columns: minmax(0, 1fr); }
+}
 .dash-head { display: flex; justify-content: space-between; gap: 20px; align-items: center; margin-bottom: 24px; }
 .dash-head h1 { font-size: 30px; line-height: 1.2; margin: 4px 0 6px; letter-spacing: -.7px; }
 .dash-head p, .dash-editor p, .dash-focus-dialog p { color: var(--muted); margin: 0; }

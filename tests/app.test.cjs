@@ -7,6 +7,85 @@ const { JSDOM, VirtualConsole } = require("jsdom");
 const { IDBFactory, IDBKeyRange } = require("fake-indexeddb");
 const X = require("../vendor/xlsx.full.min.js");
 const root = path.join(__dirname, "..");
+test("COI abre importação no destino escolhido e exclusão sai da base, persiste e pode ser restaurada", async () => {
+  const t = await boot(), b = t.w.MichelleBridge;
+  b.navigate("coi"); t.click("[data-import-coi]");
+  assert.equal(b.getState().page, "data");
+  await b.handleFile(file(t.w, "ordens.xlsx", workbook()));
+  assert.equal(b.getState().pending.sector, "coi");
+  await b.confirmImport();
+  assert.equal(b.getAll().length, 3);
+  const id = b.getImports()[0].id;
+  t.click("[data-delete-lot]");
+  await wait(() => b.getAll().length === 0);
+  assert.equal(b.getImports()[0].deleted, true);
+  assert.equal(t.w.document.querySelectorAll("#dropzone .is-imported").length, 0);
+  assert.match(t.w.document.querySelector(".deleted-files").textContent, /Restaurar arquivo/);
+  const reopened = await boot(t.db);
+  assert.equal(reopened.w.MichelleBridge.getAll().length, 0);
+  reopened.w.MichelleBridge.navigate("data");
+  reopened.click("[data-restore-lot]");
+  await wait(() => reopened.w.MichelleBridge.getAll().length === 3);
+  assert.equal(reopened.w.MichelleBridge.getImports()[0].id, id);
+  assert.equal(reopened.w.MichelleBridge.getImports()[0].rows[0].raw["Número da OS"], "001");
+  reopened.w.MichelleBridge.navigate("coi"); reopened.click("[data-dashboard-coi]");
+  assert.equal(reopened.w.MichelleDashboard.getConfig().sector, "coi");
+  assert.equal(reopened.w.MichelleDashboard.model().rows.length, 3);
+  assert.equal(t.errors.length + reopened.errors.length, 0);
+  t.w.close(); reopened.w.close();
+});
+test("importação automática em janela aceita arquivo sem datas e oferece relatório, dashboard e nova apresentação", async () => {
+  const t = await boot(), b = t.w.MichelleBridge, w = t.w;
+  b.navigate("data");
+  const wb = X.utils.book_new();
+  X.utils.book_append_sheet(wb, X.utils.aoa_to_sheet([["CUC", "Número de Eventos"], ["Restauração", 100], ["Teste", 50]]), "Eventos");
+  await b.handleFiles([file(w, "eventos.xlsx", X.write(wb, { type: "buffer", bookType: "xlsx" })), file(w, "ordens.xlsx", workbook())]);
+  assert.ok(w.document.querySelector("#import-review[open]"));
+  assert.match(w.document.querySelector(".import-reading-summary").textContent, /Sem data na planilha/);
+  assert.equal(w.document.querySelector(".import-advanced").open, false);
+  assert.equal(b.getState().pending.periodStart, "");
+  t.click("[data-import-queue]");
+  await wait(() => b.getImports().length === 2 && !b.getState().importBusy);
+  assert.equal(w.document.querySelector("#import-review"), null);
+  assert.equal(b.getImports().find(l => l.type === "cuc").periodStart, null);
+  assert.equal(b.D.stats(b.getAll()).byType.cuc.value, 150);
+  assert.ok(b.getImports().every(l => l.mapping && l.interpretationVersion === 2));
+  t.click("[data-quick-report]");
+  assert.equal(b.getState().page, "report");
+  assert.equal(b.getState().report.rows.length, 5);
+  b.navigate("data");
+  t.click('.data-next-actions [data-nav="dashboard"]');
+  assert.equal(w.MichelleDashboard.model().intelligence.profiles.find(p => p.type === "cuc").total, 150);
+  assert.match(w.document.querySelector('[data-dash-widget="reading"]').textContent, /Número de Eventos/);
+  const lot = b.getImports().find(l => l.type === "cuc"), row = lot.rows[0];
+  assert.equal(row.date, null);
+  assert.equal(row.raw["CUC"], "Restauração");
+  assert.match(w.document.querySelector('[data-dash-widget="records"]').textContent, /Ver linha/);
+  b.navigate("data");
+  t.click("[data-create-presentation]");
+  await wait(() => w.MichelleStudio.getState().library.length === 1);
+  const firstId = w.MichelleStudio.getState().currentId;
+  b.navigate("data"); t.click("[data-create-presentation]");
+  await wait(() => w.MichelleStudio.getState().library.length === 2);
+  assert.notEqual(w.MichelleStudio.getState().currentId, firstId);
+  assert.equal(t.errors.length, 0);
+  t.w.close();
+});
+test("dashboard cruza contas, expõe ausência de período e aplica o filtro sem misturar empresas", async () => {
+  const t = await boot(), b = t.w.MichelleBridge;
+  const row = (id, type, company, extra = {}) => ({ id, type, company, account: "0010", client: "Cliente", sector: "tec", value: 1, status: "Pendente", title: "Atendimento", raw: { Empresa: company, Conta: "0010" }, line: 2, ...extra });
+  b.getImports().push({ id: "orders", rows: [row("1", "ordens", "Empresa A", { date: "2026-09-03" }), row("2", "ordens", "Empresa B", { date: "2026-09-03" })] }, { id: "trips", rows: [row("3", "deslocamentos", "Empresa A", { value: 10 })] });
+  b.navigate("dashboard");
+  assert.match(t.w.document.querySelector('[data-dash-widget="crossings"]').textContent, /Não informado · vínculo só pela conta/);
+  t.click("[data-dash-account]");
+  assert.equal(t.w.MichelleDashboard.model().rows.length, 2);
+  assert.ok(t.w.MichelleDashboard.model().rows.every(r => r.company === "Empresa A"));
+  assert.ok(t.w.document.querySelector("[data-dash-clear-account]"));
+  t.click("[data-dash-clear-account]");
+  assert.equal(t.w.MichelleDashboard.model().rows.length, 3);
+  assert.equal(t.errors.length, 0);
+  t.w.close();
+});
 test("Power BI seguro: validação do link, persistência, troca de origem e tela cheia sem recriar relatório", async () => {
   const t = await boot(), b = t.w.MichelleBridge;
   b.navigate("dashboard");
@@ -183,6 +262,7 @@ async function boot(db = new IDBFactory(), dashboardPreference) {
     "vendor/xlsx.full.min.js",
     "vendor/jszip.min.js",
     "data-core.js",
+    "data-intelligence.js",
     "pptx.js",
     "app.js",
     "studio.js",

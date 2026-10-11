@@ -1,20 +1,20 @@
 /* Dashboard operacional: a mesma base importada, com filtros e composição persistente. */
 (() => {
   "use strict";
-  const b = window.MichelleBridge, D = b.D, esc = b.esc;
+  const b = window.MichelleBridge, D = b.D, I = window.MCIntelligence, esc = b.esc;
   const key = "michelle.dashboard.v1";
   const blocks = {
-    insights: "Insights operacionais", metrics: "Indicadores",
+    insights: "Insights operacionais", metrics: "Indicadores", crossings: "Cruzamento de contas", reading: "Entendimento das planilhas",
     trend: "Evolução no período", status: "Distribuição de status",
     sectors: "Registros por setor", ranking: "Principais registros", records: "Detalhamento",
   };
-  const dimensions = { title: "Descrição", client: "Cliente / conta", operator: "Operador" };
+  const dimensions = { title: "Descrição", client: "Cliente", company: "Empresa", operator: "Operador", direction: "Origem da ligação" };
   const statuses = ["Concluído", "Em andamento", "Pendente", "Cancelado", "Não atendido", "Não informado"];
   const defaults = () => ({
     sector: "geral", type: "all", status: "all", period: "all", start: "", end: "", query: "",
-    dimension: "title", member: null, chart: "line", zoom: 100, reportUrl: "", reportView: "local",
+    dimension: "title", member: null, accountKey: null, chart: "line", zoom: 100, reportUrl: "", reportView: "local",
     metrics: ["records", "ordens", "ligacoes", "cuc", "deslocamentos", "indicadores", "done", "pending", "rate", "duration"],
-    order: Object.keys(blocks), hidden: [], sizes: { insights: 12, metrics: 12, trend: 8, status: 4, sectors: 6, ranking: 6, records: 12 },
+    order: ["metrics", "insights", "crossings", "trend", "status", "sectors", "ranking", "reading", "records"], hidden: [], sizes: { insights: 12, metrics: 12, crossings: 12, reading: 12, trend: 8, status: 4, sectors: 6, ranking: 6, records: 12 },
   });
   function reportUrl(value) {
     try {
@@ -42,6 +42,7 @@
       if (typeof c.query === "string") out.query = c.query.slice(0, 200);
       if (Object.hasOwn(dimensions, c.dimension)) out.dimension = c.dimension;
       if (c.member && Object.hasOwn(dimensions, c.member.field) && typeof c.member.value === "string") out.member = c.member;
+      if (typeof c.accountKey === "string") { const k = JSON.parse(c.accountKey); if (Array.isArray(k) && k.length === 2 && k.every(v => typeof v === "string" && v.length > 0 && v.length < 200)) out.accountKey = c.accountKey; }
       if (["line", "bar"].includes(c.chart)) out.chart = c.chart;
       if ([80, 100, 125, 150].includes(c.zoom)) out.zoom = c.zoom;
       out.reportUrl = reportUrl(c.reportUrl);
@@ -79,19 +80,20 @@
     if (b.getState().query) rows = D.select(rows, { query: b.getState().query });
     if (config.status !== "all") rows = rows.filter(r => r.status === config.status);
     if (config.member) rows = rows.filter(r => String(r[config.member.field] || "Não informado") === config.member.value);
+    if (config.accountKey) rows = rows.filter(r => I.key(r) === config.accountKey);
     const types = [...new Set(rows.map(r => r.type))];
     const mixed = types.length > 1;
     let metrics = D.metricOptions(rows).filter(m => !(mixed && ["done", "pending", "rate", "duration"].includes(m.id)));
     metrics = metrics.map(m => m.id === "indicadores" ? { ...m, label: "Linhas de indicadores", value: rows.filter(r => r.type === "indicadores").length } : m);
-    return { all, available, rows, start, end, latest: dates.at(-1), mixed, metrics };
+    return { all, available, rows, start, end, latest: dates.at(-1), mixed, effectiveType: types.length === 1 ? types[0] : config.type, metrics, intelligence: I.analyze(rows) };
   }
-  function weighted() { return ["cuc", "deslocamentos"].includes(config.type); }
-  function weight(r) { return weighted() ? Number(r.value) || 0 : 1; }
-  function unit() { return config.type === "cuc" ? "Eventos CUC" : config.type === "deslocamentos" ? "Deslocamentos" : "Linhas"; }
+  function weighted(m) { return ["cuc", "deslocamentos"].includes(m.effectiveType); }
+  function weight(r, m) { return weighted(m) ? Number(r.value) || 0 : 1; }
+  function unit(m) { return m.effectiveType === "cuc" ? "Eventos CUC" : m.effectiveType === "deslocamentos" ? "Deslocamentos" : "Linhas"; }
   function metricDescription(m, rows) {
     if (m.id === "records") return "Linhas ativas após os filtros";
     if (m.id === "rate") return `${num(D.stats(rows).done)} concluídos / ${num(D.stats(rows).known)} com status reconhecido; não é SLA`;
-    if (m.id === "duration") return `Média de ${num(D.stats(rows).timed)} durações informadas, em minutos`;
+    if (m.id === "duration") return `Média de ${num(D.stats(rows).timed)} de ${num(rows.length)} registros com duração; inclui zeros. Não mede espera ou SLA`;
     if (["cuc", "deslocamentos"].includes(m.id)) return "Soma das quantidades informadas na fonte";
     if (m.id === "pending") return "Pendentes + em andamento; exclui cancelados e não atendidos";
     if (m.id === "done") return "Status reconhecido como concluído";
@@ -105,7 +107,7 @@
   }
   function empty(title, text = "") { return `<div class="dash-empty"><strong>${esc(title)}</strong>${text ? `<p>${esc(text)}</p>` : ""}</div>`; }
   function trend(m) {
-    const daily = D.series(m.rows.map(r => weighted() ? r : { ...r, type: "linha" }));
+    const daily = D.series(m.rows.map(r => weighted(m) ? r : { ...r, type: "linha" }));
     if (!daily.length) return empty("Sem datas individuais", "Totais por competência não são distribuídos artificialmente entre os dias.");
     const step = Math.max(1, Math.ceil(daily.length / 52));
     const series = Array.from({ length: Math.ceil(daily.length / step) }, (_, i) => {
@@ -118,9 +120,9 @@
     const grid = [0, .25, .5, .75, 1].map(t => `<line x1="${left}" x2="${W - right}" y1="${y(t * max)}" y2="${y(t * max)}" stroke="var(--line)" stroke-dasharray="3 5"/><text x="${left - 9}" y="${y(t * max) + 4}" text-anchor="end" fill="var(--muted)" font-size="12">${num(Math.round(max * t))}</text>`).join("");
     const points = series.map((p, i) => `${x(i)},${y(p.value)}`).join(" ");
     const bw = Math.min(40, (W - left - right) / series.length * .65);
-    const marks = config.chart === "bar" ? series.map((p, i) => `<rect x="${x(i) - bw / 2}" y="${y(p.value)}" width="${bw}" height="${H - bottom - y(p.value)}" rx="3" fill="var(--brand)"><title>${esc(p.detail)}: ${num(p.value)} ${unit().toLowerCase()}</title></rect>`).join("") : `<polyline points="${points}" fill="none" stroke="var(--brand)" stroke-width="3" stroke-linejoin="round"/>${series.map((p, i) => `<circle cx="${x(i)}" cy="${y(p.value)}" r="4" fill="var(--brand)"><title>${esc(p.detail)}: ${num(p.value)} ${unit().toLowerCase()}</title></circle>`).join("")}`;
+    const marks = config.chart === "bar" ? series.map((p, i) => `<rect x="${x(i) - bw / 2}" y="${y(p.value)}" width="${bw}" height="${H - bottom - y(p.value)}" rx="3" fill="var(--brand)"><title>${esc(p.detail)}: ${num(p.value)} ${unit(m).toLowerCase()}</title></rect>`).join("") : `<polyline points="${points}" fill="none" stroke="var(--brand)" stroke-width="3" stroke-linejoin="round"/>${series.map((p, i) => `<circle cx="${x(i)}" cy="${y(p.value)}" r="4" fill="var(--brand)"><title>${esc(p.detail)}: ${num(p.value)} ${unit(m).toLowerCase()}</title></circle>`).join("")}`;
     const labels = series.map((p, i) => i === series.length - 1 || i % Math.max(1, Math.ceil(series.length / 6)) === 0 ? `<text x="${x(i)}" y="${H - 12}" text-anchor="middle" fill="var(--muted)" font-size="12">${esc(p.label)}</text>` : "").join("");
-    return `<div class="dash-chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(unit())} por data, ${daily.length} datas informadas">${grid}${marks}${labels}</svg></div><p class="dash-note">${unit()} com data individual${step > 1 ? ` · agrupadas em até ${step} datas por ponto` : ""}. ${num(m.rows.filter(r => !r.date).length)} linhas por competência fora deste gráfico.</p><details class="dash-values"><summary>Ver valores do gráfico</summary><div class="dash-table-scroll"><table><thead><tr><th>Data / intervalo</th><th>${unit()}</th></tr></thead><tbody>${series.map(p => `<tr><td>${esc(p.detail)}</td><td>${num(p.value)}</td></tr>`).join("")}</tbody></table></div></details>`;
+    return `<div class="dash-chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(unit(m))} por data, ${daily.length} datas informadas">${grid}${marks}${labels}</svg></div><p class="dash-note">${unit(m)} com data individual${step > 1 ? ` · agrupadas em até ${step} datas por ponto` : ""}. ${num(m.rows.filter(r => !r.date).length)} linhas por competência fora deste gráfico.</p><details class="dash-values"><summary>Ver valores do gráfico</summary><div class="dash-table-scroll"><table><thead><tr><th>Data / intervalo</th><th>${unit(m)}</th></tr></thead><tbody>${series.map(p => `<tr><td>${esc(p.detail)}</td><td>${num(p.value)}</td></tr>`).join("")}</tbody></table></div></details>`;
   }
   function horizontal(items, attribute) {
     if (!items.length) return empty("Sem registros disponíveis");
@@ -139,28 +141,40 @@
   }
   function ranking(m) {
     const groups = new Map();
-    m.rows.forEach(r => { const name = String(r[config.dimension] || "Não informado"); groups.set(name, (groups.get(name) || 0) + weight(r)); });
+    m.rows.forEach(r => { const name = String(r[config.dimension] || "Não informado"); groups.set(name, (groups.get(name) || 0) + weight(r, m)); });
     const items = [...groups].sort((a, z) => z[1] - a[1]).slice(0, 8).map(([id, value]) => ({ id, label: id, value }));
-    return horizontal(items, "data-dash-member") + `<p class="dash-note">Até 8 por ${esc(dimensions[config.dimension].toLowerCase())} · ${unit().toLowerCase()}. Toque para explorar.</p>`;
+    return horizontal(items, "data-dash-member") + `<p class="dash-note">Até 8 por ${esc(dimensions[config.dimension].toLowerCase())} · ${unit(m).toLowerCase()}. Toque para explorar.</p>`;
   }
   function insights(m) {
-    const items = D.insights(m.rows, { goals: b.getSettings().goals, sector: config.sector }).filter(x => !m.mixed || !/Conclusão:|Meta de|Maior volume:/.test(x.title)).slice(0, 3);
-    return `<div class="dash-insights">${items.map(x => `<div><span>${icon(x.ico, 18)}</span><strong>${esc(x.title)}</strong><p>${esc(x.text)}</p></div>`).join("")}</div>`;
+    const cards = m.intelligence.cards, types = new Set(), featured = cards.filter(c => { if (types.has(c.type)) return false; types.add(c.type); return true; });
+    const extra = cards.filter(c => !featured.includes(c));
+    return `<p class="dash-note">Análise local recalculada com os filtros. Abra a evidência para conferir cada conclusão.</p><div class="dash-insights">${featured.map(insightCard).join("")}</div>${extra.length ? `<details class="dash-extra-insights"><summary>Mais ${extra.length} leituras do recorte</summary><div class="dash-insights">${extra.map(insightCard).join("")}</div></details>` : ""}`;
+  }
+  function insightCard(c) {
+    return `<div class="dash-insight-card"><span>${icon(c.ico, 18)}</span><strong>${esc(c.title)}</strong><p>${esc(c.text)}</p><details><summary>Entender este insight</summary><p><b>Base do cálculo:</b> ${esc(c.basis)}</p><p><b>Limite:</b> ${esc(c.caveat)}</p>${c.evidence.length ? `<ul>${c.evidence.map(r => `<li>${esc(r.source)} · linha ${esc(r.line || "—")}</li>`).join("")}</ul>` : ""}</details>${c.type === "cross" ? '<button class="btn" data-dash-focus="crossings">Ver contas relacionadas</button>' : Object.hasOwn(D.types, c.type) ? `<button class="btn" data-dash-insight-type="${esc(c.type)}">Explorar esta fonte</button>` : ""}</div>`;
+  }
+  function reading(m) {
+    if (!m.rows.length) return empty("Sem planilhas neste recorte", "Importe uma fonte para ver seu significado e a cobertura das colunas.");
+    return `<p class="dash-note">O setor é o destino escolhido na importação. Não é deduzido como departamento de origem da planilha. Campos vazios são preservados.</p><div class="dash-readings">${m.intelligence.profiles.map(p => `<details><summary>${esc(p.label)} · ${num(p.total)} ${esc(p.unit)}</summary><p>${esc(p.meaning)}</p><p>${num(p.rows)} linhas · ${num(p.dated)} com data individual · ${num(p.timed)} com duração.</p><p class="dash-note">${esc(p.limit)}</p>${p.fields.length ? `<div class="dash-table-scroll"><table><thead><tr><th>Coluna original</th><th>Preenchimento no recorte</th><th>Uso no painel</th></tr></thead><tbody>${p.fields.map(f => `<tr><td>${esc(f.name)}</td><td>${num(f.populated)} / ${num(p.rows)}</td><td class="dash-purpose">${esc(f.purpose)}</td></tr>`).join("")}</tbody></table></div>` : '<p class="dash-note">Esta importação não possui colunas originais para detalhar.</p>'}</details>`).join("")}</div>`;
+  }
+  function crossings(m) {
+    const c = m.intelligence.cross;
+    return `<p class="dash-note">OS × deslocamentos · empresa + conta. O período é conferido quando informado. Ligações e CUC ficam fora desse vínculo: as fontes fornecidas não têm a chave completa.</p>${c.accounts.length ? `<div class="dash-cross-metrics"><span><b>${num(c.matchedAccounts)}</b> contas correspondentes</span><span><b>${num(c.matchedOrders)} / ${num(c.orders)}</b> OS relacionadas</span><span><b>${num(c.matchedTrips)} / ${num(c.trips)}</b> deslocamentos relacionados</span></div><div class="dash-table-scroll"><table><thead><tr><th>Empresa / conta</th><th>Cliente</th><th>Competência</th><th>Deslocamentos</th><th>OS</th><th>OS em aberto</th><th>Explorar</th></tr></thead><tbody>${c.accounts.map(a => `<tr><td>${esc(a.company)} / ${esc(a.account)}</td><td>${esc(a.client)}</td><td>${a.periodConfirmed ? a.periods.map(p => `${date(p.start)} a ${date(p.end)}`).join("; ") : "Não informado · vínculo só pela conta"}</td><td>${num(a.trips)}</td><td>${num(a.orders)}</td><td>${num(a.pending)}</td><td><button class="btn" data-dash-account="${esc(I.key(a))}">Ver conta</button></td></tr>`).join("")}</tbody></table></div>` : empty("Cruzamento aguardando correspondência", c.reason)}${c.accounts.length ? `<p class="dash-note">${esc(c.reason)}</p>` : ""}${c.available ? `<details class="dash-cross-coverage"><summary>Conferir cobertura do cruzamento</summary><p>${num(c.excludedOrders)} OS e ${num(c.excludedTrips)} deslocamentos não foram relacionados. ${num(c.unmatchedAccounts)} contas de deslocamentos não têm OS no período; ${num(c.ambiguousPeriods)} contas têm competências sobrepostas; ${num(c.missingKeys)} linhas não possuem empresa/conta e ${num(c.missingPeriods)} não possuem período suficiente para validar a correspondência temporal. Ausência de correspondência não significa ausência de atendimento.</p></details>` : ""}`;
   }
   function records(m) {
     const rows = [...m.rows].sort((a, z) => String(z.date || z.periodEnd || "").localeCompare(String(a.date || a.periodEnd || "")));
     const pages = Math.max(1, Math.ceil(rows.length / 20)); state.page = Math.min(state.page, pages - 1);
     const view = rows.slice(state.page * 20, (state.page + 1) * 20);
     if (!view.length) return empty("Nenhum registro neste recorte");
-    return `<div class="dash-table-scroll" tabindex="0" aria-label="Detalhamento dos dados filtrados"><table><thead><tr><th>Identificação</th><th>Descrição / cliente</th><th>Setor</th><th>Data / competência</th><th>Quantidade da fonte</th><th>Status</th></tr></thead><tbody>${view.map(r => `<tr><td>${esc(r.id)}</td><td><strong>${esc(r.title)}</strong><small>${esc(r.client)}</small></td><td>${esc(b.getSectors().find(s => s.id === r.sector)?.name || r.sector)}</td><td>${r.date ? date(r.date) : `${date(r.periodStart)} a ${date(r.periodEnd)}`}</td><td>${num(r.value)}</td><td>${esc(r.status)}</td></tr>`).join("")}</tbody></table></div><div class="dash-pagination"><button class="btn" data-dash-page="-1" ${state.page ? "" : "disabled"}>Anterior</button><span>${num(m.rows.length)} linhas · ${state.page + 1} / ${pages}</span><button class="btn" data-dash-page="1" ${state.page + 1 < pages ? "" : "disabled"}>Próxima</button></div>`;
+    return `<div class="dash-table-scroll" tabindex="0" aria-label="Detalhamento dos dados filtrados"><table><thead><tr><th>Identificação</th><th>Descrição / cliente</th><th>Setor</th><th>Data / competência</th><th>Quantidade da fonte</th><th>Status</th><th>Fonte original</th></tr></thead><tbody>${view.map(r => { const lot = b.getImports().find(l => l.id === r.lotId); return `<tr><td>${esc(r.id)}</td><td><strong>${esc(r.title)}</strong><small>${esc(r.client)}</small></td><td>${esc(b.getSectors().find(s => s.id === r.sector)?.name || r.sector)}</td><td>${r.date ? date(r.date) : `${date(r.periodStart)} a ${date(r.periodEnd)}`}</td><td>${num(r.value)}</td><td>${esc(r.status)}</td><td><details class="dash-raw"><summary>Ver linha ${esc(r.line || "—")}</summary><p>${esc(r.source || lot?.name || "Planilha importada")} · ${esc(lot?.sheet || "Aba não registrada")}</p><dl>${Object.entries(r.raw || {}).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v == null || v === "" ? "Não informado" : v)}</dd>`).join("")}</dl></details></td></tr>`; }).join("")}</tbody></table></div><div class="dash-pagination"><button class="btn" data-dash-page="-1" ${state.page ? "" : "disabled"}>Anterior</button><span>${num(m.rows.length)} linhas · ${state.page + 1} / ${pages}</span><button class="btn" data-dash-page="1" ${state.page + 1 < pages ? "" : "disabled"}>Próxima</button></div>`;
   }
-  function content(id, m) { return ({ insights, metrics: metricCards, trend, status: statusChart, sectors: sectorsChart, ranking, records }[id])(m); }
+  function content(id, m) { return ({ insights, metrics: metricCards, crossings, reading, trend, status: statusChart, sectors: sectorsChart, ranking, records }[id])(m); }
   function widget(id, m) {
     return `<article class="dash-widget" style="--dash-span:${config.sizes[id]}" data-dash-widget="${id}"><header class="dash-widget-head"><h2>${esc(blocks[id])}</h2><div>${id === "trend" ? `<select id="dash-chart" aria-label="Tipo de gráfico temporal"><option value="line" ${config.chart === "line" ? "selected" : ""}>Linhas</option><option value="bar" ${config.chart === "bar" ? "selected" : ""}>Barras</option></select>` : ""}${id === "ranking" ? `<select id="dash-dimension" aria-label="Agrupar principais registros">${Object.entries(dimensions).map(([k, v]) => `<option value="${k}" ${config.dimension === k ? "selected" : ""}>${v}</option>`).join("")}</select>` : ""}${state.editor ? `<button class="dash-icon-btn dash-drag" draggable="true" data-dash-drag="${id}" title="Arrastar bloco; use as setas de Personalizar no celular" aria-label="Arrastar ${esc(blocks[id])}">${icon("menu", 16)}</button>` : ""}<button class="dash-icon-btn" data-dash-focus="${id}" title="Ampliar ${esc(blocks[id])}" aria-label="Ampliar ${esc(blocks[id])}">${icon("expand", 17)}</button></div></header><div class="dash-widget-body">${content(id, m)}</div></article>`;
   }
   function editor(m) {
     if (!state.editor) return "";
-    const available = D.metricOptions(m.all);
+    const available = [...new Map(Object.keys(D.types).flatMap(type => D.metricOptions(m.all.filter(r => r.type === type))).map(metric => [metric.id, metric])).values()];
     return `<section class="dash-editor" aria-labelledby="dash-editor-title"><div class="dash-editor-head"><div><h2 id="dash-editor-title">Monte seu dashboard</h2><p>Escolha os blocos, a ordem, o tamanho e os indicadores. Seus ajustes ficam salvos.</p></div><button class="btn" data-dash-edit>Concluir ajustes</button></div><div class="dash-editor-grid"><div><h3>Blocos e ordem</h3>${config.order.map((id, i) => `<div class="dash-editor-row"><label><input type="checkbox" data-dash-visible="${id}" ${config.hidden.includes(id) ? "" : "checked"}>${esc(blocks[id])}</label><div><button class="dash-icon-btn" data-dash-move="${id}:-1" aria-label="Mover ${esc(blocks[id])} para cima" ${i === 0 ? "disabled" : ""}>↑</button><button class="dash-icon-btn" data-dash-move="${id}:1" aria-label="Mover ${esc(blocks[id])} para baixo" ${i === config.order.length - 1 ? "disabled" : ""}>↓</button><select data-dash-size="${id}" aria-label="Largura de ${esc(blocks[id])}">${[[4, "1/3"], [6, "Metade"], [8, "2/3"], [12, "Inteiro"]].map(([n, name]) => `<option value="${n}" ${config.sizes[id] === n ? "selected" : ""}>${name}</option>`).join("")}</select></div></div>`).join("")}<p class="dash-note">No celular, cada bloco ocupa a largura da tela. A ordem e a seleção continuam iguais.</p></div><div><h3>Indicadores visíveis</h3><div class="dash-metric-options">${available.map(x => `<label><input type="checkbox" data-dash-metric="${esc(x.id)}" ${config.metrics.includes(x.id) ? "checked" : ""}>${esc(x.id === "indicadores" ? "Linhas de indicadores" : x.label)}</label>`).join("")}</div><p class="dash-note">Indicadores sem dados no recorte não aparecem. Conclusão e duração exigem uma única fonte.</p><button class="btn" data-dash-reset-layout>Restaurar composição padrão</button></div></div></section>`;
   }
   function source(m) {
@@ -173,7 +187,7 @@
   function localPage() {
     const m = model();
     const selected = config.order.filter(id => !config.hidden.includes(id));
-    return `<section id="interactive-dashboard" class="interactive-dashboard ${state.editor ? "editing" : ""}" style="--dash-scale:${config.zoom / 100}" aria-label="Dashboard interativo"><header class="dash-head"><div><span class="eyebrow">POWER BI PAINEL COMPLETO / MICHELLE CÂNDIDO</span><h1>Dashboard</h1><p>Explore a operação. Escolha o que importa.</p></div><div class="dash-actions"><label class="dash-zoom-label" for="dash-zoom">Ampliação<select id="dash-zoom" aria-label="Ampliação do dashboard">${[80, 100, 125, 150].map(n => `<option value="${n}" ${config.zoom === n ? "selected" : ""}>${n}%</option>`).join("")}</select></label><button class="btn" data-dash-edit aria-expanded="${state.editor}">${icon("settings")} ${state.editor ? "Concluir ajustes" : "Personalizar"}</button><button class="btn btn-primary" data-dash-fullscreen aria-pressed="${state.expanded}">${icon(state.expanded ? "close" : "expand")} ${state.expanded ? "Sair de tela cheia" : "Tela cheia"}</button></div></header><details class="dash-filter-panel" ${state.filtersOpen ? "open" : ""}><summary>Filtros e período <span>${num(m.rows.length)} linhas no recorte</span></summary><div class="dash-filters"><label>Setor<select id="dash-sector"><option value="geral">Todos os setores</option>${b.getSectors().map(s => `<option value="${s.id}" ${config.sector === s.id ? "selected" : ""}>${esc(s.name)}</option>`).join("")}</select></label><label>Fonte<select id="dash-type"><option value="all">Todas · totais separados</option>${Object.entries(D.types).map(([k, label]) => `<option value="${k}" ${config.type === k ? "selected" : ""}>${esc(label)}</option>`).join("")}</select></label><label>Status<select id="dash-status"><option value="all">Todos os status</option>${statuses.map(s => `<option ${config.status === s ? "selected" : ""}>${esc(s)}</option>`).join("")}</select></label><label>Período<select id="dash-period">${[["all", "Todo o histórico"], ["7", "Últimos 7 dias da fonte"], ["30", "Últimos 30 dias da fonte"], ["90", "Últimos 90 dias da fonte"], ["365", "Últimos 12 meses da fonte"]].map(([k, text]) => `<option value="${k}" ${String(config.period) === k ? "selected" : ""}>${text}</option>`).join("")}</select></label><label>De<input id="dash-start" type="date" value="${esc(config.start)}"></label><label>Até<input id="dash-end" type="date" value="${esc(config.end)}"></label><form class="dash-search" id="dash-search"><label>Buscar nos dados<input id="dash-query" type="search" maxlength="200" placeholder="Cliente, descrição, conta..." value="${esc(config.query)}"></label><button class="dash-icon-btn" aria-label="Aplicar busca no dashboard">${icon("search")}</button></form><button class="btn" data-dash-clear>Limpar filtros</button></div></details><div class="dash-context" role="status"><span>${m.start || m.end ? `${date(m.start)} a ${date(m.end)}` : "Todo o histórico"} · ${num(m.rows.length)} linhas · dados até ${date(m.latest)}</span>${config.member ? `<button class="btn" data-dash-clear-member>Remover filtro: ${esc(config.member.value)} ×</button>` : ""}${b.getState().query ? `<span>Busca global: ${esc(b.getState().query)}</span>` : ""}<button class="btn" data-dash-export ${m.rows.length ? "" : "disabled"}>${icon("down", 16)} Exportar este recorte</button></div>${editor(m)}<div class="dash-grid">${selected.map(id => widget(id, m)).join("")}</div>${source(m)}${state.focus ? `<dialog id="dashboard-focus" class="dash-focus-dialog" aria-labelledby="dash-focus-title"><header><div><span class="eyebrow">DASHBOARD / MICHELLE CÂNDIDO</span><h2 id="dash-focus-title">${esc(blocks[state.focus])}</h2><p>${num(m.rows.length)} linhas · filtros atuais</p></div><button class="btn" data-dash-close-focus>Fechar ampliação ${icon("close", 17)}</button></header><div class="dash-focus-body">${content(state.focus, m)}</div></dialog>` : ""}</section>`;
+    return `<section id="interactive-dashboard" class="interactive-dashboard ${state.editor ? "editing" : ""}" style="--dash-scale:${config.zoom / 100}" aria-label="Dashboard interativo"><header class="dash-head"><div><span class="eyebrow">POWER BI PAINEL COMPLETO / MICHELLE CÂNDIDO</span><h1>Dashboard</h1><p>Explore a operação. Escolha o que importa.</p></div><div class="dash-actions"><label class="dash-zoom-label" for="dash-zoom">Ampliação<select id="dash-zoom" aria-label="Ampliação do dashboard">${[80, 100, 125, 150].map(n => `<option value="${n}" ${config.zoom === n ? "selected" : ""}>${n}%</option>`).join("")}</select></label><button class="btn" data-dash-edit aria-expanded="${state.editor}">${icon("settings")} ${state.editor ? "Concluir ajustes" : "Personalizar"}</button><button class="btn btn-primary" data-dash-fullscreen aria-pressed="${state.expanded}">${icon(state.expanded ? "close" : "expand")} ${state.expanded ? "Sair de tela cheia" : "Tela cheia"}</button></div></header><details class="dash-filter-panel" ${state.filtersOpen ? "open" : ""}><summary>Filtros e período <span>${num(m.rows.length)} linhas no recorte</span></summary><div class="dash-filters"><label>Setor<select id="dash-sector"><option value="geral">Todos os setores</option>${b.getSectors().map(s => `<option value="${s.id}" ${config.sector === s.id ? "selected" : ""}>${esc(s.name)}</option>`).join("")}</select></label><label>Fonte<select id="dash-type"><option value="all">Todas · totais separados</option>${Object.entries(D.types).map(([k, label]) => `<option value="${k}" ${config.type === k ? "selected" : ""}>${esc(label)}</option>`).join("")}</select></label><label>Status<select id="dash-status"><option value="all">Todos os status</option>${statuses.map(s => `<option ${config.status === s ? "selected" : ""}>${esc(s)}</option>`).join("")}</select></label><label>Período<select id="dash-period">${[["all", "Todo o histórico"], ["7", "Últimos 7 dias da fonte"], ["30", "Últimos 30 dias da fonte"], ["90", "Últimos 90 dias da fonte"], ["365", "Últimos 12 meses da fonte"]].map(([k, text]) => `<option value="${k}" ${String(config.period) === k ? "selected" : ""}>${text}</option>`).join("")}</select></label><label>De<input id="dash-start" type="date" value="${esc(config.start)}"></label><label>Até<input id="dash-end" type="date" value="${esc(config.end)}"></label><form class="dash-search" id="dash-search"><label>Buscar nos dados<input id="dash-query" type="search" maxlength="200" placeholder="Cliente, descrição, conta..." value="${esc(config.query)}"></label><button class="dash-icon-btn" aria-label="Aplicar busca no dashboard">${icon("search")}</button></form><button class="btn" data-dash-clear>Limpar filtros</button></div></details><div class="dash-context" role="status"><span>${m.start || m.end ? `${date(m.start)} a ${date(m.end)}` : "Todo o histórico"} · ${num(m.rows.length)} linhas · dados até ${date(m.latest)}</span>${config.accountKey ? `<button class="btn" data-dash-clear-account>Remover conta: ${esc(JSON.parse(config.accountKey).join(" / "))} ×</button>` : ""}${config.member ? `<button class="btn" data-dash-clear-member>Remover filtro: ${esc(config.member.value)} ×</button>` : ""}${b.getState().query ? `<span>Busca global: ${esc(b.getState().query)}</span>` : ""}<button class="btn" data-dash-export ${m.rows.length ? "" : "disabled"}>${icon("down", 16)} Exportar este recorte</button></div>${editor(m)}<div class="dash-grid">${selected.map(id => widget(id, m)).join("")}</div>${source(m)}${state.focus ? `<dialog id="dashboard-focus" class="dash-focus-dialog" aria-labelledby="dash-focus-title"><header><div><span class="eyebrow">DASHBOARD / MICHELLE CÂNDIDO</span><h2 id="dash-focus-title">${esc(blocks[state.focus])}</h2><p>${num(m.rows.length)} linhas · filtros atuais</p></div><button class="btn" data-dash-close-focus>Fechar ampliação ${icon("close", 17)}</button></header><div class="dash-focus-body">${content(state.focus, m)}</div></dialog>` : ""}</section>`;
   }
   function connection() {
     if (!state.connectOpen) return "";
@@ -228,7 +242,7 @@
     const values = { "dash-sector": "sector", "dash-type": "type", "dash-status": "status", "dash-period": "period", "dash-chart": "chart", "dash-dimension": "dimension", "dash-zoom": "zoom" };
     Object.entries(values).forEach(([id, key]) => document.getElementById(id)?.addEventListener("change", e => {
       const patch = { [key]: key === "zoom" ? Number(e.target.value) : e.target.value };
-      if (["sector", "type", "dimension"].includes(key)) patch.member = null;
+      if (["sector", "type", "dimension"].includes(key)) { patch.member = null; patch.accountKey = null; }
       if (key === "period") patch.start = patch.end = "";
       update(patch, id);
     }));
@@ -247,7 +261,7 @@
     root.querySelectorAll("[data-dash-metric]").forEach(el => el.addEventListener("change", () => { const metrics = config.metrics.filter(x => x !== el.dataset.dashMetric); if (el.checked) metrics.push(el.dataset.dashMetric); update({ metrics }); }));
     root.querySelectorAll("[data-dash-size]").forEach(el => el.addEventListener("change", () => update({ sizes: { ...config.sizes, [el.dataset.dashSize]: Number(el.value) } })));
     root.addEventListener("click", e => {
-      const el = e.target.closest("[data-dash-connect],[data-dash-disconnect],[data-dash-engine],[data-dash-edit],[data-dash-fullscreen],[data-dash-focus],[data-dash-close-focus],[data-dash-clear],[data-dash-clear-member],[data-dash-move],[data-dash-status],[data-dash-sector],[data-dash-member],[data-dash-page],[data-dash-reset-layout],[data-dash-export]");
+      const el = e.target.closest("[data-dash-connect],[data-dash-disconnect],[data-dash-engine],[data-dash-edit],[data-dash-fullscreen],[data-dash-focus],[data-dash-close-focus],[data-dash-clear],[data-dash-clear-member],[data-dash-clear-account],[data-dash-account],[data-dash-insight-type],[data-dash-move],[data-dash-status],[data-dash-sector],[data-dash-member],[data-dash-page],[data-dash-reset-layout],[data-dash-export]");
       if (!el) return;
       if (el.hasAttribute("data-dash-connect")) { state.connectOpen = !state.connectOpen; b.render(); if (state.connectOpen) document.getElementById("dash-powerbi-url")?.focus({ preventScroll: true }); return; }
       if (el.hasAttribute("data-dash-disconnect")) { state.connectOpen = false; update({ reportUrl: "", reportView: "local" }); return; }
@@ -256,7 +270,10 @@
       if (el.hasAttribute("data-dash-fullscreen")) { state.expanded ? collapse() : expand(); return; }
       if (el.dataset.dashFocus) { state.focus = el.dataset.dashFocus; b.render(); return; }
       if (el.hasAttribute("data-dash-close-focus")) { const id = state.focus; state.focus = null; b.render(); document.querySelector(`[data-dash-focus="${id}"]`)?.focus(); return; }
-      if (el.hasAttribute("data-dash-clear")) { const d = defaults(); b.getState().query = ""; update({ sector: d.sector, type: d.type, status: d.status, period: d.period, start: "", end: "", query: "", member: null }); return; }
+      if (el.hasAttribute("data-dash-clear")) { const d = defaults(); b.getState().query = ""; update({ sector: d.sector, type: d.type, status: d.status, period: d.period, start: "", end: "", query: "", member: null, accountKey: null }); return; }
+      if (el.dataset.dashAccount) { state.focus = null; update({ accountKey: el.dataset.dashAccount, member: null }); return; }
+      if (el.hasAttribute("data-dash-clear-account")) { update({ accountKey: null }); return; }
+      if (el.dataset.dashInsightType) { state.focus = null; update({ type: el.dataset.dashInsightType, accountKey: null, member: null }); return; }
       if (el.hasAttribute("data-dash-clear-member")) { update({ member: null }); return; }
       if (el.dataset.dashMove) { const [id, delta] = el.dataset.dashMove.split(":"); move(id, Number(delta)); return; }
       if (el.dataset.dashStatus) { update({ status: config.status === el.dataset.dashStatus ? "all" : el.dataset.dashStatus }); return; }
@@ -288,6 +305,6 @@
     else if (state.editor) { state.editor = false; b.render(); }
   });
   document.addEventListener("fullscreenchange", () => { if (state.native && !document.fullscreenElement) collapse(); });
-  window.MichelleDashboard = { page, wire, model, expand, collapse, getConfig: () => structuredClone(config), getState: () => ({ ...state }) };
+  window.MichelleDashboard = { page, wire, model, expand, collapse, openSector(sector) { config = { ...config, sector, type: "all", status: "all", period: "all", start: "", end: "", query: "", member: null, accountKey: null, reportView: "local" }; b.getState().query = ""; persist(); b.navigate("dashboard"); }, getConfig: () => structuredClone(config), getState: () => ({ ...state }) };
   b.render();
 })();
