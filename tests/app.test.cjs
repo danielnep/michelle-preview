@@ -7,6 +7,130 @@ const { JSDOM, VirtualConsole } = require("jsdom");
 const { IDBFactory, IDBKeyRange } = require("fake-indexeddb");
 const X = require("../vendor/xlsx.full.min.js");
 const root = path.join(__dirname, "..");
+test("Power BI seguro: validação do link, persistência, troca de origem e tela cheia sem recriar relatório", async () => {
+  const t = await boot(), b = t.w.MichelleBridge;
+  b.navigate("dashboard");
+  t.click("[data-dash-connect]");
+  const submit = value => {
+    t.w.document.querySelector("#dash-powerbi-url").value = value;
+    t.w.document.querySelector("#dash-powerbi-form").dispatchEvent(new t.w.Event("submit", { bubbles: true, cancelable: true }));
+  };
+  const report = "https://app.powerbi.com/reportEmbed?reportId=aaaaaaaa-0000-1111-2222-bbbbbbbbbbbb";
+  for (const url of ["javascript:alert(1)", report.replace("app.powerbi.com", "app.powerbi.com.evil.test"), report + "&access_token=secret", "https://app.powerbi.com/reportEmbed?reportId=bad"]) {
+    submit(url);
+    assert.match(t.w.document.querySelector("#dash-powerbi-error").textContent, /link seguro/);
+    assert.equal(t.w.MichelleDashboard.getConfig().reportUrl, "");
+  }
+  submit(report + "&pageName=ReportSection2");
+  const frame = t.w.document.querySelector(".dash-native-report iframe");
+  assert.ok(frame);
+  assert.equal(new URL(frame.src).searchParams.get("autoAuth"), "true");
+  assert.equal(new URL(frame.src).searchParams.get("pageName"), "ReportSection2");
+  await t.w.MichelleDashboard.expand();
+  assert.equal(t.w.document.querySelector(".dash-native-report iframe"), frame);
+  assert.ok(t.w.document.body.classList.contains("dashboard-expanded"));
+  t.w.MichelleDashboard.collapse();
+  assert.equal(t.w.document.querySelector(".dash-native-report iframe"), frame);
+  const reopened = await boot(t.db, t.w.localStorage.getItem("michelle.dashboard.v1"));
+  reopened.w.MichelleBridge.navigate("dashboard");
+  assert.ok(reopened.w.document.querySelector(".dash-native-report iframe"));
+  t.click('[data-dash-engine="local"]');
+  assert.ok(t.w.document.querySelector(".dash-grid"));
+  t.click("[data-dash-connect]");
+  t.click("[data-dash-disconnect]");
+  assert.equal(t.w.MichelleDashboard.getConfig().reportUrl, "");
+  assert.equal(t.errors.length, 0);
+  t.w.close(); reopened.w.close();
+});
+function dashboardLots(t) {
+  const row = (id, sector, type, date, status, extra = {}) => ({ id, sector, type, date, status, value: 1, title: "Atendimento " + id, client: "Conta " + id, ...extra });
+  const lots = [
+    { id: "dash-orders", name: "ordens.xlsx", type: "ordens", sector: "tec", created: "2026-10-01T12:00:00Z", rows: [row("A", "tec", "ordens", "2026-09-01", "Pendente"), row("B", "tec", "ordens", "2026-09-28", "Concluído")] },
+    { id: "dash-calls", name: "ligacoes.xlsx", type: "ligacoes", sector: "port", created: "2026-10-02T12:00:00Z", rows: [row("C", "port", "ligacoes", "2026-09-28", "Concluído", { duration: 2 }), row("D", "port", "ligacoes", "2026-09-28", "Não atendido", { duration: 4 })] },
+    { id: "dash-cuc", name: "cuc.xlsx", type: "cuc", sector: "coi", created: "2026-10-03T12:00:00Z", rows: [row("E", "coi", "cuc", null, "Não informado", { value: 100, periodStart: "2026-09-01", periodEnd: "2026-09-30" })] },
+  ];
+  t.w.MichelleBridge.getImports().push(...lots);
+  return lots;
+}
+test("dashboard: filtros de fonte, status e competência preservam as unidades e o período real", async () => {
+  const t = await boot(), b = t.w.MichelleBridge;
+  dashboardLots(t); b.navigate("dashboard");
+  let m = t.w.MichelleDashboard.model();
+  assert.equal(m.rows.length, 5);
+  assert.equal(m.metrics.find(x => x.id === "cuc").value, 100);
+  assert.ok(!m.metrics.some(x => ["done", "pending", "rate", "duration"].includes(x.id)));
+  t.input("#dash-type", "ordens");
+  m = t.w.MichelleDashboard.model();
+  assert.equal(m.rows.length, 2);
+  assert.equal(m.metrics.find(x => x.id === "rate").value, 50);
+  t.input("#dash-period", "7");
+  m = t.w.MichelleDashboard.model();
+  assert.equal(m.end, "2026-09-28");
+  assert.equal(m.rows.length, 1);
+  t.input("#dash-status", "Pendente");
+  assert.equal(t.w.MichelleDashboard.model().rows.length, 0);
+  t.click("[data-dash-clear]");
+  t.input("#dash-type", "cuc");
+  t.input("#dash-start", "2026-09-02");
+  assert.equal(t.w.MichelleDashboard.model().rows.length, 0);
+  t.input("#dash-start", "2026-09-01");
+  t.input("#dash-end", "2026-09-30");
+  assert.equal(t.w.MichelleDashboard.model().metrics.find(x => x.id === "cuc").value, 100);
+  t.click("[data-dash-clear]");
+  t.click('[data-dash-sector="tec"]');
+  assert.equal(t.w.MichelleDashboard.model().rows.length, 2);
+  assert.equal(t.errors.length, 0); t.w.close();
+});
+test("dashboard: composição, indicadores, filtros e ampliação sobrevivem à reabertura", async () => {
+  const t = await boot(), b = t.w.MichelleBridge;
+  dashboardLots(t); b.navigate("dashboard");
+  t.click("[data-dash-edit]");
+  t.click('[data-dash-visible="status"]');
+  t.input('[data-dash-size="trend"]', "12");
+  t.click('[data-dash-move="ranking:-1"]');
+  t.click('[data-dash-metric="records"]');
+  t.input("#dash-zoom", "150");
+  t.input("#dash-type", "ordens");
+  const preference = t.w.localStorage.getItem("michelle.dashboard.v1");
+  const reopened = await boot(t.db, preference);
+  reopened.w.MichelleBridge.navigate("dashboard");
+  const c = reopened.w.MichelleDashboard.getConfig();
+  assert.ok(c.hidden.includes("status"));
+  assert.equal(c.sizes.trend, 12);
+  assert.ok(c.order.indexOf("ranking") < c.order.indexOf("sectors"));
+  assert.ok(!c.metrics.includes("records"));
+  assert.equal(c.zoom, 150); assert.equal(c.type, "ordens");
+  assert.equal(reopened.w.document.querySelector('[data-dash-widget="status"]'), null);
+  assert.equal(t.errors.length + reopened.errors.length, 0);
+  t.w.close(); reopened.w.close();
+});
+test("dashboard: tela cheia conserva filtros, amplia blocos e oferece alternativa quando a API falha", async () => {
+  const t = await boot(), b = t.w.MichelleBridge, d = t.w.document;
+  dashboardLots(t); b.navigate("dashboard");
+  let fullscreen = null;
+  Object.defineProperty(d, "fullscreenElement", { get: () => fullscreen });
+  d.documentElement.requestFullscreen = async () => { fullscreen = d.documentElement; };
+  d.exitFullscreen = async () => { fullscreen = null; };
+  await t.w.MichelleDashboard.expand();
+  assert.equal(fullscreen, d.documentElement);
+  t.input("#dash-type", "ordens");
+  assert.equal(fullscreen, d.documentElement);
+  assert.ok(d.body.classList.contains("dashboard-expanded"));
+  assert.equal(t.w.MichelleDashboard.model().rows.length, 2);
+  t.click('[data-dash-focus="trend"]');
+  assert.ok(d.querySelector("#dashboard-focus").open);
+  t.w.dispatchEvent(new t.w.KeyboardEvent("keydown", { key: "Escape" }));
+  assert.equal(d.querySelector("#dashboard-focus"), null);
+  t.w.MichelleDashboard.collapse();
+  assert.ok(!d.body.classList.contains("dashboard-expanded"));
+  d.documentElement.requestFullscreen = async () => { throw Error("Sem permissão"); };
+  await t.w.MichelleDashboard.expand();
+  assert.ok(d.body.classList.contains("dashboard-expanded"));
+  assert.equal(t.w.MichelleDashboard.getState().native, false);
+  b.navigate("overview");
+  assert.ok(!d.body.classList.contains("dashboard-expanded"));
+  assert.equal(t.errors.length, 0); t.w.close();
+});
 const blobText = (w, blob) =>
   new Promise((resolve, reject) => {
     const reader = new w.FileReader();
@@ -21,7 +145,7 @@ const wait = async (fn) => {
   }
   throw Error("Operação não concluiu");
 };
-async function boot(db = new IDBFactory()) {
+async function boot(db = new IDBFactory(), dashboardPreference) {
   const errors = [],
     vc = new VirtualConsole();
   vc.on("jsdomError", (e) => errors.push(e));
@@ -35,6 +159,7 @@ async function boot(db = new IDBFactory()) {
     },
   );
   const w = dom.window;
+  if (dashboardPreference) w.localStorage.setItem("michelle.dashboard.v1", dashboardPreference);
   Object.defineProperty(w, "indexedDB", { value: db });
   w.IDBKeyRange = IDBKeyRange;
   Object.defineProperty(w, "crypto", { value: webcrypto });
@@ -61,6 +186,7 @@ async function boot(db = new IDBFactory()) {
     "pptx.js",
     "app.js",
     "studio.js",
+    "dashboard.js",
   ])
     w.eval(fs.readFileSync(path.join(root, file), "utf8"));
   await wait(

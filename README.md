@@ -1,4 +1,4 @@
-# MC Power BI Painel Completo · Horizon
+# Power BI painel completo / Michelle Cândido
 
 Aplicativo operacional de Michelle Cândido. A interface e os cinco modelos de apresentação existentes foram preservados e integrados a um fluxo de dados real.
 
@@ -8,6 +8,8 @@ Aplicativo operacional de Michelle Cândido. A interface e os cinco modelos de a
 - Arquivos idênticos são bloqueados. Sobreposição exige escolha explícita entre atualizar o mesmo período ou acumular. Ordens de serviço são reconciliadas por setor, empresa e número. Arquivar um lote retira seus dados dos cálculos e permite reativação.
 - Totais de CUC e deslocamentos usam as quantidades da fonte. Dados sem dia exigem competência e só participam dos filtros que abrangem esse período inteiro. Cancelamentos e ligações não atendidas ficam separados das pendências.
 - Indicadores, tabelas, gráficos e insights determinísticos usam os dados ativos. Metas são configuradas pelo usuário. Limitações de status, datas e cobertura são informadas.
+- **Visualizar dashboard** abre uma página analítica independente do Estúdio: filtros por setor, fonte, status, período e busca; gráficos com seleção por toque; exportação do recorte e detalhamento paginado. Personalizar permite escolher indicadores e blocos, reorganizar e ajustar larguras. A composição e os filtros são preservados. Há ampliação de 80% a 150%, foco individual em cada gráfico e tela cheia, com tela dedicada quando o navegador não permite Fullscreen API. No celular, os blocos ficam empilhados e os controles se adaptam desde 320 px.
+- **Conectar Microsoft Power BI** aceita o link seguro de incorporação de um relatório existente (`app.powerbi.com/reportEmbed`), preserva a autenticação Microsoft e oferece o relatório nativo, seus filtros e suas páginas no dashboard. A conexão é opcional e separada das planilhas importadas.
 - Relatórios são gerados como um resultado consistente. A exportação XLSX contém os mesmos registros e indicadores. Filtros e novas importações invalidam o resultado anterior.
 - Estúdio: cinco modelos, seleção de dados/indicadores, insights após os dados, seis temas (Grafite padrão), personalização, elementos adicionais e posicionamento por arraste, setas ou coordenadas. Componentes do modelo podem ser posicionados, mas não excluídos.
 - Biblioteca unificada de apresentações criadas e importadas; salvamento automático, edição, reabertura e backup completo.
@@ -24,6 +26,8 @@ Importações e apresentações antigas do localStorage são migradas sem apagar
 
 A conversa com IA externa aguarda integração. As análises operacionais e as consultas locais funcionam sem essa integração.
 
+O dashboard de planilhas é uma implementação deste aplicativo; ele não cria arquivos PBIX nem envia dados ao Microsoft Power BI. O modo nativo depende do link de um relatório publicado no serviço, das permissões e do licenciamento do usuário. O layout interno no celular depende do relatório original. A incorporação segue a [documentação oficial da Microsoft](https://learn.microsoft.com/en-us/power-bi/collaborate-share/service-embed-secure); não recebe tokens de acesso no formulário e não amplia permissões de visualização.
+
 A renderização de PPTX é local, não é o motor do Microsoft PowerPoint. Fontes, quebras de linha, estilos de gráficos e algumas formas podem variar. Gradientes usam a primeira cor; SmartArt, mídias incorporadas, imagens EMF/WMF e animações internas não têm reprodução completa. O aplicativo apresenta avisos sobre essas limitações. Os originais permanecem intactos. Não há promessa de fidelidade visual para todos os arquivos.
 
 ## Envio de arquivos e aparência
@@ -32,13 +36,13 @@ A Visão Geral começa com o Dashboard central. O botão **Adicionar dados** abr
 
 O quadro de envio aceita múltiplos arquivos por seleção ou arrastar e soltar. Cada planilha mantém sua configuração de aba, setor, tipo, colunas e competência. O botão de importação processa os arquivos independentes e deixa erros visíveis para correção. A lista no quadro mantém arquivos importados, quantidade de linhas, setor e botões de consulta e download do original, inclusive após recarregar.
 
-A identidade usa os arquivos oficiais fornecidos: logo transparente centralizada no cabeçalho e no menu, símbolo H, favicon, ícones de atalho e imagem de compartilhamento. A paleta escura usa preto e cinza neutro, branco e azul celeste nas ações. O modo escuro é o padrão para novos acessos; preferências já salvas são preservadas. O modo claro/escuro é persistido, a navegação móvel respeita a área segura e o menu pode ser fechado por botão ou Esc. Os resumos de insights usam três colunas no computador e uma no celular, com tipografia e foco de teclado consistentes. A aparência do aplicativo não modifica os temas das apresentações. A busca de registros fica no menu e está disponível também no celular, com indicação do filtro ativo e ação para limpar.
+A identificação no cabeçalho, menu e rodapé é “Power BI painel completo / Michelle Cândido”, sem logotipos ou créditos de desenvolvimento. O favicon, os ícones de atalho e a imagem de compartilhamento usam um símbolo neutro de indicadores. A paleta escura usa preto e cinza neutro, branco e azul celeste nas ações. O modo escuro é o padrão para novos acessos; preferências já salvas são preservadas. O modo claro/escuro é persistido, a navegação móvel respeita a área segura e o menu pode ser fechado por botão ou Esc. Os resumos de insights usam três colunas no computador e uma no celular, com tipografia e foco de teclado consistentes. A aparência do aplicativo não modifica os temas das apresentações. A busca de registros fica no menu e está disponível também no celular, com indicação do filtro ativo e ação para limpar.
 
 O manifesto fornece o nome e os ícones para atalhos do sistema. Ele não adiciona funcionamento offline. As referências de design usadas são as diretrizes oficiais de [modo escuro da Apple](https://developer.apple.com/design/human-interface-guidelines/dark-mode), [layouts adaptáveis do Android](https://developer.android.com/develop/adaptive-apps/guides/use-window-size-classes), [papéis de cores do Material Design](https://m3.material.io/styles/color/roles) e [WCAG 2.2](https://www.w3.org/TR/WCAG22/).
 
 ## Código e testes
 
-`app.js` mantém navegação, páginas, gráficos e assistente. `data-core.js` concentra normalização, cálculos e persistência. `studio.js` mantém os modelos e a edição. `pptx.js` lê PowerPoint. Bibliotecas de produção ficam em `vendor/`, com suas licenças; não há instalação necessária para abrir o painel por HTTP/HTTPS.
+`app.js` mantém navegação, páginas, gráficos e assistente. `dashboard.js` e `dashboard.css` implementam a análise interativa e a incorporação opcional do Power BI. `data-core.js` concentra normalização, cálculos e persistência. `studio.js` mantém os modelos e a edição. `pptx.js` lê PowerPoint. Bibliotecas de produção ficam em `vendor/`, com suas licenças; não há instalação necessária para abrir o painel por HTTP/HTTPS.
 
 Para executar os testes:
 
@@ -47,6 +51,6 @@ npm ci
 npm test
 ```
 
-Os quinze testes cobrem importação, totais/status, datas e competência, deduplicação/versionamento, filtros, geração/exportação de relatórios, persistência, edição/posicionamento de slides, teclado e leitura de um PPTX real com imagem e gráfico. O armazenamento e o DOM são exercitados com fake-indexeddb e jsdom. Testes de layout e tela cheia em navegador devem ser registrados separadamente; estes testes não substituem uma validação visual.
+Os dezenove testes cobrem importação, totais/status, datas e competência, deduplicação/versionamento, filtros, geração/exportação de relatórios, persistência, composição do dashboard, tela cheia e sua alternativa, validação e persistência do link Power BI, edição/posicionamento de slides, teclado e leitura de um PPTX real com imagem e gráfico. O armazenamento e o DOM são exercitados com fake-indexeddb e jsdom. A conferência visual em navegador inclui 320 px sem transbordamento horizontal e a tela dedicada do dashboard. Um relatório nativo real não pôde ser validado sem seu link e acesso Microsoft.
 
 `tests/responsive.html` exibe o aplicativo real em janelas de 390 × 844 e 1280 × 900, com seletores de largura entre 320 e 1600 px para conferência visual. Reabrir essa página carrega a versão atual do painel nos quadros de teste. A apresentação de teste não contém dados de clientes. As planilhas operacionais usadas na reconciliação permanecem fora deste repositório público.

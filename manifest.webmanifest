@@ -1,7 +1,7 @@
 {
   "id": "./",
-  "name": "MC Power BI Painel Completo | Horizon",
-  "short_name": "Horizon MC",
+  "name": "Power BI painel completo / Michelle Cândido",
+  "short_name": "Painel Michelle",
   "description": "Indicadores, análises, relatórios e apresentações da operação.",
   "lang": "pt-BR",
   "start_url": "./#/geral",
@@ -11,13 +11,13 @@
   "theme_color": "#080808",
   "icons": [
     {
-      "src": "assets/icon-192.png",
+      "src": "assets/icon-192.png?v=3.2.3",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "assets/icon-512.png",
+      "src": "assets/icon-512.png?v=3.2.3",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"

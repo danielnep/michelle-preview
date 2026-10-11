@@ -39,6 +39,7 @@
     spark:
       '<path d="m12 3 1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="m19 16 .9 2.1L22 19l-2.1.9L19 22l-.9-2.1L16 19l2.1-.9z"/>',
     close: '<path d="M5 5l14 14M19 5 5 19"/>',
+    expand: '<path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/>',
     moon: '<path d="M20.5 13a9 9 0 0 1-9.5-9.5A9 9 0 1 0 20.5 13z"/>',
     sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 1.5 1.5M5 19l1.5-1.5M17.5 6.5 1.5-1.5"/>',
   };
@@ -239,14 +240,16 @@
       ? sec.name
       : {
           geral: "Visão Geral",
+          dashboard: "Dashboard",
           data: "Enviar Dados Excel",
           report: "Relatórios",
           insight: "Insights e análises",
           present: "Estúdio de apresentações",
           settings: "Configurações",
         }[state.page] || "Visão geral";
-    return `<div class="app"><div class="backdrop ${state.sidebar ? "open" : ""}" data-close="1"></div><aside id="panel-navigation" class="sidebar ${state.sidebar ? "open" : ""}" aria-label="Navegação do painel"><button type="button" class="sidebar-close small-icon-btn" data-close-nav aria-label="Fechar menu">${icon("close", 20)}</button><div class="brand"><div class="brand-logo-plate"><img src="assets/horizon-logo.png?v=3.2.2" srcset="assets/horizon-logo.png?v=3.2.2 1200w, assets/horizon-logo-hd.png 2172w" sizes="220px" alt="Horizon" class="brand-logo" width="1200" height="400"></div><div class="brand-sub">OPERAÇÕES E INDICADORES</div></div><label class="searchbox sidebar-search">${icon("search", 18)}<input aria-label="Pesquisar registros" id="global-search" placeholder="Buscar registros..." value="${esc(state.query)}" /></label><div class="nav-scroll"><div class="nav-group"><div class="side-label">PRINCIPAL</div>${nav("geral", "Visão Geral")}${nav("present", "Estúdio de Apresentações")}</div><div class="nav-group"><div class="side-label">DEPARTAMENTOS</div>${sectors.map((s) => nav(s.id, s.name)).join("")}</div><div class="nav-group"><div class="side-label">GESTÃO E DADOS</div>${nav("data", "Enviar Dados Excel")}${nav("report", "Relatórios")}${nav("insight", "Insights e análises")}${nav("settings", "Configurações")}</div></div><div class="side-bottom"><div class="side-status"><span class="online-dot"></span> ${state.ready ? "Dados salvos neste navegador" : "Carregando armazenamento"}</div><div class="side-credit">MC Power BI Painel Completo • v3.2.2</div></div></aside><div class="main"><header class="topbar"><button aria-label="${state.sidebar ? "Fechar menu" : "Abrir menu"}" aria-expanded="${state.sidebar}" aria-controls="panel-navigation" class="small-icon-btn mob-toggle" data-toggle="1">${icon("menu", 20)}</button><div class="header-identity"><div class="crumb"><span class="owner-name">Michelle Cândido<small>Gerente Central de Operações Integradas</small></span><span class="app-caption">MC Power BI Painel Completo<span class="crumb-page"> · ${esc(title)}</span></span></div></div><button type="button" class="header-brand" data-nav="geral" aria-label="Horizon · Visão Geral"><img src="assets/horizon-logo.png?v=3.2.2" srcset="assets/horizon-logo.png?v=3.2.2 1200w, assets/horizon-logo-hd.png 2172w" sizes="180px" alt="Horizon" width="1200" height="400"></button><div class="head-actions">${themeButton()}<button aria-label="Estúdio de Apresentações" class="btn studio-top-button" data-nav="present">${icon("report", 15)} Estúdio de Apresentações</button><button type="button" class="top-assistant" data-assistant-open="1" aria-label="Abrir assistente">${icon("spark", 15)} <span>Assistente</span></button><span class="badge info" style="white-space:nowrap">${imports.length ? "Dados reais" : "Aguardando dados"}</span><div class="avatar">M</div></div></header><main class="content"><div class="print-header">POWER BI PAINEL COMPLETO | MICHELLE</div>${body()}</main><footer class="footer"><span>MC Power BI Painel Completo © 2026 • ${state.ready ? "Dados salvos neste navegador" : "Carregando armazenamento"}</span><span class="development-credit"><img src="assets/horizon-symbol.png" alt="" width="24" height="24">Desenvolvido por Horizon</span></footer></div><nav class="mobile-nav" aria-label="Navegação principal">${[
+    return `<div class="app"><div class="backdrop ${state.sidebar ? "open" : ""}" data-close="1"></div><aside id="panel-navigation" class="sidebar ${state.sidebar ? "open" : ""}" aria-label="Navegação do painel"><button type="button" class="sidebar-close small-icon-btn" data-close-nav aria-label="Fechar menu">${icon("close", 20)}</button><div class="brand"><strong class="panel-brand-title">Power BI painel completo</strong><span class="panel-brand-owner">Michelle Cândido</span></div><label class="searchbox sidebar-search">${icon("search", 18)}<input aria-label="Pesquisar registros" id="global-search" placeholder="Buscar registros..." value="${esc(state.query)}" /></label><div class="nav-scroll"><div class="nav-group"><div class="side-label">PRINCIPAL</div>${nav("geral", "Visão Geral")}${nav("dashboard", "Visualizar dashboard")}${nav("present", "Estúdio de Apresentações")}</div><div class="nav-group"><div class="side-label">DEPARTAMENTOS</div>${sectors.map((s) => nav(s.id, s.name)).join("")}</div><div class="nav-group"><div class="side-label">GESTÃO E DADOS</div>${nav("data", "Enviar Dados Excel")}${nav("report", "Relatórios")}${nav("insight", "Insights e análises")}${nav("settings", "Configurações")}</div></div><div class="side-bottom"><div class="side-credit">Power BI painel completo / Michelle Cândido</div></div></aside><div class="main"><header class="topbar"><button aria-label="${state.sidebar ? "Fechar menu" : "Abrir menu"}" aria-expanded="${state.sidebar}" aria-controls="panel-navigation" class="small-icon-btn mob-toggle" data-toggle="1">${icon("menu", 20)}</button><div class="header-identity"><div class="crumb"><strong class="app-title">Power BI painel completo</strong><span class="owner-name">Michelle Cândido</span><span class="app-caption crumb-page">${esc(title)}</span></div></div><div class="head-actions">${themeButton()}<button aria-label="Estúdio de Apresentações" class="btn studio-top-button" data-nav="present">${icon("report", 15)} Estúdio de Apresentações</button><button type="button" class="top-assistant" data-assistant-open="1" aria-label="Abrir assistente">${icon("spark", 15)} <span>Assistente</span></button><span class="badge info" style="white-space:nowrap">${imports.length ? "Dados reais" : "Aguardando dados"}</span><div class="avatar">M</div></div></header><main class="content"><div class="print-header">Power BI painel completo / Michelle Cândido</div>${body()}</main><footer class="footer"><span>Power BI painel completo / Michelle Cândido</span></footer></div><nav class="mobile-nav" aria-label="Navegação principal">${[
       ["geral", "Visão Geral", "grid"],
+      ["dashboard", "Dashboard", "chart"],
       ["data", "Enviar Dados", "up"],
       ["report", "Relatórios", "report"],
       ["present", "Estúdio", "files"],
@@ -263,7 +266,7 @@
     title,
     desc = "Visão centralizada dos seus indicadores e resultados.",
   ) =>
-    `<section class="overview-head"><div><div class="eyebrow">HORIZON / OPERAÇÕES</div><h1 class="title">${esc(title)}</h1><p class="subtitle">${esc(desc)}</p>${state.query ? `<div class="active-search">Busca nos registros: <strong>${esc(state.query)}</strong><button class="btn" data-clear-query>Limpar busca</button></div>` : ""}</div><div class="header-buttons">${state.page === "insight" || idSector(state.page) ? periodButtons() : ""}${["geral", ...sectors.map((s) => s.id)].includes(state.page) ? `<button class="btn" data-nav="report">${icon("report", 14)} Gerar relatório</button>${state.page !== "geral" ? `<button class="btn btn-primary" data-nav="data">${icon("up", 14)} Importar dados</button>` : ""}` : ""}</div></section>`;
+    `<section class="overview-head"><div><div class="eyebrow">OPERAÇÕES</div><h1 class="title">${esc(title)}</h1><p class="subtitle">${esc(desc)}</p>${state.query ? `<div class="active-search">Busca nos registros: <strong>${esc(state.query)}</strong><button class="btn" data-clear-query>Limpar busca</button></div>` : ""}</div><div class="header-buttons">${state.page === "insight" || idSector(state.page) ? periodButtons() : ""}${["geral", ...sectors.map((s) => s.id)].includes(state.page) ? `<button class="btn" data-nav="report">${icon("report", 14)} Gerar relatório</button>${state.page !== "geral" ? `<button class="btn btn-primary" data-nav="data">${icon("up", 14)} Importar dados</button>` : ""}` : ""}</div></section>`;
   function statCards(rs, sector) {
     const ms = D.metricOptions(rs);
     if (!ms.length || !rs.length)
@@ -412,7 +415,7 @@
         "Visão Geral",
         "Indicadores, prioridades e ferramentas da sua operação.",
       ) +
-      `<section class="central-dashboard" aria-labelledby="dashboard-title"><div class="dashboard-head"><div><span class="dashboard-eyebrow">CENTRAL DE INDICADORES</span><h2 id="dashboard-title">Dashboard central</h2><p>Suas planilhas alimentam os indicadores, gráficos e relatórios.</p></div><div class="dashboard-import"><button class="btn btn-primary" data-nav="data">${icon("plus", 18)} Adicionar dados</button><small>Importar uma ou mais planilhas</small></div><div class="dashboard-filters">${periodButtons()}</div></div>` +
+      `<section class="central-dashboard" aria-labelledby="dashboard-title"><div class="dashboard-head"><div><span class="dashboard-eyebrow">CENTRAL DE INDICADORES</span><h2 id="dashboard-title">Dashboard central</h2><p>Suas planilhas alimentam os indicadores, gráficos e relatórios.</p></div><div class="dashboard-import"><button class="btn btn-primary" data-nav="dashboard">${icon("chart", 18)} Visualizar dashboard</button><button class="btn" data-nav="data">${icon("plus", 18)} Adicionar dados</button><small>Importar uma ou mais planilhas</small></div><div class="dashboard-filters">${periodButtons()}</div></div>` +
       insightsPanel(rs) +
       statCards(rs) +
       graphPanels(rs) +
@@ -545,7 +548,7 @@
       )}</div><form class="assistant-form" data-assistant-form="1"><label class="sr-only" for="${full ? "assistant-text-full" : "assistant-text-dock"}">Mensagem ao assistente</label><textarea id="${full ? "assistant-text-full" : "assistant-text-dock"}" data-assistant-input="1" rows="1" maxlength="1800" placeholder="${state.assistantMode === "dados" ? "Pergunte sobre seus indicadores..." : "Escreva sua mensagem..."}" aria-label="Mensagem ao assistente"></textarea><button type="submit" aria-label="Enviar mensagem">${icon("arrow", 18)}</button></form><p class="assistant-disclaimer">${state.assistantMode === "dados" ? "Respostas calculadas com os dados importados." : "Respostas gerais limitadas sem integração com IA generativa."}</p></div>`;
   }
   function assistantDock() {
-    return `<div class="assistant-layer ${state.assistantOpen ? "open" : ""}"><button type="button" class="assistant-dismiss" data-assistant-close="1" aria-label="Fechar assistente" tabindex="${state.assistantOpen ? "0" : "-1"}"></button><section class="assistant-window" role="dialog" aria-modal="false" aria-label="Assistente Michelle" aria-hidden="${!state.assistantOpen}"><div class="assistant-window-header"><div class="assistant-identity"><span class="assistant-emblem"><img src="assets/icon-192.png" alt="Horizon" width="32" height="32"></span><span><strong>Assistente Michelle</strong><small>Seu espaço para análises e conversas</small></span></div><div class="assistant-header-actions"><button type="button" data-assistant-clear="1" title="Limpar conversa deste modo" aria-label="Limpar conversa">${icon("trash", 15)}</button><button type="button" data-assistant-expand="1" title="Abrir em página inteira" aria-label="Abrir assistente em página inteira">${icon("grid", 15)}</button><button type="button" data-assistant-close="1" title="Fechar" aria-label="Fechar assistente">${icon("close", 16)}</button></div></div><div class="assistant-chat-root" data-assistant-root="dock">${assistantChat()}</div></section></div><button type="button" class="assistant-fab ${state.assistantOpen ? "active" : ""}" data-assistant-toggle="1" aria-expanded="${state.assistantOpen}" aria-label="${state.assistantOpen ? "Fechar assistente" : "Abrir assistente Michelle"}"><span class="fab-emblem">${icon(state.assistantOpen ? "close" : "spark", 20)}</span><span class="fab-label">${state.assistantOpen ? "Fechar assistente" : "Assistente"}</span><span class="fab-presence"></span></button>`;
+    return `<div class="assistant-layer ${state.assistantOpen ? "open" : ""}"><button type="button" class="assistant-dismiss" data-assistant-close="1" aria-label="Fechar assistente" tabindex="${state.assistantOpen ? "0" : "-1"}"></button><section class="assistant-window" role="dialog" aria-modal="false" aria-label="Assistente Michelle" aria-hidden="${!state.assistantOpen}"><div class="assistant-window-header"><div class="assistant-identity"><span class="assistant-emblem" aria-hidden="true">${icon("spark", 22)}</span><span><strong>Assistente Michelle</strong><small>Seu espaço para análises e conversas</small></span></div><div class="assistant-header-actions"><button type="button" data-assistant-clear="1" title="Limpar conversa deste modo" aria-label="Limpar conversa">${icon("trash", 15)}</button><button type="button" data-assistant-expand="1" title="Abrir em página inteira" aria-label="Abrir assistente em página inteira">${icon("grid", 15)}</button><button type="button" data-assistant-close="1" title="Fechar" aria-label="Fechar assistente">${icon("close", 16)}</button></div></div><div class="assistant-chat-root" data-assistant-root="dock">${assistantChat()}</div></section></div><button type="button" class="assistant-fab ${state.assistantOpen ? "active" : ""}" data-assistant-toggle="1" aria-expanded="${state.assistantOpen}" aria-label="${state.assistantOpen ? "Fechar assistente" : "Abrir assistente Michelle"}"><span class="fab-emblem">${icon(state.assistantOpen ? "close" : "spark", 20)}</span><span class="fab-label">${state.assistantOpen ? "Fechar assistente" : "Assistente"}</span><span class="fab-presence"></span></button>`;
   }
   function pageInsight() {
     return (
@@ -569,6 +572,7 @@
   function body() {
     let sec = idSector(state.page);
     if (sec) return pageSector(sec);
+    if (state.page === "dashboard") return window.MichelleDashboard ? window.MichelleDashboard.page() : '<section class="card panel">Preparando o dashboard...</section>';
     if (state.page === "data") return pageData();
     if (state.page === "report") return pageReport();
     if (state.page === "insight") return pageInsight();
@@ -586,6 +590,7 @@
       .querySelectorAll("[data-assistant-messages]")
       .forEach((el) => (el.scrollTop = el.scrollHeight));
     wire();
+    window.MichelleDashboard?.wire();
   }
   function appearance() {
     if (["light", "dark"].includes(settings.appearance))
@@ -1428,7 +1433,7 @@
           return btoa(s);
         };
       const data = {
-        application: "MC Power BI Painel Completo",
+        application: "Power BI painel completo / Michelle Cândido",
         version: 3,
         lots: imports,
         settings,

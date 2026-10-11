@@ -1,9 +1,10 @@
 {
   "name": "horizon-michelle-dashboard",
   "private": true,
-  "version": "3.2.2",
+  "version": "3.2.3",
   "scripts": {
-    "test": "node --test tests/*.test.cjs"
+    "test": "node --test tests/*.test.cjs",
+    "dev": "node scripts/dev.mjs"
   },
   "devDependencies": {
     "fake-indexeddb": "^6.2.4",
