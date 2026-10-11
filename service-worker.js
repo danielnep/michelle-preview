@@ -1,7 +1,7 @@
 /* Cache exclusivamente do shell público. Dados operacionais ficam no IndexedDB. */
-const CACHE="michelle-shell-v4-20261011-roles";
+const CACHE="michelle-shell-v4-20261011-motion";
 const ROOT=new URL("./",self.registration.scope);
-const ASSETS=["./","./index.html","./manifest.webmanifest","./assets/mc-symbol.svg","./styles.css","./enhancements.css","./theme.css","./dashboard.css","./clarity.css","./mc-4.css","./profiles.css","./profiles.js","./vendor/xlsx.full.min.js","./vendor/jszip.min.js","./analysis/mc-analysis.js","./analysis/preferences.js","./data-core.js","./data-intelligence.js","./pptx.js","./install.js","./app.js","./studio.js","./dashboard.js"];
+const ASSETS=["./","./index.html","./manifest.webmanifest","./assets/mc-symbol.svg","./styles.css","./enhancements.css","./theme.css","./dashboard.css","./clarity.css","./mc-4.css","./profiles.css","./profiles.js","./motion.css","./motion.js","./vendor/xlsx.full.min.js","./vendor/jszip.min.js","./analysis/mc-analysis.js","./analysis/preferences.js","./data-core.js","./data-intelligence.js","./pptx.js","./install.js","./app.js","./studio.js","./dashboard.js"];
 const urls=ASSETS.map(x=>new URL(x,ROOT).href);
 self.addEventListener("install",event=>event.waitUntil(caches.open(CACHE).then(cache=>Promise.allSettled(urls.map(url=>cache.add(new Request(url,{cache:"reload"}))))).then(()=>self.skipWaiting())));
 self.addEventListener("activate",event=>event.waitUntil((async()=>{for(const k of await caches.keys())if(k.startsWith("michelle-shell-")&&k!==CACHE)await caches.delete(k);await self.clients.claim();})()));
