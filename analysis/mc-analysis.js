@@ -7,7 +7,7 @@
 "use strict";
 const norm=v=>String(v??"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[_-]+/g," ").replace(/\s+/g," ").trim();
 const specs={
- ordens:{label:"Ordens de serviço",metric:"Ordens de serviço registradas",unit:"ordens de serviço",hints:[/\bordens?\s+de\s+servic/,/\brelatorio\s+(?:de\s+)?os\b/,/\b(?:os)\s+(?:abertas|fechadas|concluidas)\b/],columns:[/numero\s+(?:da\s+)?os\b/,/\bordem\s+de\s+servic/,/solicitacao/,/data\s+de\s+abertura/] },
+ ordens:{label:"Ordens de serviço",metric:"Ordens de serviço registradas",unit:"ordens de serviço",hints:[/\b(?:ordem|ordens)\s+de\s+servic/,/\brelatorio\s+(?:de\s+)?os\b/,/\b(?:os)\s+(?:abertas|fechadas|concluidas)\b/],columns:[/numero\s+(?:da\s+)?os\b/,/\bordem\s+de\s+servic/,/solicitacao/,/data\s+de\s+abertura/] },
  ligacoes:{label:"Ligações",metric:"Ligações registradas",unit:"ligações",hints:[/ligac/,/telefon/,/chamad/],columns:[/durac/,/operador/,/resultado\s+ligacao/,/origem\s+(?:da\s+)?ligac/,/\bura\b/]},
  cuc:{label:"Motivos de CUC",metric:"Eventos CUC",unit:"eventos CUC",hints:[/\bcuc\b/,/motivos?\s+de\s+alarme/],columns:[/\bcuc\b/,/numero\s+de\s+eventos/,/motivos?\s+de\s+alarme/]},
  deslocamentos:{label:"Deslocamentos por conta",metric:"Deslocamentos registrados",unit:"deslocamentos",hints:[/deslocament/,/visitas?\s+tecnic/],columns:[/deslocament/,/numero\s+de\s+deslocament/]},
