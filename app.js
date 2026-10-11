@@ -679,9 +679,15 @@
     if (state.page === "settings") return pageSettings();
     return pageOverview();
   }
+  let lastAnimatedPage = "";
   function render() {
     applyAppearance();
     document.getElementById("app").innerHTML = shell() + importReview();
+    const pageKey = state.page + "|" + (P?.currentId?.() || "gerente");
+    if (pageKey !== lastAnimatedPage) {
+      lastAnimatedPage = pageKey;
+      window.MCMotion?.animatePage();
+    }
     document
       .querySelectorAll("[data-assistant-messages]")
       .forEach((el) => (el.scrollTop = el.scrollHeight));
