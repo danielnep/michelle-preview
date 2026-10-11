@@ -287,7 +287,7 @@
     const ms = D.metricOptions(rs);
     if (!ms.length || !rs.length)
       return `<div class="empty-state card"><h3>${state.ready ? "Pronto para receber seus dados" : "Carregando seus dados"}</h3><p>Envie uma planilha Excel para alimentar os indicadores, análises e relatórios.</p><button class="btn btn-primary" data-nav="data">Enviar Dados Excel</button></div>`;
-    return `<div class="stats">${ms.map((m, i) => `<article class="card stat"><div class="stat-top"><span class="stat-label">${esc(m.label)}</span><span class="stat-icon">${icon(i === 0 ? "files" : "chart", 17)}</span></div><div class="stat-value">${fmtNum(Math.round(m.value * 100) / 100)}${m.id === "rate" ? "%" : ""}</div><div class="stat-footer">${m.id === "rate" ? "Somente status reconhecidos" : m.id === "duration" ? "Somente durações informadas" : "Dados importados neste recorte"}</div><small class="stat-source-hint">${esc(sourceHint(m, rs))}</small></article>`).join("")}</div>`;
+    return `<div class="stats">${ms.map((m, i) => `<article class="card stat"><div class="stat-top"><span class="stat-label">${esc(window.MCAnalysis?.metricLabel(m) || m.label)}</span><span class="stat-icon">${icon(i === 0 ? "files" : "chart", 17)}</span></div><div class="stat-value">${fmtNum(Math.round(m.value * 100) / 100)}${m.id === "rate" ? "%" : ""}</div><div class="stat-footer">${m.id === "rate" ? "Somente status reconhecidos" : m.id === "duration" ? "Somente durações informadas" : "Dados importados neste recorte"}</div><small class="stat-source-hint">${esc(sourceHint(m, rs))}</small></article>`).join("")}</div>`;
   }
   function histogram(rs) {
     let data = D.series(rs);
@@ -535,7 +535,7 @@
     const assessment = window.MCAnalysis?.quality(r.rows, { type: p.type });
     const qualityNotes = assessment?.issues?.length ? '<div class="mc-analysis-notes"><strong>Conferência automática de qualidade</strong><ul>' + assessment.issues.map(x => '<li>' + esc(x.text) + '</li>').join("") + '</ul></div>' : "";
     const conflictNotes = detection.conflict ? '<div class="mc-analysis-notes"><strong class="warning">Identificação conflitante</strong><p>' + esc(detection.reason) + '</p><label><input type="checkbox" data-mc-review ' + (p.manualReview ? "checked" : "") + '> Conferi o tipo e as colunas desta planilha.</label></div>' : "";
-    return `<div class="import-reading-summary"><h3>${esc(p.name)}</h3><div class="import-summary-grid"><span><small>Fonte identificada</small><b>${esc(D.types[p.type])}</b></span><span><small>Registros lidos</small><b>${fmtNum(r.rows.length)}</b></span><span><small>Datas da planilha</small><b>${dates.length ? `${fmtDate(dates[0])} a ${fmtDate(dates.at(-1))}` : "Sem data na planilha"}</b></span><span><small>Destino sugerido</small><b>${esc(idSector(p.sector)?.name || p.sector)}</b></span></div><div class="import-detection"><strong>${icon("check", 16)} Identificação: ${esc(detection.confidence || "Conferir")}</strong><p>${esc(detection.reason || "")}</p><p><b>Arquivo:</b> ${esc(p.name)} · <b>Aba:</b> ${esc(p.sheet)}</p></div>${qualityNotes}${conflictNotes}<div class="import-column-tags"><strong>Colunas reconhecidas</strong><div>${mapped.length ? mapped.slice(0, 8).map(x => `<span title="${esc(I?.fieldPurpose(p.type, x.name) || x.role)}"><b>${esc(x.name)}</b> → ${esc(x.role)}</span>`).join("") : "<span>Nenhuma coluna associada com segurança; use Ajustes opcionais.</span>"}</div></div><p class="panel-sub">${dates.length ? "Datas e horários originais foram preservados." : "Este arquivo pode ser importado sem definir datas. Os totais continuam disponíveis em Todo o histórico."}</p><p class="panel-sub">Aba: ${esc(p.sheet)} · ${r.errors.length} linhas inválidas · ${r.skipped.length} totais/resumos excluídos.</p><details class="import-reading"><summary>Ver a interpretação da planilha</summary><p>${esc(window.MCIntelligence?.semantics[p.type]?.meaning || "Confira as colunas reconhecidas.")}</p><p class="panel-sub">${esc(window.MCIntelligence?.semantics[p.type]?.limit || "")}</p><p class="panel-sub">Apenas esta aba será anexada. Abas de resumo não são somadas à base detalhada.</p></details><div class="table-wrap import-raw-preview"><table class="tbl"><thead><tr>${fields.map(h => `<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${r.rows.slice(0, 5).map(x => `<tr>${fields.map(h => `<td>${esc(x.raw[String(h)] ?? "")}</td>`).join("")}</tr>`).join("")}</tbody></table></div><details class="import-advanced" ${state.importAdvancedOpen ? "open" : ""}><summary>Ajustes opcionais e conferência de colunas</summary>${importAdvanced(p)}</details></div>`;
+    return `<div class="import-reading-summary"><h3>${esc(p.name)}</h3><div class="import-summary-grid"><span><small>Fonte identificada</small><b>${esc(D.types[p.type])}</b></span><span><small>Registros lidos</small><b>${fmtNum(r.rows.length)}</b></span><span><small>Datas da planilha</small><b>${dates.length ? `${fmtDate(dates[0])} a ${fmtDate(dates.at(-1))}` : "Sem data na planilha"}</b></span><span><small>Destino sugerido</small><b>${esc(idSector(p.sector)?.name || p.sector)}</b></span></div><div class="import-detection"><strong>${icon("check", 16)} Identificação: ${esc(detection.confidence || "Conferir")}</strong><p>${esc(detection.reason || "")}</p><p><b>Arquivo:</b> ${esc(p.name)} · <b>Aba:</b> ${esc(p.sheet)}</p></div>${qualityNotes}${conflictNotes}${p.savedPreferenceUsed ? '<p class="panel-sub">Mapeamento revisado anteriormente e recuperado neste navegador. Confira antes de confirmar.</p>' : ""}<div class="import-column-tags"><strong>Colunas reconhecidas</strong><div>${mapped.length ? mapped.slice(0, 8).map(x => `<span title="${esc(I?.fieldPurpose(p.type, x.name) || x.role)}"><b>${esc(x.name)}</b> → ${esc(x.role)}</span>`).join("") : "<span>Nenhuma coluna associada com segurança; use Ajustes opcionais.</span>"}</div></div><p class="panel-sub">${dates.length ? "Datas e horários originais foram preservados." : "Este arquivo pode ser importado sem definir datas. Os totais continuam disponíveis em Todo o histórico."}</p><p class="panel-sub">Aba: ${esc(p.sheet)} · ${r.errors.length} linhas inválidas · ${r.skipped.length} totais/resumos excluídos.</p><details class="import-reading"><summary>Ver a interpretação da planilha</summary><p>${esc(window.MCIntelligence?.semantics[p.type]?.meaning || "Confira as colunas reconhecidas.")}</p><p class="panel-sub">${esc(window.MCIntelligence?.semantics[p.type]?.limit || "")}</p><p class="panel-sub">Apenas esta aba será anexada. Abas de resumo não são somadas à base detalhada.</p></details><div class="table-wrap import-raw-preview"><table class="tbl"><thead><tr>${fields.map(h => `<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${r.rows.slice(0, 5).map(x => `<tr>${fields.map(h => `<td>${esc(x.raw[String(h)] ?? "")}</td>`).join("")}</tr>`).join("")}</tbody></table></div><details class="import-advanced" ${state.importAdvancedOpen ? "open" : ""}><summary>Ajustes opcionais e conferência de colunas</summary>${importAdvanced(p)}</details></div>`;
   }
   function previewRows(rows) {
     let cols = Object.keys(rows[0] || {}).slice(0, 6);
@@ -609,7 +609,7 @@
         "Configurações",
         "Personalize metas, identificação e preferências do seu painel.",
       ) +
-      `<section class="mc-install-panel"><div><strong>Instalar Painel Michelle</strong><p data-install-status>Suporte varia conforme o navegador. Seus dados permanecem neste navegador e não são sincronizados com outros dispositivos.</p><p id="mc-install-guide" hidden></p></div><button type="button" class="install-shortcut" data-mc-install>Instalar aplicativo</button></section><div class="page-grid"><section class="card panel"><div class="panel-head"><div><h3 class="panel-title">Identidade do painel</h3><p class="panel-sub">Informações desta operação</p></div>${icon("settings", 19)}</div><div class="field appearance-field"><label for="appearance-select">Aparência do aplicativo</label><select id="appearance-select" class="control"><option value="light" ${appearance() === "light" ? "selected" : ""}>Claro · cinza e grafite</option><option value="dark" ${appearance() === "dark" ? "selected" : ""}>Escuro · grafite</option></select><p class="panel-sub">A preferência fica salva. Os temas dos slides são configurados no Estúdio.</p></div><div class="field"><label>Nome da operação</label><input class="control" id="operation" value="${esc(settings.operation)}" /></div><button class="btn btn-primary section-space" data-save="1">Salvar configurações</button><div class="info-box section-space"><strong>Seus dados operacionais</strong><p>Exporte as planilhas do sistema de origem e importe por Enviar Dados Excel. O painel preserva os arquivos originais e o histórico de atualização.</p></div></section><section class="card panel"><div class="panel-head"><div><h3 class="panel-title">Metas por departamento</h3><p class="panel-sub">Percentual de conclusão desejado</p></div>${icon("target", 18)}</div><div class="settings-list section-space">${sectors.map((s) => `<div class="settings-item"><div><strong>${s.name}</strong><small>Meta de conclusão (percentual)</small><div class="progress"><div style="width:${settings.goals?.[s.id] ?? 0}%"></div></div></div><div class="row" style="gap:4px"><input class="control" type="number" min="0" max="100" step="1" data-goal="${s.id}" value="${settings.goals?.[s.id] ?? ""}" placeholder="Sem meta"/><span>%</span></div></div>`).join("")}</div><button class="btn btn-primary section-space" data-save="1">${icon("check", 14)} Aplicar metas</button></section></div>`
+      `<section class="mc-install-panel"><div><strong>Instalar Painel Michelle</strong><p data-install-status>Suporte varia conforme o navegador. Seus dados permanecem neste navegador e não são sincronizados com outros dispositivos.</p><p id="mc-install-guide" hidden></p></div><button type="button" class="install-shortcut" data-mc-install>Instalar aplicativo</button></section><div class="mc-analysis-notes"><strong>Memória de interpretação de planilhas</strong><p>Correções feitas nos campos e confirmadas ficam salvas por modelo de planilha, apenas neste navegador. Você pode apagá-las sem excluir suas importações.</p><button type="button" class="btn" data-mc-reset-mappings>Apagar correções salvas</button></div><div class="page-grid"><section class="card panel"><div class="panel-head"><div><h3 class="panel-title">Identidade do painel</h3><p class="panel-sub">Informações desta operação</p></div>${icon("settings", 19)}</div><div class="field appearance-field"><label for="appearance-select">Aparência do aplicativo</label><select id="appearance-select" class="control"><option value="light" ${appearance() === "light" ? "selected" : ""}>Claro · cinza e grafite</option><option value="dark" ${appearance() === "dark" ? "selected" : ""}>Escuro · grafite</option></select><p class="panel-sub">A preferência fica salva. Os temas dos slides são configurados no Estúdio.</p></div><div class="field"><label>Nome da operação</label><input class="control" id="operation" value="${esc(settings.operation)}" /></div><button class="btn btn-primary section-space" data-save="1">Salvar configurações</button><div class="info-box section-space"><strong>Seus dados operacionais</strong><p>Exporte as planilhas do sistema de origem e importe por Enviar Dados Excel. O painel preserva os arquivos originais e o histórico de atualização.</p></div></section><section class="card panel"><div class="panel-head"><div><h3 class="panel-title">Metas por departamento</h3><p class="panel-sub">Percentual de conclusão desejado</p></div>${icon("target", 18)}</div><div class="settings-list section-space">${sectors.map((s) => `<div class="settings-item"><div><strong>${s.name}</strong><small>Meta de conclusão (percentual)</small><div class="progress"><div style="width:${settings.goals?.[s.id] ?? 0}%"></div></div></div><div class="row" style="gap:4px"><input class="control" type="number" min="0" max="100" step="1" data-goal="${s.id}" value="${settings.goals?.[s.id] ?? ""}" placeholder="Sem meta"/><span>%</span></div></div>`).join("")}</div><button class="btn btn-primary section-space" data-save="1">${icon("check", 14)} Aplicar metas</button></section></div>`
     );
   }
   function pageSectorDirectory() {
@@ -1017,6 +1017,7 @@
         { store: "files", value: { id: p.hash, name: p.name, bytes: p.bytes } },
       ]);
       imports = next.lots;
+      if (p.userEdited || p.manualReview) window.MCPreferences?.confirm(p);
       p.status = "saved";
       p.lotId = lot.id;
       p.error = "";
@@ -1111,6 +1112,9 @@
       } catch (e) { notify("Não foi possível alterar o arquivo: " + e.message, true); }
     }));
     document.querySelector("[data-mc-review]")?.addEventListener("change", e => { if (state.pending) { state.pending.manualReview = e.target.checked; render(); } });
+    document.querySelector("[data-mc-reset-mappings]")?.addEventListener("click", () => {
+      window.MCPreferences?.reset(); notify("Correções de classificação apagadas. Arquivos importados preservados.");
+    });
     document.querySelector(".import-advanced")?.addEventListener("toggle", e => { state.importAdvancedOpen = e.target.open; });
     const review = document.getElementById("import-review");
     if (review) {
@@ -1285,10 +1289,12 @@
     ])
       document.getElementById(id)?.addEventListener("change", (e) => {
         state.pending[key] = e.target.value;
+        state.pending.userEdited = true;
         render();
       });
     document.getElementById("imp-header")?.addEventListener("change", (e) => {
       state.pending.headerRow = Number(e.target.value) - 1;
+      state.pending.userEdited = true;
       state.pending.mapping = D.suggest(
         state.pending.grid[state.pending.headerRow] || [],
       );
@@ -1298,6 +1304,7 @@
       (el) =>
         (el.onchange = () => {
           state.pending.mapping[el.dataset.map] = Number(el.value);
+          state.pending.userEdited = true;
           render();
         }),
     );
@@ -1479,6 +1486,19 @@
           : p.type === "ordens" || p.type === "deslocamentos"
             ? "tec"
             : "coi");
+    p.userEdited = false;
+    const remembered = window.MCPreferences?.get(p.analysisProfile?.signature);
+    if (remembered && !a.conflict && (a.type === "geral" || remembered.type === a.type)) {
+      const heads = p.grid[remembered.headerRow] || [];
+      const valid = Object.values(remembered.mapping).every(i => Number.isInteger(i) && i >= -1 && i < heads.length);
+      if (valid) {
+        p.headerRow = remembered.headerRow;
+        p.mapping = { ...remembered.mapping };
+        p.type = remembered.type;
+        p.sector = remembered.sector;
+        p.savedPreferenceUsed = true;
+      }
+    }
     render();
   }
   function validatePending(p = state.pending) {
