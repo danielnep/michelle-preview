@@ -82,9 +82,13 @@
   function current() { return profiles[currentId()]; }
   function set(id) {
     if (!valid(id)) return false;
-    if (id === currentId()) return true;
-    try { root.localStorage?.setItem(STORAGE_KEY, id); }
-    catch (_) { /* A experiência continua ativa só nesta sessão. */ session = id; }
+    if (id === active().id) return true;
+    try {
+      if (root.localStorage) {
+        root.localStorage.setItem(STORAGE_KEY, id);
+        session = null;
+      } else session = id;
+    } catch (_) { /* A experiência continua ativa só nesta sessão. */ session = id; }
     if (typeof root.dispatchEvent === "function" && typeof root.CustomEvent === "function")
       root.dispatchEvent(new root.CustomEvent("mc:profile-changed", { detail: { id } }));
     return true;
