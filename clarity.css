@@ -39,3 +39,7 @@
 @media(max-width:900px) { .import-journey ol { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media(max-width:560px) { .import-journey { padding:13px; } .import-journey ol {grid-template-columns:1fr 1fr;gap:7px;} .import-journey li {padding:10px;} .panel-logo-small {width:29px;height:29px;} .header-identity {gap:6px;} .brand .panel-brand-title {font-size:16px;} }
 @media(max-width:340px) { .import-journey ol {grid-template-columns:1fr;} }
+
+.stat-source-hint { display:block; margin-top:6px; font-size:11px; line-height:1.45; color:var(--muted); overflow-wrap:anywhere; }
+.dash-metric-lineage p { font-size:11px; line-height:1.5; color:var(--muted); margin:6px 0 0; }
+.dash-widget-caption span { overflow-wrap:anywhere; }
