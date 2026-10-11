@@ -49,4 +49,4 @@ npm test
 
 Os quinze testes cobrem importação, totais/status, datas e competência, deduplicação/versionamento, filtros, geração/exportação de relatórios, persistência, edição/posicionamento de slides, teclado e leitura de um PPTX real com imagem e gráfico. O armazenamento e o DOM são exercitados com fake-indexeddb e jsdom. Testes de layout e tela cheia em navegador devem ser registrados separadamente; estes testes não substituem uma validação visual.
 
-`tests/responsive.html` exibe o aplicativo real em janelas de 390 × 844 e 1280 × 900 para conferência visual. A apresentação de teste não contém dados de clientes. As planilhas operacionais usadas na reconciliação permanecem fora deste repositório público.
+`tests/responsive.html` exibe o aplicativo real em janelas de 390 × 844 e 1280 × 900, com seletores de largura entre 320 e 1600 px para conferência visual. Reabrir essa página carrega a versão atual do painel nos quadros de teste. A apresentação de teste não contém dados de clientes. As planilhas operacionais usadas na reconciliação permanecem fora deste repositório público.

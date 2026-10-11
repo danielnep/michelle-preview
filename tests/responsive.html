@@ -85,6 +85,11 @@
     </section>
   </main>
   <script>
+    for (const frame of document.querySelectorAll("iframe")) {
+      const url = new URL(frame.src);
+      url.searchParams.set("qa-refresh", Date.now().toString());
+      frame.src = url.href;
+    }
     for (const [id, label, title, height] of [
       ["mobile", "Painel no celular", "Celular", 844],
       ["desktop", "Painel no computador", "Computador", 900],
