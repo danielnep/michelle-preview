@@ -1,0 +1,76 @@
+/* Movimento MC · 4.2.0  |  Feedback tátil, sem comprometer legibilidade */
+:root{--mc-ease:cubic-bezier(.22,.85,.27,1);--mc-fast:170ms;--mc-normal:310ms}
+@keyframes mc-page-enter{
+ from{opacity:.35;transform:translate3d(0,11px,0)}
+ to{opacity:1;transform:translate3d(0,0,0)}
+}
+@keyframes mc-rise{
+ from{opacity:0;transform:translate3d(0,14px,0) scale(.99)}
+ to{opacity:1;transform:translate3d(0,0,0) scale(1)}
+}
+@keyframes mc-chart-reveal{from{opacity:.25;transform:scaleY(.8)}to{opacity:1;transform:scaleY(1)}}
+@keyframes mc-dialog-enter{from{opacity:0;transform:translate3d(0,10px,0) scale(.975)}to{opacity:1;transform:translate3d(0,0,0) scale(1)}}
+@keyframes mc-modal-shade{from{opacity:0}to{opacity:1}}
+.mc-page-arrive{animation:mc-page-enter 320ms var(--mc-ease) both}
+.mc-page-arrive .mc-role-priority,
+.mc-page-arrive .stat,
+.mc-page-arrive .dash-metric{animation:mc-rise 390ms var(--mc-ease) both}
+.mc-page-arrive .mc-role-priority:nth-child(2),
+.mc-page-arrive .stat:nth-child(2),
+.mc-page-arrive .dash-metric:nth-child(2){animation-delay:45ms}
+.mc-page-arrive .mc-role-priority:nth-child(3),
+.mc-page-arrive .stat:nth-child(3),
+.mc-page-arrive .dash-metric:nth-child(3){animation-delay:90ms}
+.mc-page-arrive .mc-role-priority:nth-child(n+4),
+.mc-page-arrive .stat:nth-child(n+4),
+.mc-page-arrive .dash-metric:nth-child(n+4){animation-delay:110ms}
+.mc-page-arrive .dash-widget{animation:mc-rise 340ms var(--mc-ease) both}
+.mc-page-arrive .dash-widget:nth-child(2){animation-delay:40ms}
+.mc-page-arrive .dash-widget:nth-child(3){animation-delay:70ms}
+.mc-page-arrive .dash-widget:nth-child(n+4){animation-delay:100ms}
+.mc-page-arrive .dash-chart svg{animation:mc-chart-reveal 450ms var(--mc-ease) both;transform-origin:bottom}
+.btn,.nav,.mobile-nav button,.sector-tile,.mc-role-priority,.mc-role-actions button,.dash-bar,
+.dash-metric,.dash-icon-btn,.studio-thumb,.studio-promo,.upload-file,.install-shortcut{
+ transition:transform var(--mc-fast) var(--mc-ease),box-shadow var(--mc-fast) ease,
+ border-color var(--mc-fast) ease,background-color var(--mc-fast) ease,filter var(--mc-fast) ease;
+ -webkit-tap-highlight-color:transparent;
+}
+@media(hover:hover) and (pointer:fine){
+ .btn:not(:disabled):hover,.sector-tile:hover,.mc-role-priority:hover,.install-shortcut:hover{transform:translateY(-2px)}
+ .dash-metric:hover,.dash-widget:not(.mc-drag-source):hover{box-shadow:0 10px 32px rgba(0,0,0,.13)}
+ .dash-icon-btn:not(:disabled):hover{transform:translateY(-1px);border-color:var(--brand)}
+}
+.btn:not(:disabled):active,.mobile-nav button:active,.sector-tile:active,.mc-role-priority:active,
+.dash-icon-btn:not(:disabled):active{transform:scale(.965)}
+.mobile-nav button.active{position:relative}
+.mobile-nav button.active::before{content:"";position:absolute;left:32%;right:32%;top:1px;height:2px;border-radius:6px;background:var(--brand);box-shadow:0 0 9px var(--brand);animation:mc-rise 240ms ease-out}
+.import-review[open],.dash-focus-dialog[open],#position-dialog[open]{animation:mc-dialog-enter 280ms var(--mc-ease) both}
+.import-review::backdrop,.dash-focus-dialog::backdrop,#position-dialog::backdrop{animation:mc-modal-shade 200ms ease-out both}
+.dropzone.dragging{transform:scale(1.008);border-color:var(--brand)!important;box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 25%,transparent),0 15px 38px rgba(0,0,0,.14)}
+.dash-drag{cursor:grab!important;touch-action:none!important;user-select:none;-webkit-user-select:none}
+.dash-drag:active,.dash-drag.mc-dragging-handle{cursor:grabbing!important;color:var(--brand);background:var(--tint);transform:scale(1.05)}
+.dash-editor-row{position:relative;transition:background-color 160ms,border-color 160ms,transform 200ms var(--mc-ease)}
+.dash-editor-handle{width:40px;height:40px;min-width:40px;min-height:40px;flex:none;border:1px solid var(--line);border-radius:9px;background:var(--surface-alt);color:var(--brand);display:inline-flex;align-items:center;justify-content:center;touch-action:none;cursor:grab}
+.dash-editor-handle:active{cursor:grabbing}
+.dash-widget{transition:box-shadow 210ms var(--mc-ease),border-color 190ms ease,transform 210ms var(--mc-ease),opacity 210ms ease}
+.dash-widget.mc-drag-source,.dash-editor-row.mc-drag-source{opacity:.35;border-style:dashed;border-color:var(--brand)}
+.dash-widget.mc-drag-target,.dash-editor-row.mc-drag-target,.dash-widget.drag-target{border:2px dashed var(--brand);background:var(--tint);box-shadow:inset 0 0 0 1px var(--brand),0 0 0 3px color-mix(in srgb,var(--brand) 15%,transparent)}
+.mc-drag-ghost{position:fixed;left:0;top:0;z-index:999999;max-width:min(270px,70vw);padding:13px 16px;border:1px solid var(--brand);border-radius:12px;color:var(--ink);font:650 14px/1.4 "Plus Jakarta Sans",Inter,sans-serif;background:var(--surface);box-shadow:0 18px 46px rgba(0,0,0,.35);pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;will-change:transform}
+.dash-editor-tips{margin:10px 0;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface-alt);font-size:12px;color:var(--muted);line-height:1.6}
+.dash-editor-tips strong{color:var(--ink)}
+.position-preview [data-positionable]{touch-action:none;cursor:grab}
+.position-preview [data-positionable]:active{cursor:grabbing;filter:brightness(1.1)}
+@media(max-width:700px){
+ .dash-editor-row{gap:8px}
+ .dash-editor-handle{width:44px;height:44px}
+ .dash-drag{touch-action:none}
+}
+@media(prefers-reduced-motion:reduce){
+ .mc-page-arrive,.mc-page-arrive *, .mobile-nav button.active::before,
+ .import-review[open],.dash-focus-dialog[open],#position-dialog[open],
+ .import-review::backdrop,.dash-focus-dialog::backdrop,#position-dialog::backdrop{
+   animation:none!important;transition:none!important;scroll-behavior:auto!important
+ }
+ .btn,.nav,.mobile-nav button,.sector-tile,.dash-widget,.mc-role-priority,.dash-metric,.dropzone,.dash-icon-btn{transition:none!important}
+}
+@media print{.mc-page-arrive,.mc-page-arrive *{animation:none!important;transition:none!important;transform:none!important}}
