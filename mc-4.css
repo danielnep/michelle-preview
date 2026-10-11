@@ -1,0 +1,33 @@
+/* MC 4.0 · clareza gerencial, instalação e monograma */
+.panel-logo{display:inline-grid;place-items:center;background:linear-gradient(145deg,#0a1a32,#173450);color:#d9f7ff;border-radius:10px;overflow:hidden}
+.panel-logo svg{display:none}
+.panel-logo::before{content:"";display:block;width:100%;height:100%;background:url("assets/mc-symbol.svg") center / cover no-repeat}
+.panel-logo-small{width:34px;height:34px;flex-shrink:0}
+.brand .panel-logo{width:44px;height:44px}
+.install-shortcut{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid var(--line);border-radius:9px;padding:9px 12px;min-height:44px;background:var(--surface);color:var(--ink);cursor:pointer;font:inherit;font-size:12px}
+.install-shortcut:hover,.install-shortcut:focus-visible{border-color:var(--brand)}
+.install-shortcut[hidden]{display:none!important}
+.mc-analysis-notes{padding:13px 15px;border:1px solid var(--line);border-radius:11px;background:var(--surface-alt);margin:12px 0;font-size:13px}
+.mc-analysis-notes strong{display:block;font-weight:750;margin-bottom:5px}
+.mc-analysis-notes p{margin:5px 0;line-height:1.55;color:var(--muted)}
+.mc-analysis-notes ul{margin:8px 0 0;padding-left:20px}
+.mc-analysis-notes li{margin:5px 0}
+.mc-analysis-notes .warning{color:#ffcb9b}
+.mc-intelligence-card{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:14px;margin-bottom:12px}
+.mc-intelligence-card>strong{display:block;font-size:14px;margin-bottom:7px}
+.mc-intelligence-card p{font-size:13px;line-height:1.6;color:var(--muted);margin:0 0 8px}
+.mc-intelligence-card details{font-size:12px;color:var(--muted)}
+.mc-intelligence-card summary{color:var(--brand);cursor:pointer;padding:8px 0;min-height:30px}
+.mc-install-panel{margin:14px 0;padding:14px;border-radius:12px;background:var(--surface-alt);border:1px solid var(--line);display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.mc-install-panel > div{min-width:150px;flex:1}
+.mc-install-panel p{color:var(--muted);font-size:12px;line-height:1.5;margin:6px 0 0}
+#mc-install-guide[hidden]{display:none}
+@media(max-width:700px){
+ .topbar .install-shortcut{width:44px;min-width:44px;padding:0}
+ .topbar .install-shortcut .install-label{display:none}
+ .dashboard-import,.overview-head .header-buttons{max-width:100%}
+ .mc-intelligence-card{padding:12px}
+ .dash-metric-source{overflow-wrap:anywhere}
+}
+@media(display-mode:standalone){.content{padding-top:max(14px,env(safe-area-inset-top))}.topbar{padding-top:max(8px,env(safe-area-inset-top))}}
+@media(prefers-reduced-motion:reduce){.mc-intelligence-card,.mc-install-panel{scroll-behavior:auto;transition:none}}
