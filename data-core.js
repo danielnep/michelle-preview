@@ -203,7 +203,7 @@
       partyName: row.partyName ?? (row.type === "ligacoes" ? String(rawField(raw, ["Nome"]) ?? "") : ""),
     };
   }
-  function detect(grid) {
+  function detect(grid, context = {}) {
     let best = { headerRow: 0, score: 0, type: "geral", mapping: {} };
     grid.slice(0, 50).forEach((row, i) => {
       const m = suggest(row),
@@ -226,6 +226,28 @@
         best = { headerRow: i, score, type, mapping: m };
       }
     });
+
+    // O nome do arquivo e da aba complementa cabeçalhos incompletos,
+    // mas nunca substitui uma classificação específica já sustentada pelas colunas.
+    const name = norm([context.filename || "", context.sheet || ""].join(" "));
+    const hinted = /deslocament|visitas? tecnic/.test(name) ? "deslocamentos"
+      : /\bcuc\b|motivos? de (alarme|cuc)/.test(name) ? "cuc"
+      : /ligac|telefonia|telefonemas|chamadas/.test(name) ? "ligacoes"
+      : /ordens? de servico|relatorio.*\bos\b|\bos\b.*relatorio/.test(name) ? "ordens"
+      : /indicadores|\bkpi\b/.test(name) ? "indicadores" : null;
+    const fromHeaders = best.type !== "geral";
+    if (!fromHeaders && hinted) best.type = hinted;
+    best.confidence = fromHeaders && best.score >= 4 ? "Alta"
+      : fromHeaders ? "Moderada"
+      : hinted && best.score >= 2 ? "Moderada"
+      : hinted ? "Sugerida pelo arquivo"
+      : "Revisão recomendada";
+    best.reason = fromHeaders
+      ? "Tipo reconhecido pelos cabeçalhos da planilha."
+      : hinted
+        ? "Cabeçalhos genéricos; tipo sugerido pelo nome do arquivo ou da aba. Confira antes de confirmar."
+        : "Tipo não identificado com segurança; confira as colunas antes de confirmar.";
+    best.filenameHint = hinted;
     return best;
   }
   function cell(row, m, k) {
