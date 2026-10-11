@@ -1,0 +1,41 @@
+/* Identidade e leitura dos dados: legibilidade antes de decoração. */
+.brand { display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:7px 10px; text-align:center; }
+.brand .panel-brand-title { max-width:165px; font-size:17px; text-align:left; }
+.brand .panel-brand-owner { flex-basis:100%; margin:0 0 0 0; text-align:center; }
+.panel-logo { width:43px; height:43px; border:1px solid color-mix(in srgb,var(--brand) 38%,var(--line)); background:linear-gradient(145deg,#233448,#0c1520); color:#8fe1ff; border-radius:12px; display:inline-grid; place-items:center; flex-shrink:0; box-shadow:0 4px 15px #0002; }
+.header-identity { display:flex; align-items:center; gap:11px; min-width:0; }
+.panel-logo-small { width:35px; height:35px; border-radius:10px; }
+.import-journey { padding:19px 20px; border:1px solid var(--line); border-radius:12px; background:linear-gradient(120deg,var(--surface-alt),var(--surface)); margin-bottom:19px; }
+.import-journey-head { display:flex; align-items:center; gap:12px; margin-bottom:14px; }
+.import-journey-head > span { width:38px;height:38px;display:grid;place-items:center;color:var(--brand);background:var(--surface);border:1px solid var(--line);border-radius:10px; }
+.import-journey-head strong { display:block; font-size:17px; letter-spacing:-.2px; }
+.import-journey-head small { display:block; color:var(--muted); font-size:12px; }
+.import-journey ol { margin:0; padding:0; list-style:none; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; }
+.import-journey li { background:var(--surface); border:1px solid var(--line); border-radius:9px; padding:13px; min-width:0; }
+.import-journey li b { display:block; font-size:13px; color:var(--ink); margin-bottom:5px; }
+.import-journey li span { font-size:12px; line-height:1.5; color:var(--muted); }
+.import-journey > p { margin:14px 0 0; color:var(--muted); font-size:12px; line-height:1.6; }
+.import-journey > p b { color:var(--ink); }
+.import-detection { border:1px solid var(--line); background:var(--surface-alt); border-radius:9px; padding:12px 14px; margin:12px 0; }
+.import-detection strong { display:flex; gap:7px; align-items:center; color:var(--ink); font-size:13px; }
+.import-detection p { margin:6px 0 0; color:var(--muted); font-size:12px; line-height:1.5; }
+.import-column-tags { margin:14px 0; }
+.import-column-tags > strong { display:block; font-size:13px; margin-bottom:9px; }
+.import-column-tags > div { display:flex; flex-wrap:wrap; gap:7px; }
+.import-column-tags span { border:1px solid var(--line);background:var(--surface-alt);padding:7px 10px;border-radius:7px;font-size:12px;color:var(--muted);max-width:100%;overflow-wrap:anywhere; }
+.import-column-tags span b { color:var(--ink); }
+.dash-metric-source { margin:6px 0 3px; font-size:11px; line-height:1.4; color:var(--muted); overflow-wrap:anywhere; }
+.dash-metric-source b { color:var(--ink); font-weight:600; }
+.dash-metric-lineage { margin-top:8px; border-top:1px solid var(--line); padding-top:7px; }
+.dash-metric-lineage summary { font-size:11px; color:var(--brand); cursor:pointer; }
+.dash-metric-lineage ul { margin:6px 0 0; padding-left:16px; font-size:11px; line-height:1.6; color:var(--muted); overflow-wrap:anywhere; }
+.dash-widget-caption { font-size:12px; color:var(--muted); line-height:1.5; padding:0 0 12px; }
+.dash-row-value { display:block; font-weight:700; }
+.dash-row-unit { display:block; color:var(--muted); font-size:11px; line-height:1.45; white-space:normal; }
+.dash-quick-guide { background:var(--surface-alt); border:1px solid var(--line);padding:13px 15px;border-radius:8px;margin:13px 0;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;font-size:12px;color:var(--muted); }
+.dash-quick-guide strong { color:var(--ink); }
+.dash-quick-guide a { color:var(--brand); text-decoration:underline; }
+.dash-source-list { overflow-wrap:anywhere; }
+@media(max-width:900px) { .import-journey ol { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:560px) { .import-journey { padding:13px; } .import-journey ol {grid-template-columns:1fr 1fr;gap:7px;} .import-journey li {padding:10px;} .panel-logo-small {width:29px;height:29px;} .header-identity {gap:6px;} .brand .panel-brand-title {font-size:16px;} }
+@media(max-width:340px) { .import-journey ol {grid-template-columns:1fr;} }
