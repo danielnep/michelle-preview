@@ -1584,6 +1584,10 @@ textarea:focus-visible,
 .library-card:hover {
   border-color: var(--brand) !important;
 }
+.sector-tile .tile-top,
+.sector-tile .tile-bottom small {
+  color: var(--muted);
+}
 .library-card.selected {
   border-color: var(--brand) !important;
   box-shadow: 0 0 0 2px var(--brand);
@@ -1614,7 +1618,7 @@ textarea:focus-visible,
   font-size: 11px;
   margin-top: 4px;
 }
-.tbl strong,
+.tbl td strong,
 .donut-center strong,
 .donut-legend strong {
   color: var(--ink);
