@@ -1514,6 +1514,22 @@ textarea:focus-visible,
   border-radius: 10px;
   overflow: hidden;
 }
+.studio-empty {
+  background: var(--surface-alt);
+  color: var(--ink);
+  border-color: var(--line);
+}
+.studio-empty p {
+  color: var(--muted);
+}
+.studio-thumb-screen {
+  background: #171717;
+  color: #f5f5f5;
+}
+.studio-thumb.active {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 2px var(--brand);
+}
 .table-detail {
   color: var(--muted);
   font-size: 11px;
