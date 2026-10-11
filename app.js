@@ -245,18 +245,20 @@
       : {
           geral: "Visão Geral",
           dashboard: "Dashboard",
+          sectors: "Setores",
+          more: "Mais opções",
           data: "Enviar Dados Excel",
           report: "Relatórios",
           insight: "Insights e análises",
           present: "Estúdio de apresentações",
           settings: "Configurações",
         }[state.page] || "Visão geral";
-    return `<div class="app"><div class="backdrop ${state.sidebar ? "open" : ""}" data-close="1"></div><aside id="panel-navigation" class="sidebar ${state.sidebar ? "open" : ""}" aria-label="Navegação do painel"><button type="button" class="sidebar-close small-icon-btn" data-close-nav aria-label="Fechar menu">${icon("close", 20)}</button><div class="brand"><span class="panel-logo" aria-hidden="true">${icon("brand", 26)}</span><strong class="panel-brand-title">Power BI | Painel Completo</strong><span class="panel-brand-owner">Michelle Cândido</span></div><label class="searchbox sidebar-search">${icon("search", 18)}<input aria-label="Pesquisar registros" id="global-search" placeholder="Buscar registros..." value="${esc(state.query)}" /></label><div class="nav-scroll"><div class="nav-group"><div class="side-label">PRINCIPAL</div>${nav("geral", "Visão Geral")}${nav("dashboard", "Visualizar dashboard")}${nav("present", "Estúdio de Apresentações")}</div><div class="nav-group"><div class="side-label">DEPARTAMENTOS</div>${sectors.map((s) => nav(s.id, s.name)).join("")}</div><div class="nav-group"><div class="side-label">GESTÃO E DADOS</div>${nav("data", "Enviar Dados Excel")}${nav("report", "Relatórios")}${nav("insight", "Insights e análises")}${nav("settings", "Configurações")}</div></div><div class="side-bottom"><div class="side-credit">Power BI | Painel Completo / Michelle Cândido</div></div></aside><div class="main"><header class="topbar"><button aria-label="${state.sidebar ? "Fechar menu" : "Abrir menu"}" aria-expanded="${state.sidebar}" aria-controls="panel-navigation" class="small-icon-btn mob-toggle" data-toggle="1">${icon("menu", 20)}</button><div class="header-identity"><span class="panel-logo panel-logo-small" aria-hidden="true">${icon("brand", 19)}</span><div class="crumb"><strong class="app-title">Power BI | Painel Completo</strong><span class="owner-name">Michelle Cândido</span><span class="app-caption crumb-page">${esc(title)}</span></div></div><div class="head-actions">${themeButton()}<button aria-label="Estúdio de Apresentações" class="btn studio-top-button" data-nav="present">${icon("report", 15)} Estúdio de Apresentações</button><button type="button" class="top-assistant" data-assistant-open="1" aria-label="Abrir assistente">${icon("spark", 15)} <span>Assistente</span></button><span class="badge info" style="white-space:nowrap">${imports.length ? "Dados reais" : "Aguardando dados"}</span><div class="avatar">M</div></div></header><main class="content"><div class="print-header">Power BI | Painel Completo / Michelle Cândido</div>${body()}</main><footer class="footer"><span>Power BI | Painel Completo / Michelle Cândido</span></footer></div><nav class="mobile-nav" aria-label="Navegação principal">${[
-      ["geral", "Visão Geral", "grid"],
-      ["dashboard", "Dashboard", "chart"],
-      ["data", "Enviar Dados", "up"],
+    return `<div class="app"><div class="backdrop ${state.sidebar ? "open" : ""}" data-close="1"></div><aside id="panel-navigation" class="sidebar ${state.sidebar ? "open" : ""}" aria-label="Navegação do painel"><button type="button" class="sidebar-close small-icon-btn" data-close-nav aria-label="Fechar menu">${icon("close", 20)}</button><div class="brand"><span class="panel-logo" aria-hidden="true">${icon("brand", 26)}</span><strong class="panel-brand-title">Power BI | Painel Completo</strong><span class="panel-brand-owner">Michelle Cândido</span></div><label class="searchbox sidebar-search">${icon("search", 18)}<input aria-label="Pesquisar registros" id="global-search" placeholder="Buscar registros..." value="${esc(state.query)}" /></label><div class="nav-scroll"><div class="nav-group"><div class="side-label">PRINCIPAL</div>${nav("geral", "Visão Geral")}${nav("dashboard", "Visualizar dashboard")}${nav("present", "Estúdio de Apresentações")}</div><div class="nav-group"><div class="side-label">DEPARTAMENTOS</div>${sectors.map((s) => nav(s.id, s.name)).join("")}</div><div class="nav-group"><div class="side-label">GESTÃO E DADOS</div>${nav("data", "Enviar Dados Excel")}${nav("report", "Relatórios")}${nav("insight", "Insights e análises")}${nav("settings", "Configurações")}</div></div><div class="side-bottom"><div class="side-credit">Power BI | Painel Completo / Michelle Cândido</div></div></aside><div class="main"><header class="topbar"><button aria-label="${state.sidebar ? "Fechar menu" : "Abrir menu"}" aria-expanded="${state.sidebar}" aria-controls="panel-navigation" class="small-icon-btn mob-toggle" data-toggle="1">${icon("menu", 20)}</button><div class="header-identity"><span class="panel-logo panel-logo-small" aria-hidden="true">${icon("brand", 19)}</span><div class="crumb"><strong class="app-title">Power BI | Painel Completo</strong><span class="owner-name">Michelle Cândido</span><span class="app-caption crumb-page">${esc(title)}</span></div></div><div class="head-actions">${themeButton()}<button type="button" class="install-shortcut" data-mc-install title="Instalar aplicativo" aria-label="Instalar aplicativo">${icon("down", 16)}<span class="install-label">Instalar</span></button><button aria-label="Estúdio de Apresentações" class="btn studio-top-button" data-nav="present">${icon("report", 15)} Estúdio de Apresentações</button><button type="button" class="top-assistant" data-assistant-open="1" aria-label="Abrir assistente">${icon("spark", 15)} <span>Assistente</span></button><span class="badge info" style="white-space:nowrap">${imports.length ? "Dados reais" : "Aguardando dados"}</span><div class="avatar">M</div></div></header><main class="content"><div class="print-header">Power BI | Painel Completo / Michelle Cândido</div>${body()}</main><footer class="footer"><span>Power BI | Painel Completo / Michelle Cândido</span></footer></div><nav class="mobile-nav" aria-label="Navegação principal">${[
+      ["geral", "Resumo", "grid"],
+      ["sectors", "Setores", "coi"],
+      ["data", "Dados", "up"],
       ["report", "Relatórios", "report"],
-      ["present", "Estúdio", "files"],
+      ["more", "Mais", "menu"],
     ]
       .map(
         ([id, label, ico]) =>
@@ -437,6 +439,7 @@
         "Indicadores, prioridades e ferramentas da sua operação.",
       ) +
       `<section class="central-dashboard" aria-labelledby="dashboard-title"><div class="dashboard-head"><div><span class="dashboard-eyebrow">CENTRAL DE INDICADORES</span><h2 id="dashboard-title">Dashboard central</h2><p>Suas planilhas alimentam os indicadores, gráficos e relatórios.</p></div><div class="dashboard-import"><button class="btn btn-primary" data-nav="dashboard">${icon("chart", 18)} Visualizar dashboard</button><button class="btn" data-nav="data">${icon("plus", 18)} Adicionar dados</button><small>Importar uma ou mais planilhas</small></div><div class="dashboard-filters">${periodButtons()}</div></div>` +
+      managerialHighlights(rs) +
       insightsPanel(rs) +
       statCards(rs) +
       graphPanels(rs) +
@@ -517,7 +520,7 @@
     if (!state.importReviewOpen) return "";
     const files = state.uploadQueue.filter(p => !p.lotId), p = state.pending;
     if (!files.length) return "";
-    return `<dialog id="import-review" class="import-review" aria-labelledby="import-review-title"><header><div><span class="eyebrow">PLANILHAS</span><h2 id="import-review-title">Importar e ler</h2><p>Leitura automática. Confira e confirme para anexar os arquivos.</p></div><button class="btn" data-close-import>Fechar</button></header><div class="import-review-body"><div class="import-review-files">${files.map(f => `<button class="btn ${p === f ? "active" : ""}" data-configure-file="${f.queueId}" ${f.grid ? "" : "disabled"}>${esc(f.name)} · ${f.status === "reading" ? "Lendo…" : f.status === "error" ? "Conferir" : "Lido"}</button>`).join("")}</div>${p?.grid ? importWizard(p) : '<p>Lendo os arquivos selecionados…</p>'}${files.filter(f => f.error).map(f => `<p class="import-file-error">${esc(f.name)}: ${esc(f.error)}</p>`).join("")}</div><footer><button class="btn" data-close-import>Voltar</button>${files.filter(f => f.grid).length > 1 ? `<button class="btn btn-primary" data-import-queue ${state.importBusy ? "disabled" : ""}>Confirmar ${files.filter(f => f.grid).length} arquivos lidos</button>` : `<button class="btn btn-primary" data-confirm-import ${p?.grid && validatePending(p).rows.length && !state.importBusy ? "" : "disabled"}>Confirmar importação</button>`}</footer></dialog>`;
+    return `<dialog id="import-review" class="import-review" aria-labelledby="import-review-title"><header><div><span class="eyebrow">PLANILHAS</span><h2 id="import-review-title">Importar e ler</h2><p>Leitura automática. Confira e confirme para anexar os arquivos.</p></div><button class="btn" data-close-import>Fechar</button></header><div class="import-review-body"><div class="import-review-files">${files.map(f => `<button class="btn ${p === f ? "active" : ""}" data-configure-file="${f.queueId}" ${f.grid ? "" : "disabled"}>${esc(f.name)} · ${f.status === "reading" ? "Lendo…" : f.status === "error" ? "Conferir" : "Lido"}</button>`).join("")}</div>${p?.grid ? importWizard(p) : '<p>Lendo os arquivos selecionados…</p>'}${files.filter(f => f.error).map(f => `<p class="import-file-error">${esc(f.name)}: ${esc(f.error)}</p>`).join("")}</div><footer><button class="btn" data-close-import>Voltar</button>${files.filter(f => f.grid).length > 1 ? `<button class="btn btn-primary" data-import-queue ${state.importBusy ? "disabled" : ""}>Confirmar ${files.filter(f => f.grid).length} arquivos lidos</button>` : `<button class="btn btn-primary" data-confirm-import ${p?.grid && validatePending(p).rows.length && (!p.detectInfo?.conflict || p.manualReview) && !state.importBusy ? "" : "disabled"}>Confirmar importação</button>`}</footer></dialog>`;
   }
   function importWizard(p) {
     const r = validatePending(p), dates = r.rows.map(x => x.date).filter(Boolean).sort();
@@ -529,7 +532,10 @@
       index,
     })).filter(x => x.role);
     const detection = p.detectInfo || D.detect(p.grid, { filename: p.name, sheet: p.sheet });
-    return `<div class="import-reading-summary"><h3>${esc(p.name)}</h3><div class="import-summary-grid"><span><small>Fonte identificada</small><b>${esc(D.types[p.type])}</b></span><span><small>Registros lidos</small><b>${fmtNum(r.rows.length)}</b></span><span><small>Datas da planilha</small><b>${dates.length ? `${fmtDate(dates[0])} a ${fmtDate(dates.at(-1))}` : "Sem data na planilha"}</b></span><span><small>Destino sugerido</small><b>${esc(idSector(p.sector)?.name || p.sector)}</b></span></div><div class="import-detection"><strong>${icon("check", 16)} Identificação: ${esc(detection.confidence || "Conferir")}</strong><p>${esc(detection.reason || "")}</p><p><b>Arquivo:</b> ${esc(p.name)} · <b>Aba:</b> ${esc(p.sheet)}</p></div><div class="import-column-tags"><strong>Colunas reconhecidas</strong><div>${mapped.length ? mapped.slice(0, 8).map(x => `<span title="${esc(I?.fieldPurpose(p.type, x.name) || x.role)}"><b>${esc(x.name)}</b> → ${esc(x.role)}</span>`).join("") : "<span>Nenhuma coluna associada com segurança; use Ajustes opcionais.</span>"}</div></div><p class="panel-sub">${dates.length ? "Datas e horários originais foram preservados." : "Este arquivo pode ser importado sem definir datas. Os totais continuam disponíveis em Todo o histórico."}</p><p class="panel-sub">Aba: ${esc(p.sheet)} · ${r.errors.length} linhas inválidas · ${r.skipped.length} totais/resumos excluídos.</p><details class="import-reading"><summary>Ver a interpretação da planilha</summary><p>${esc(window.MCIntelligence?.semantics[p.type]?.meaning || "Confira as colunas reconhecidas.")}</p><p class="panel-sub">${esc(window.MCIntelligence?.semantics[p.type]?.limit || "")}</p><p class="panel-sub">Apenas esta aba será anexada. Abas de resumo não são somadas à base detalhada.</p></details><div class="table-wrap import-raw-preview"><table class="tbl"><thead><tr>${fields.map(h => `<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${r.rows.slice(0, 5).map(x => `<tr>${fields.map(h => `<td>${esc(x.raw[String(h)] ?? "")}</td>`).join("")}</tr>`).join("")}</tbody></table></div><details class="import-advanced" ${state.importAdvancedOpen ? "open" : ""}><summary>Ajustes opcionais e conferência de colunas</summary>${importAdvanced(p)}</details></div>`;
+    const assessment = window.MCAnalysis?.quality(r.rows, { type: p.type });
+    const qualityNotes = assessment?.issues?.length ? '<div class="mc-analysis-notes"><strong>Conferência automática de qualidade</strong><ul>' + assessment.issues.map(x => '<li>' + esc(x.text) + '</li>').join("") + '</ul></div>' : "";
+    const conflictNotes = detection.conflict ? '<div class="mc-analysis-notes"><strong class="warning">Identificação conflitante</strong><p>' + esc(detection.reason) + '</p><label><input type="checkbox" data-mc-review ' + (p.manualReview ? "checked" : "") + '> Conferi o tipo e as colunas desta planilha.</label></div>' : "";
+    return `<div class="import-reading-summary"><h3>${esc(p.name)}</h3><div class="import-summary-grid"><span><small>Fonte identificada</small><b>${esc(D.types[p.type])}</b></span><span><small>Registros lidos</small><b>${fmtNum(r.rows.length)}</b></span><span><small>Datas da planilha</small><b>${dates.length ? `${fmtDate(dates[0])} a ${fmtDate(dates.at(-1))}` : "Sem data na planilha"}</b></span><span><small>Destino sugerido</small><b>${esc(idSector(p.sector)?.name || p.sector)}</b></span></div><div class="import-detection"><strong>${icon("check", 16)} Identificação: ${esc(detection.confidence || "Conferir")}</strong><p>${esc(detection.reason || "")}</p><p><b>Arquivo:</b> ${esc(p.name)} · <b>Aba:</b> ${esc(p.sheet)}</p></div>${qualityNotes}${conflictNotes}<div class="import-column-tags"><strong>Colunas reconhecidas</strong><div>${mapped.length ? mapped.slice(0, 8).map(x => `<span title="${esc(I?.fieldPurpose(p.type, x.name) || x.role)}"><b>${esc(x.name)}</b> → ${esc(x.role)}</span>`).join("") : "<span>Nenhuma coluna associada com segurança; use Ajustes opcionais.</span>"}</div></div><p class="panel-sub">${dates.length ? "Datas e horários originais foram preservados." : "Este arquivo pode ser importado sem definir datas. Os totais continuam disponíveis em Todo o histórico."}</p><p class="panel-sub">Aba: ${esc(p.sheet)} · ${r.errors.length} linhas inválidas · ${r.skipped.length} totais/resumos excluídos.</p><details class="import-reading"><summary>Ver a interpretação da planilha</summary><p>${esc(window.MCIntelligence?.semantics[p.type]?.meaning || "Confira as colunas reconhecidas.")}</p><p class="panel-sub">${esc(window.MCIntelligence?.semantics[p.type]?.limit || "")}</p><p class="panel-sub">Apenas esta aba será anexada. Abas de resumo não são somadas à base detalhada.</p></details><div class="table-wrap import-raw-preview"><table class="tbl"><thead><tr>${fields.map(h => `<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${r.rows.slice(0, 5).map(x => `<tr>${fields.map(h => `<td>${esc(x.raw[String(h)] ?? "")}</td>`).join("")}</tr>`).join("")}</tbody></table></div><details class="import-advanced" ${state.importAdvancedOpen ? "open" : ""}><summary>Ajustes opcionais e conferência de colunas</summary>${importAdvanced(p)}</details></div>`;
   }
   function previewRows(rows) {
     let cols = Object.keys(rows[0] || {}).slice(0, 6);
@@ -592,6 +598,7 @@
         "Insights e Análises",
         "Diagnósticos gerenciais calculados com os dados disponíveis.",
       ) +
+      managerialHighlights(recordsFor()) +
       insightsPanel(recordsFor(), null, true) +
       `<div class="insight-actions"><button class="btn btn-primary" data-refresh-insights>Gerar Insights com Dados Atuais</button><button class="btn" data-nav="data">Importar Novos Dados</button><button class="btn" data-nav="report">Gerar Relatório</button></div><section class="card panel assistant-full-card section-space"><div class="panel-head"><div><h3>Assistente Michelle</h3><p class="panel-sub">Consultas locais ao painel. IA externa aguardando integração.</p></div><button class="btn" data-assistant-clear>Limpar conversa</button></div><div class="assistant-chat-root assistant-chat-full" data-assistant-root="full">${assistantChat(true)}</div></section>`
     );
@@ -602,10 +609,32 @@
         "Configurações",
         "Personalize metas, identificação e preferências do seu painel.",
       ) +
-      `<div class="page-grid"><section class="card panel"><div class="panel-head"><div><h3 class="panel-title">Identidade do painel</h3><p class="panel-sub">Informações desta operação</p></div>${icon("settings", 19)}</div><div class="field appearance-field"><label for="appearance-select">Aparência do aplicativo</label><select id="appearance-select" class="control"><option value="light" ${appearance() === "light" ? "selected" : ""}>Claro · cinza e grafite</option><option value="dark" ${appearance() === "dark" ? "selected" : ""}>Escuro · grafite</option></select><p class="panel-sub">A preferência fica salva. Os temas dos slides são configurados no Estúdio.</p></div><div class="field"><label>Nome da operação</label><input class="control" id="operation" value="${esc(settings.operation)}" /></div><button class="btn btn-primary section-space" data-save="1">Salvar configurações</button><div class="info-box section-space"><strong>Seus dados operacionais</strong><p>Exporte as planilhas do sistema de origem e importe por Enviar Dados Excel. O painel preserva os arquivos originais e o histórico de atualização.</p></div></section><section class="card panel"><div class="panel-head"><div><h3 class="panel-title">Metas por departamento</h3><p class="panel-sub">Percentual de conclusão desejado</p></div>${icon("target", 18)}</div><div class="settings-list section-space">${sectors.map((s) => `<div class="settings-item"><div><strong>${s.name}</strong><small>Meta de conclusão (percentual)</small><div class="progress"><div style="width:${settings.goals?.[s.id] ?? 0}%"></div></div></div><div class="row" style="gap:4px"><input class="control" type="number" min="0" max="100" step="1" data-goal="${s.id}" value="${settings.goals?.[s.id] ?? ""}" placeholder="Sem meta"/><span>%</span></div></div>`).join("")}</div><button class="btn btn-primary section-space" data-save="1">${icon("check", 14)} Aplicar metas</button></section></div>`
+      `<section class="mc-install-panel"><div><strong>Instalar Painel Michelle</strong><p data-install-status>Suporte varia conforme o navegador. Seus dados permanecem neste navegador e não são sincronizados com outros dispositivos.</p><p id="mc-install-guide" hidden></p></div><button type="button" class="install-shortcut" data-mc-install>Instalar aplicativo</button></section><div class="page-grid"><section class="card panel"><div class="panel-head"><div><h3 class="panel-title">Identidade do painel</h3><p class="panel-sub">Informações desta operação</p></div>${icon("settings", 19)}</div><div class="field appearance-field"><label for="appearance-select">Aparência do aplicativo</label><select id="appearance-select" class="control"><option value="light" ${appearance() === "light" ? "selected" : ""}>Claro · cinza e grafite</option><option value="dark" ${appearance() === "dark" ? "selected" : ""}>Escuro · grafite</option></select><p class="panel-sub">A preferência fica salva. Os temas dos slides são configurados no Estúdio.</p></div><div class="field"><label>Nome da operação</label><input class="control" id="operation" value="${esc(settings.operation)}" /></div><button class="btn btn-primary section-space" data-save="1">Salvar configurações</button><div class="info-box section-space"><strong>Seus dados operacionais</strong><p>Exporte as planilhas do sistema de origem e importe por Enviar Dados Excel. O painel preserva os arquivos originais e o histórico de atualização.</p></div></section><section class="card panel"><div class="panel-head"><div><h3 class="panel-title">Metas por departamento</h3><p class="panel-sub">Percentual de conclusão desejado</p></div>${icon("target", 18)}</div><div class="settings-list section-space">${sectors.map((s) => `<div class="settings-item"><div><strong>${s.name}</strong><small>Meta de conclusão (percentual)</small><div class="progress"><div style="width:${settings.goals?.[s.id] ?? 0}%"></div></div></div><div class="row" style="gap:4px"><input class="control" type="number" min="0" max="100" step="1" data-goal="${s.id}" value="${settings.goals?.[s.id] ?? ""}" placeholder="Sem meta"/><span>%</span></div></div>`).join("")}</div><button class="btn btn-primary section-space" data-save="1">${icon("check", 14)} Aplicar metas</button></section></div>`
     );
   }
+  function pageSectorDirectory() {
+    return header("Setores", "Abra os indicadores do setor desejado.") +
+      '<section class="sector-grid">' + sectors.map(sec => {
+        const n = recordsFor(sec.id).length;
+        return '<button class="sector-tile" data-nav="' + esc(sec.id) + '"><div class="tile-top">' + icon(sec.id, 18) + ' ' + esc(sec.name) + '</div><div class="tile-bottom"><strong>' + fmtNum(n) + '</strong><small>linhas disponíveis · ver setor</small></div></button>';
+      }).join("") + '</section>';
+  }
+  function pageMore() {
+    return header("Mais opções", "Ferramentas avançadas e configuração.") +
+      '<section class="sector-grid">' +
+      [["dashboard","Dashboard completo","chart"],["insight","Análises e assistente","insight"],["present","Estúdio de apresentações","files"],["settings","Configurações e instalação","settings"]].map(x => '<button class="sector-tile" data-nav="' + x[0] + '"><div class="tile-top">' + icon(x[2], 18) + ' ' + x[1] + '</div><div class="tile-bottom"><small>Abrir ferramenta</small></div></button>').join("") +
+      '</section>';
+  }
+  function managerialHighlights(rows) {
+    if (!window.MCAnalysis || !rows.length) return "";
+    const cards = window.MCAnalysis.analyze(rows, imports).filter(x => ["attention","comparison","concentration"].includes(x.kind)).slice(0, 4);
+    if (!cards.length) return "";
+    return '<section class="card panel mc-executive-highlights"><div class="panel-head"><div><h3 class="panel-title">Pontos de atenção e análise</h3><p class="panel-sub">Observações apoiadas nos arquivos importados</p></div></div>' +
+      cards.map(c => '<article class="mc-intelligence-card"><strong>' + esc(c.title) + '</strong><p>' + esc(c.text) + '</p><details><summary>Entender resultado e origem</summary><p>' + esc(c.basis) + '</p><p>Limitação: ' + esc(c.caveat) + '</p><p>Fontes: ' + esc(c.sources.join(", ") || "Não informadas") + '</p></details></article>').join("") + '</section>';
+  }
   function body() {
+    if (state.page === "sectors") return pageSectorDirectory();
+    if (state.page === "more") return pageMore();
     let sec = idSector(state.page);
     if (sec) return pageSector(sec);
     if (state.page === "dashboard") return window.MichelleDashboard ? window.MichelleDashboard.page() : '<section class="card panel">Preparando o dashboard...</section>';
@@ -626,6 +655,7 @@
       .querySelectorAll("[data-assistant-messages]")
       .forEach((el) => (el.scrollTop = el.scrollHeight));
     wire();
+    window.MCInstall?.bind();
     window.MichelleDashboard?.wire();
   }
   function appearance() {
@@ -684,6 +714,8 @@
       s = D.stats(rows);
     if (!rows.length)
       return "Não há dados no recorte atual. Importe uma planilha ou ajuste os filtros.";
+    if (window.MCAnalysis && /arquivo|planilh|inconsisten|duplic|compar|subiu|caiu|pior|melhor|variac|prior|problema|gargalo|conta/i.test(v))
+      return window.MCAnalysis.answer(q, rows, imports);
     if (/cruz|insight|interpret|planilh|evento|cuc|desloc|duracao|horario/.test(v) && window.MCIntelligence)
       return window.MCIntelligence.analyze(rows).cards.map(c => `${c.title}\n${c.text}\nBase: ${c.basis}\nLimite: ${c.caveat}`).join("\n\n");
     if (/pend|aberto|atras/.test(v))
@@ -926,6 +958,8 @@
     state.importBusy = true;
     try {
       const result = validatePending(p);
+      if (p.detectInfo?.conflict && !p.manualReview)
+        throw Error("Há um conflito entre nome do arquivo e colunas. Confirme a identificação antes de importar.");
       if (result.errors.length && !p.acceptInvalid)
         throw Error(
           "Confira as linhas inválidas e marque a opção para importar somente as válidas.",
@@ -940,7 +974,15 @@
           sheet: p.sheet,
           headerRow: p.headerRow,
           mapping: { ...result.mapping },
-          interpretationVersion: 2,
+          interpretationVersion: 4,
+          analysisProfile: p.analysisProfile ? {
+            confidence: p.analysisProfile.confidence,
+            filenameType: p.analysisProfile.filenameType,
+            headerType: p.analysisProfile.headerType,
+            signature: p.analysisProfile.signature,
+            explanation: p.analysisProfile.explanation,
+            conflictReviewed: !!p.manualReview
+          } : null,
           hash: p.hash,
           sector: p.sector,
           type: p.type,
@@ -950,6 +992,7 @@
           rows: result.rows,
           errors: result.errors,
           skipped: result.skipped,
+          quality: window.MCAnalysis?.quality(result.rows, { type: p.type }) || null,
           fileId: p.hash,
         };
       const next = D.ingest(imports, lot, p.policy);
@@ -1067,6 +1110,7 @@
         notify(deleting ? "Arquivo excluído do painel. Você pode restaurá-lo em Arquivos excluídos." : "Arquivo restaurado. Indicadores atualizados.");
       } catch (e) { notify("Não foi possível alterar o arquivo: " + e.message, true); }
     }));
+    document.querySelector("[data-mc-review]")?.addEventListener("change", e => { if (state.pending) { state.pending.manualReview = e.target.checked; render(); } });
     document.querySelector(".import-advanced")?.addEventListener("toggle", e => { state.importAdvancedOpen = e.target.open; });
     const review = document.getElementById("import-review");
     if (review) {
@@ -1422,6 +1466,8 @@
     });
     const a = D.detect(p.grid, { filename: p.name, sheet: p.sheet });
     p.detectInfo = a;
+    p.analysisProfile = a.profile || window.MCAnalysis?.profile(p.grid, { filename: p.name, sheet: p.sheet }, a);
+    p.manualReview = false;
     p.headerRow = a.headerRow;
     p.mapping = a.mapping;
     p.type = a.type;
