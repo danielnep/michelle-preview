@@ -1,15 +1,45 @@
 <!doctype html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="dark">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>MC Power BI Painel Completo | Horizon</title>
-    <meta name="theme-color" content="#e6e9ed" />
-    <meta name="app-version" content="3.1.3" />
+    <meta name="theme-color" content="#080808" />
+    <meta name="app-version" content="3.2.0" />
     <meta
       name="description"
       content="Painel operacional de Michelle Cândido, desenvolvido por Horizon."
     />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="32x32"
+      href="assets/favicon-32x32.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="192x192"
+      href="assets/icon-192.png"
+    />
+    <link
+      rel="apple-touch-icon"
+      sizes="180x180"
+      href="assets/apple-touch-icon.png"
+    />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <meta property="og:title" content="MC Power BI Painel Completo | Horizon" />
+    <meta
+      property="og:image"
+      content="https://danielnep.github.io/michelle-preview/assets/horizon-logo-approved.png"
+    />
+    <script>
+      try {
+        const theme = localStorage.getItem("horizon.appearance");
+        document.documentElement.dataset.theme =
+          theme === "light" ? "light" : "dark";
+      } catch (_) {}
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -17,17 +47,17 @@
       rel="stylesheet"
     />
 
-    <link rel="stylesheet" href="styles.css?v=20261011.5" />
-    <link rel="stylesheet" href="enhancements.css?v=20261011.5" />
-    <link rel="stylesheet" href="theme.css?v=20261011.5" />
+    <link rel="stylesheet" href="styles.css?v=20261011.6" />
+    <link rel="stylesheet" href="enhancements.css?v=20261011.6" />
+    <link rel="stylesheet" href="theme.css?v=20261011.6" />
   </head>
   <body>
     <div id="app"></div>
     <script src="vendor/xlsx.full.min.js"></script>
     <script src="vendor/jszip.min.js"></script>
-    <script src="data-core.js?v=20261011.5"></script>
-    <script src="pptx.js?v=20261011.5"></script>
-    <script src="app.js?v=20261011.5"></script>
-    <script src="studio.js?v=20261011.5"></script>
+    <script src="data-core.js?v=20261011.6"></script>
+    <script src="pptx.js?v=20261011.6"></script>
+    <script src="app.js?v=20261011.6"></script>
+    <script src="studio.js?v=20261011.6"></script>
   </body>
 </html>

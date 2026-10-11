@@ -231,7 +231,7 @@
     return `<span class="badge ${status === "Concluído" ? "ok" : status === "Pendente" ? "danger" : "warning"}">${esc(status)}</span>`;
   }
   function nav(item, label) {
-    return `<button type="button" class="nav ${state.page === item ? "active" : ""}" data-nav="${item}">${icon(item === "geral" ? "grid" : item)} <span>${esc(label)}</span></button>`;
+    return `<button type="button" class="nav ${state.page === item ? "active" : ""}" data-nav="${item}" ${state.page === item ? 'aria-current="page"' : ""}>${icon(item === "geral" ? "grid" : item)} <span>${esc(label)}</span></button>`;
   }
   function shell() {
     let sec = idSector(state.page);
@@ -245,7 +245,7 @@
           present: "Estúdio de apresentações",
           settings: "Configurações",
         }[state.page] || "Visão geral";
-    return `<div class="app"><div class="backdrop ${state.sidebar ? "open" : ""}" data-close="1"></div><aside class="sidebar ${state.sidebar ? "open" : ""}"><div class="brand"><div class="brand-logo-plate"><img src="assets/horizon-logo.png" alt="Horizon" class="brand-logo" width="208" height="72"></div><div class="brand-sub">OPERAÇÕES E INDICADORES</div></div><label class="searchbox sidebar-search">${icon("search", 18)}<input aria-label="Pesquisar registros" id="global-search" placeholder="Buscar registros..." value="${esc(state.query)}" /></label><div class="nav-scroll"><div class="nav-group"><div class="side-label">PRINCIPAL</div>${nav("geral", "Visão Geral")}${nav("present", "Estúdio de Apresentações")}</div><div class="nav-group"><div class="side-label">DEPARTAMENTOS</div>${sectors.map((s) => nav(s.id, s.name)).join("")}</div><div class="nav-group"><div class="side-label">GESTÃO E DADOS</div>${nav("data", "Enviar Dados Excel")}${nav("report", "Relatórios")}${nav("insight", "Insights e análises")}${nav("settings", "Configurações")}</div></div><div class="side-bottom"><div class="side-status"><span class="online-dot"></span> ${state.ready ? "Dados salvos neste navegador" : "Carregando armazenamento"}</div><div class="side-credit">MC Power BI Painel Completo • v3.1.3</div></div></aside><div class="main"><header class="topbar"><div class="header-identity"><button aria-label="Abrir menu" class="small-icon-btn mob-toggle" data-toggle="1">${icon("menu", 19)}</button><div class="header-brand"><img src="assets/horizon-logo.png" alt="Horizon" width="96" height="34"></div><div class="crumb"><span class="owner-name">Michelle Cândido<small>Gerente Central de Operações Integradas</small></span><span class="app-caption">MC Power BI Painel Completo<span class="crumb-page"> · ${esc(title)}</span></span></div></div><div class="head-actions">${themeButton()}<button aria-label="Estúdio de Apresentações" class="btn studio-top-button" data-nav="present">${icon("report", 15)} Estúdio de Apresentações</button><button type="button" class="top-assistant" data-assistant-open="1" aria-label="Abrir assistente">${icon("spark", 15)} <span>Assistente</span></button><span class="badge info" style="white-space:nowrap">${imports.length ? "Dados reais" : "Aguardando dados"}</span><div class="avatar">M</div></div></header><main class="content"><div class="print-header">POWER BI PAINEL COMPLETO | MICHELLE</div>${body()}</main><footer class="footer"><span>MC Power BI Painel Completo © 2026 • ${state.ready ? "Dados salvos neste navegador" : "Carregando armazenamento"}</span><span>Desenvolvido por Horizon</span></footer></div><nav class="mobile-nav" aria-label="Navegação principal">${[
+    return `<div class="app"><div class="backdrop ${state.sidebar ? "open" : ""}" data-close="1"></div><aside id="panel-navigation" class="sidebar ${state.sidebar ? "open" : ""}" aria-label="Navegação do painel"><button type="button" class="sidebar-close small-icon-btn" data-close-nav aria-label="Fechar menu">${icon("close", 20)}</button><div class="brand"><div class="brand-logo-plate"><img src="assets/horizon-logo.png" srcset="assets/horizon-logo.png 1200w, assets/horizon-logo-hd.png 2172w" sizes="220px" alt="Horizon" class="brand-logo" width="1200" height="400"></div><div class="brand-sub">OPERAÇÕES E INDICADORES</div></div><label class="searchbox sidebar-search">${icon("search", 18)}<input aria-label="Pesquisar registros" id="global-search" placeholder="Buscar registros..." value="${esc(state.query)}" /></label><div class="nav-scroll"><div class="nav-group"><div class="side-label">PRINCIPAL</div>${nav("geral", "Visão Geral")}${nav("present", "Estúdio de Apresentações")}</div><div class="nav-group"><div class="side-label">DEPARTAMENTOS</div>${sectors.map((s) => nav(s.id, s.name)).join("")}</div><div class="nav-group"><div class="side-label">GESTÃO E DADOS</div>${nav("data", "Enviar Dados Excel")}${nav("report", "Relatórios")}${nav("insight", "Insights e análises")}${nav("settings", "Configurações")}</div></div><div class="side-bottom"><div class="side-status"><span class="online-dot"></span> ${state.ready ? "Dados salvos neste navegador" : "Carregando armazenamento"}</div><div class="side-credit">MC Power BI Painel Completo • v3.2.0</div></div></aside><div class="main"><header class="topbar"><button aria-label="${state.sidebar ? "Fechar menu" : "Abrir menu"}" aria-expanded="${state.sidebar}" aria-controls="panel-navigation" class="small-icon-btn mob-toggle" data-toggle="1">${icon("menu", 20)}</button><div class="header-identity"><div class="crumb"><span class="owner-name">Michelle Cândido<small>Gerente Central de Operações Integradas</small></span><span class="app-caption">MC Power BI Painel Completo<span class="crumb-page"> · ${esc(title)}</span></span></div></div><button type="button" class="header-brand" data-nav="geral" aria-label="Horizon · Visão Geral"><img src="assets/horizon-logo.png" srcset="assets/horizon-logo.png 1200w, assets/horizon-logo-hd.png 2172w" sizes="180px" alt="Horizon" width="1200" height="400"></button><div class="head-actions">${themeButton()}<button aria-label="Estúdio de Apresentações" class="btn studio-top-button" data-nav="present">${icon("report", 15)} Estúdio de Apresentações</button><button type="button" class="top-assistant" data-assistant-open="1" aria-label="Abrir assistente">${icon("spark", 15)} <span>Assistente</span></button><span class="badge info" style="white-space:nowrap">${imports.length ? "Dados reais" : "Aguardando dados"}</span><div class="avatar">M</div></div></header><main class="content"><div class="print-header">POWER BI PAINEL COMPLETO | MICHELLE</div>${body()}</main><footer class="footer"><span>MC Power BI Painel Completo © 2026 • ${state.ready ? "Dados salvos neste navegador" : "Carregando armazenamento"}</span><span class="development-credit"><img src="assets/horizon-symbol.png" alt="" width="24" height="24">Desenvolvido por Horizon</span></footer></div><nav class="mobile-nav" aria-label="Navegação principal">${[
       ["geral", "Visão Geral", "grid"],
       ["data", "Enviar Dados", "up"],
       ["report", "Relatórios", "report"],
@@ -315,16 +315,16 @@
         .map((p, i) => `${i ? "L" : "M"}${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
         .join(" "),
       area = line + ` L${pts.at(-1).x} ${H - pb} L${pts[0].x} ${H - pb} Z`;
-    return `<div class="chart"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Gráfico temporal com ${d.length} períodos"> <defs><linearGradient id="linefill" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#3b9be5" stop-opacity=".21"/><stop offset="1" stop-color="#3b9be5" stop-opacity=".008"/></linearGradient></defs>${[
+    return `<div class="chart"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Gráfico temporal com ${d.length} períodos"> <defs><linearGradient id="linefill" x1="0" y1="0" x2="0" y2="1"><stop stop-color="var(--brand)" stop-opacity=".21"/><stop offset="1" stop-color="var(--brand)" stop-opacity=".008"/></linearGradient></defs>${[
       0, 0.25, 0.5, 0.75, 1,
     ]
       .map((t) => {
         let y = pt + (1 - t) * ih;
-        return `<line x1="${pl}" x2="${W - pr}" y1="${y}" y2="${y}" stroke="#e8eef5" stroke-dasharray="4 5"/><text x="${pl - 12}" y="${y + 4}" fill="#9babba" font-size="11" text-anchor="end">${Math.round(max * t)}</text>`;
+        return `<line x1="${pl}" x2="${W - pr}" y1="${y}" y2="${y}" stroke="var(--line)" stroke-dasharray="4 5"/><text x="${pl - 12}" y="${y + 4}" fill="#9babba" font-size="11" text-anchor="end">${Math.round(max * t)}</text>`;
       })
       .join(
         "",
-      )}<path d="${area}" fill="url(#linefill)"/><path d="${line}" fill="none" stroke="#2b8ce0" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>${pts.map((p, i) => `<circle cx="${p.x}" cy="${p.y}" r="3.5" fill="#fff" stroke="#328ee0" stroke-width="2"><title>${d[i].label}: ${d[i].value} registros</title></circle>`).join("")}${d.map((e, i) => `<text x="${pts[i].x}" y="${H - 8}" fill="#9cabb9" font-size="10.5" text-anchor="middle">${esc(e.label)}</text>`).join("")}</svg></div>`;
+      )}<path d="${area}" fill="url(#linefill)"/><path d="${line}" fill="none" stroke="var(--brand)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>${pts.map((p, i) => `<circle cx="${p.x}" cy="${p.y}" r="3.5" fill="var(--surface)" stroke="var(--brand)" stroke-width="2"><title>${d[i].label}: ${d[i].value} registros</title></circle>`).join("")}${d.map((e, i) => `<text x="${pts[i].x}" y="${H - 8}" fill="#9cabb9" font-size="10.5" text-anchor="middle">${esc(e.label)}</text>`).join("")}</svg></div>`;
   }
   function bars(rs) {
     let d = sectors.map((s) => ({
@@ -342,7 +342,7 @@
       .map((e, i) => {
         let y = i * row + 6,
           w = (iw * e.count) / max;
-        return `<text x="${margin - 12}" y="${y + 13}" text-anchor="end" fill="#71869a" font-size="11">${esc(e.short)}</text><rect x="${margin}" y="${y}" width="${iw}" height="18" rx="4" fill="#f1f5f9"/><rect x="${margin}" y="${y}" width="${w}" height="18" rx="4" fill="${i % 2 ? "#72b8ed" : "#398fd5"}"><title>${esc(e.name)}: ${e.count} registros</title></rect><text x="${margin + w + 7}" y="${y + 13}" fill="#436480" font-size="11" font-weight="700">${e.count}</text>`;
+        return `<text x="${margin - 12}" y="${y + 13}" text-anchor="end" fill="#71869a" font-size="11">${esc(e.short)}</text><rect x="${margin}" y="${y}" width="${iw}" height="18" rx="4" fill="var(--surface-alt)"/><rect x="${margin}" y="${y}" width="${w}" height="18" rx="4" fill="${i % 2 ? "var(--blue2)" : "var(--brand)"}"><title>${esc(e.name)}: ${e.count} registros</title></rect><text x="${margin + w + 7}" y="${y + 13}" fill="#436480" font-size="11" font-weight="700">${e.count}</text>`;
       })
       .join("")}</svg></div>`;
   }
@@ -350,7 +350,7 @@
     let c = counts(rs),
       data = [
         { name: "Concluídos", value: c.done, color: "#219f85" },
-        { name: "Em andamento", value: c.open, color: "#388ddb" },
+        { name: "Em andamento", value: c.open, color: "var(--brand)" },
         { name: "Pendentes", value: c.pending, color: "#f3ae59" },
         { name: "Cancelados", value: c.cancelled, color: "#9ba3ad" },
         { name: "Não atendidos", value: c.unanswered, color: "#dc6a69" },
@@ -358,7 +358,7 @@
       sum = Math.max(1, c.known),
       acc = 0,
       cir = 2 * Math.PI * 67;
-    return `<div class="donut-block"><div class="donut"><svg viewBox="0 0 180 180" aria-label="Distribuição de status"><circle cx="90" cy="90" r="67" fill="none" stroke="#eef3f7" stroke-width="22"/>${data
+    return `<div class="donut-block"><div class="donut"><svg viewBox="0 0 180 180" aria-label="Distribuição de status"><circle cx="90" cy="90" r="67" fill="none" stroke="var(--surface-raised)" stroke-width="22"/>${data
       .map((d) => {
         let len = (d.value / sum) * cir,
           a = `<circle cx="90" cy="90" r="67" fill="none" stroke="${d.color}" stroke-width="22" stroke-dasharray="${len} ${cir - len}" stroke-dashoffset="${-acc}" transform="rotate(-90 90 90)"><title>${d.name}: ${d.value}</title></circle>`;
@@ -380,7 +380,7 @@
     });
   }
   const insightsPanel = (rs, sector, detailed = false, range = {}) =>
-    `<section class="card panel"><div class="panel-head"><div><h3 class="panel-title">Insights operacionais</h3><p class="panel-sub">Pontos de atenção por regras locais</p></div>${icon("insight", 18)}</div>${insights(
+    `<section class="card panel operational-insights"><div class="panel-head"><div><h3 class="panel-title">Insights operacionais</h3><p class="panel-sub">Leitura dos dados da sua operação</p></div>${icon("insight", 18)}</div><div class="insights-grid">${insights(
       rs,
       sector,
       detailed,
@@ -392,7 +392,7 @@
       )
       .join(
         "",
-      )}<button class="btn btn-quiet" data-nav="insight" style="margin-top:14px;width:100%">Explorar análises ${icon("arrow", 13)}</button></section>`;
+      )}</div><button class="btn btn-quiet insight-link" data-nav="insight">Explorar análises ${icon("arrow", 13)}</button></section>`;
   function table(rs, limit = 8, offset = 0) {
     let items = [...rs]
       .sort(
@@ -404,10 +404,10 @@
       .slice(offset, offset + limit);
     if (!items.length)
       return `<div class="empty">Nenhum registro encontrado no período selecionado.</div>`;
-    return `<div class="table-wrap"><table class="tbl"><thead><tr><th>Identificação</th><th>Descrição / Conta</th><th>Setor</th><th>Data / competência</th><th>Quantidade</th><th>Status</th></tr></thead><tbody>${items.map((r) => `<tr><td><strong>${esc(r.id)}</strong></td><td><strong>${esc(r.title)}</strong><div style="font-size:10px;color:#a0acba;margin-top:4px">${esc(r.client)}</div></td><td>${esc(idSector(r.sector)?.name || r.sector)}</td><td>${r.date ? fmtDate(r.date) : fmtDate(r.periodStart) + " a " + fmtDate(r.periodEnd)}</td><td>${fmtNum(r.value)}</td><td>${statusBadge(r.status)}</td></tr>`).join("")}</tbody></table></div>`;
+    return `<div class="table-wrap"><table class="tbl"><thead><tr><th>Identificação</th><th>Descrição / Conta</th><th>Setor</th><th>Data / competência</th><th>Quantidade</th><th>Status</th></tr></thead><tbody>${items.map((r) => `<tr><td><strong>${esc(r.id)}</strong></td><td><strong>${esc(r.title)}</strong><div class="table-detail">${esc(r.client)}</div></td><td>${esc(idSector(r.sector)?.name || r.sector)}</td><td>${r.date ? fmtDate(r.date) : fmtDate(r.periodStart) + " a " + fmtDate(r.periodEnd)}</td><td>${fmtNum(r.value)}</td><td>${statusBadge(r.status)}</td></tr>`).join("")}</tbody></table></div>`;
   }
   function graphPanels(rs, sec) {
-    return `<div class="chart-area"><section class="card panel"><div class="panel-head"><div><h3 class="panel-title">Evolução do volume</h3><div class="panel-sub">Volume de registros no período selecionado</div></div><span class="badge info">${state.period === "all" ? "Todos os dados" : state.period + " dias"}</span></div>${lineChart(rs)}<div class="legend"><span class="legend-item"><span class="legend-dot" style="background:#398ddb"></span> Volume informado por data</span></div></section><section class="card panel"><div class="panel-head"><div><h3 class="panel-title">Distribuição de status</h3><div class="panel-sub">Situação das demandas</div></div>${icon("more", 18)}</div>${donut(rs)}</section></div>`;
+    return `<div class="chart-area"><section class="card panel"><div class="panel-head"><div><h3 class="panel-title">Evolução do volume</h3><div class="panel-sub">Volume de registros no período selecionado</div></div><span class="badge info">${state.period === "all" ? "Todos os dados" : state.period + " dias"}</span></div>${lineChart(rs)}<div class="legend"><span class="legend-item"><span class="legend-dot" style="background:var(--brand)"></span> Volume informado por data</span></div></section><section class="card panel"><div class="panel-head"><div><h3 class="panel-title">Distribuição de status</h3><div class="panel-sub">Situação das demandas</div></div>${icon("more", 18)}</div>${donut(rs)}</section></div>`;
   }
   function pageOverview() {
     const rs = recordsFor();
@@ -554,7 +554,7 @@
       )}</div><form class="assistant-form" data-assistant-form="1"><label class="sr-only" for="${full ? "assistant-text-full" : "assistant-text-dock"}">Mensagem ao assistente</label><textarea id="${full ? "assistant-text-full" : "assistant-text-dock"}" data-assistant-input="1" rows="1" maxlength="1800" placeholder="${state.assistantMode === "dados" ? "Pergunte sobre seus indicadores..." : "Escreva sua mensagem..."}" aria-label="Mensagem ao assistente"></textarea><button type="submit" aria-label="Enviar mensagem">${icon("arrow", 18)}</button></form><p class="assistant-disclaimer">${state.assistantMode === "dados" ? "Respostas calculadas com os dados importados." : "Respostas gerais limitadas sem integração com IA generativa."}</p></div>`;
   }
   function assistantDock() {
-    return `<div class="assistant-layer ${state.assistantOpen ? "open" : ""}"><button type="button" class="assistant-dismiss" data-assistant-close="1" aria-label="Fechar assistente" tabindex="${state.assistantOpen ? "0" : "-1"}"></button><section class="assistant-window" role="dialog" aria-modal="false" aria-label="Assistente Michelle" aria-hidden="${!state.assistantOpen}"><div class="assistant-window-header"><div class="assistant-identity"><span class="assistant-emblem">${icon("spark", 20)}</span><span><strong>Assistente Michelle</strong><small>Seu espaço para análises e conversas</small></span></div><div class="assistant-header-actions"><button type="button" data-assistant-clear="1" title="Limpar conversa deste modo" aria-label="Limpar conversa">${icon("trash", 15)}</button><button type="button" data-assistant-expand="1" title="Abrir em página inteira" aria-label="Abrir assistente em página inteira">${icon("grid", 15)}</button><button type="button" data-assistant-close="1" title="Fechar" aria-label="Fechar assistente">${icon("close", 16)}</button></div></div><div class="assistant-chat-root" data-assistant-root="dock">${assistantChat()}</div></section></div><button type="button" class="assistant-fab ${state.assistantOpen ? "active" : ""}" data-assistant-toggle="1" aria-expanded="${state.assistantOpen}" aria-label="${state.assistantOpen ? "Fechar assistente" : "Abrir assistente Michelle"}"><span class="fab-emblem">${icon(state.assistantOpen ? "close" : "spark", 20)}</span><span class="fab-label">${state.assistantOpen ? "Fechar assistente" : "Assistente"}</span><span class="fab-presence"></span></button>`;
+    return `<div class="assistant-layer ${state.assistantOpen ? "open" : ""}"><button type="button" class="assistant-dismiss" data-assistant-close="1" aria-label="Fechar assistente" tabindex="${state.assistantOpen ? "0" : "-1"}"></button><section class="assistant-window" role="dialog" aria-modal="false" aria-label="Assistente Michelle" aria-hidden="${!state.assistantOpen}"><div class="assistant-window-header"><div class="assistant-identity"><span class="assistant-emblem"><img src="assets/icon-192.png" alt="Horizon" width="32" height="32"></span><span><strong>Assistente Michelle</strong><small>Seu espaço para análises e conversas</small></span></div><div class="assistant-header-actions"><button type="button" data-assistant-clear="1" title="Limpar conversa deste modo" aria-label="Limpar conversa">${icon("trash", 15)}</button><button type="button" data-assistant-expand="1" title="Abrir em página inteira" aria-label="Abrir assistente em página inteira">${icon("grid", 15)}</button><button type="button" data-assistant-close="1" title="Fechar" aria-label="Fechar assistente">${icon("close", 16)}</button></div></div><div class="assistant-chat-root" data-assistant-root="dock">${assistantChat()}</div></section></div><button type="button" class="assistant-fab ${state.assistantOpen ? "active" : ""}" data-assistant-toggle="1" aria-expanded="${state.assistantOpen}" aria-label="${state.assistantOpen ? "Fechar assistente" : "Abrir assistente Michelle"}"><span class="fab-emblem">${icon(state.assistantOpen ? "close" : "spark", 20)}</span><span class="fab-label">${state.assistantOpen ? "Fechar assistente" : "Assistente"}</span><span class="fab-presence"></span></button>`;
   }
   function pageInsight() {
     return (
@@ -603,16 +603,14 @@
       const stored = localStorage.getItem("horizon.appearance");
       if (["light", "dark"].includes(stored)) return stored;
     } catch (_) {}
-    return window.matchMedia?.("(prefers-color-scheme: dark)").matches
-      ? "dark"
-      : "light";
+    return "dark";
   }
   function applyAppearance() {
     const theme = appearance();
     document.documentElement.dataset.theme = theme;
     document
       .querySelector('meta[name="theme-color"]')
-      ?.setAttribute("content", theme === "dark" ? "#171c23" : "#e6e9ed");
+      ?.setAttribute("content", theme === "dark" ? "#080808" : "#f5f5f5");
   }
   function themeButton() {
     const dark = appearance() === "dark";
@@ -1071,7 +1069,17 @@
     document.querySelector("[data-toggle]")?.addEventListener("click", () => {
       state.sidebar = !state.sidebar;
       render();
+      document
+        .querySelector(state.sidebar ? ".sidebar-close" : "[data-toggle]")
+        ?.focus();
     });
+    document
+      .querySelector("[data-close-nav]")
+      ?.addEventListener("click", () => {
+        state.sidebar = false;
+        render();
+        document.querySelector("[data-toggle]")?.focus();
+      });
     document.querySelector("[data-close]")?.addEventListener("click", () => {
       state.sidebar = false;
       render();
@@ -1589,6 +1597,12 @@
     notify,
   };
   window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && state.sidebar) {
+      state.sidebar = false;
+      render();
+      document.querySelector("[data-toggle]")?.focus();
+      return;
+    }
     if (e.key === "Escape" && state.assistantOpen) {
       state.assistantOpen = false;
       render();

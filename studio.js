@@ -1212,7 +1212,7 @@
   }
   function slideStyle() {
     const c = st.config;
-    return `--slide-accent:${safeColor(c.color) || "#58a4da"};${safeColor(c.background) ? "background:" + c.background + " !important;" : ""}font-family:${["Inter", "Arial", "Georgia", "Verdana"].includes(c.font) ? c.font : "Inter"};`;
+    return `--slide-accent:${safeColor(c.color) || "#79d9ff"};${safeColor(c.background) ? "background:" + c.background + " !important;" : ""}font-family:${["Inter", "Arial", "Georgia", "Verdana"].includes(c.font) ? c.font : "Inter"};`;
   }
   function modelAttributes(slide, key) {
     const p = slide.layout?.[key];
@@ -1259,7 +1259,7 @@
   }
   function settingsMarkup() {
     const c = st.config;
-    return `<section class="studio-panel"><h3>Personalização</h3><div class="studio-mini-fields"><label>Cor dos elementos<input type="color" id="studio-color" value="${c.color || "#58a4da"}"></label><label>Fundo<input type="color" id="studio-background" value="${c.background || "#26323b"}"></label></div><label>Fonte<select id="studio-font">${["Inter", "Arial", "Georgia", "Verdana"].map((f) => `<option ${c.font === f ? "selected" : ""}>${f}</option>`).join("")}</select></label><label>Transição padrão<select id="studio-transition">${Object.entries(
+    return `<section class="studio-panel"><h3>Personalização</h3><div class="studio-mini-fields"><label>Cor dos elementos<input type="color" id="studio-color" value="${c.color || "#79d9ff"}"></label><label>Fundo<input type="color" id="studio-background" value="${c.background || "#171717"}"></label></div><label>Fonte<select id="studio-font">${["Inter", "Arial", "Georgia", "Verdana"].map((f) => `<option ${c.font === f ? "selected" : ""}>${f}</option>`).join("")}</select></label><label>Transição padrão<select id="studio-transition">${Object.entries(
       transitions,
     )
       .map(

@@ -30,7 +30,9 @@ A renderização de PPTX é local, não é o motor do Microsoft PowerPoint. Font
 
 O quadro de envio aceita múltiplos arquivos por seleção ou arrastar e soltar. Cada planilha mantém sua configuração de aba, setor, tipo, colunas e competência. O botão de importação processa os arquivos independentes e deixa erros visíveis para correção. A lista no quadro mantém arquivos importados, quantidade de linhas, setor e botões de consulta e download do original, inclusive após recarregar.
 
-A identidade usa o logo Horizon fornecido. O painel tem superfícies cinza, navegação grafite, modo claro/escuro persistido e navegação inferior em celulares. A aparência do aplicativo não modifica os temas das apresentações. A busca de registros fica no menu e está disponível também no celular, com indicação do filtro ativo e ação para limpar.
+A identidade usa os arquivos oficiais fornecidos: logo transparente centralizada no cabeçalho e no menu, símbolo H, favicon, ícones de atalho e imagem de compartilhamento. A paleta escura usa preto e cinza neutro, branco e azul celeste nas ações. O modo escuro é o padrão para novos acessos; preferências já salvas são preservadas. O modo claro/escuro é persistido, a navegação móvel respeita a área segura e o menu pode ser fechado por botão ou Esc. Os resumos de insights usam três colunas no computador e uma no celular, com tipografia e foco de teclado consistentes. A aparência do aplicativo não modifica os temas das apresentações. A busca de registros fica no menu e está disponível também no celular, com indicação do filtro ativo e ação para limpar.
+
+O manifesto fornece o nome e os ícones para atalhos do sistema. Ele não adiciona funcionamento offline. As referências de design usadas são as diretrizes oficiais de [modo escuro da Apple](https://developer.apple.com/design/human-interface-guidelines/dark-mode), [layouts adaptáveis do Android](https://developer.android.com/develop/adaptive-apps/guides/use-window-size-classes), [papéis de cores do Material Design](https://m3.material.io/styles/color/roles) e [WCAG 2.2](https://www.w3.org/TR/WCAG22/).
 
 ## Código e testes
 

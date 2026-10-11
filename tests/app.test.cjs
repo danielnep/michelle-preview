@@ -218,6 +218,9 @@ test("múltiplos arquivos: ligações, erro independente, deduplicação e lista
 });
 test("modo escuro: alternância salva e reaberta sem mudar o tema dos slides", async () => {
   const t = await boot();
+  assert.equal(t.w.document.documentElement.dataset.theme, "dark");
+  t.click("[data-toggle-theme]");
+  await wait(() => t.w.MichelleBridge.getSettings().appearance === "light");
   t.click("[data-toggle-theme]");
   await wait(
     () =>
