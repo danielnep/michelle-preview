@@ -1,0 +1,31 @@
+name: Testes Painel Michelle
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Instalar dependências
+        run: npm ci --ignore-scripts
+      - name: Executar testes
+        run: npm test
+      - name: Verificar sintaxe dos módulos principais
+        run: |
+          node --check profiles.js
+          node --check app.js
+          node --check dashboard.js
+          node --check data-core.js
+          node --check analysis/mc-analysis.js
+          node --check service-worker.js
