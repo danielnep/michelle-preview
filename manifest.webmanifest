@@ -1,6 +1,6 @@
 {
   "id": "./",
-  "name": "Power BI painel completo / Michelle Cândido",
+  "name": "Power BI | Painel Completo / Michelle Cândido",
   "short_name": "Painel Michelle",
   "description": "Indicadores, análises, relatórios e apresentações da operação.",
   "lang": "pt-BR",
@@ -10,6 +10,12 @@
   "background_color": "#090909",
   "theme_color": "#080808",
   "icons": [
+    {
+      "src": "assets/painel-icon.svg?v=3.4.0",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
     {
       "src": "assets/icon-192.png?v=3.2.3",
       "sizes": "192x192",
