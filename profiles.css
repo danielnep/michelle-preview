@@ -1,0 +1,64 @@
+/* Painel Michelle: experiências por função, mobile-first sem dados falsos */
+.mc-role-bar{
+ display:flex;justify-content:space-between;align-items:center;gap:16px;
+ padding:12px 17px;margin:0 0 18px;border:1px solid var(--line);
+ border-radius:14px;background:var(--surface);
+}
+.mc-role-intro{display:flex;gap:12px;align-items:center;min-width:0;flex:1}
+.mc-role-intro>div{min-width:0}
+.mc-role-intro strong{display:block;font-size:14px;line-height:1.35}
+.mc-role-intro small{display:block;font-size:12px;color:var(--muted);line-height:1.5}
+.mc-role-emblem{display:grid;place-items:center;flex-shrink:0;width:42px;height:42px;background:var(--surface-alt);border-radius:12px;color:var(--brand)}
+.mc-role-select{display:flex;gap:9px;align-items:center;flex-shrink:0}
+.mc-role-select span{font-size:12px;color:var(--muted)}
+.mc-role-select select{min-height:44px;min-width:126px;border:1px solid var(--line);background:var(--surface-alt);color:var(--ink);padding:9px 13px;border-radius:9px;font:inherit;font-weight:650}
+.mc-role-select select:focus-visible,.mc-role-priority:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
+.mc-role-home{border-radius:16px;padding:20px;display:grid;gap:16px;margin-bottom:18px}
+.mc-role-home-header h1{font-size:clamp(22px,3vw,30px);line-height:1.16;letter-spacing:-.04em;margin:6px 0 8px}
+.mc-role-home-header p{color:var(--muted);font-size:13px;line-height:1.65;margin:0 0 8px}
+.mc-role-home-header small{font-size:11px;color:var(--muted);line-height:1.5}
+.mc-role-priorities{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}
+.mc-role-priority{display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:7px;border:1px solid var(--line);background:var(--surface-alt);border-radius:12px;padding:15px;min-width:0;min-height:145px;cursor:pointer;color:var(--ink)}
+.mc-role-priority:hover{border-color:var(--brand);background:var(--surface)}
+.mc-role-priority span{font-size:12px;font-weight:650}
+.mc-role-priority strong{font-size:clamp(20px,2vw,28px);line-height:1.1;letter-spacing:-.04em;overflow-wrap:anywhere}
+.mc-role-priority small{font-size:11px;color:var(--muted);line-height:1.5}
+.mc-role-priority.warning{border-color:#aa7a43}
+.mc-role-priority.attention{border-color:#8a6565}
+.mc-role-actions{display:flex;align-items:center;flex-wrap:wrap;gap:9px}
+.mc-role-actions .btn{min-height:44px}
+.mc-home-section{margin:20px 0}
+.mc-home-section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 12px}
+.mc-home-section-head h2{font-size:19px;letter-spacing:-.03em;margin:0}
+.mc-role-next{margin:16px 0}
+.mc-role-next h2{font-size:18px}
+.mc-role-next p{font-size:13px;color:var(--muted);line-height:1.7}
+@media(max-width:900px){
+ .mc-role-priorities{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(max-width:700px){
+ .mc-role-bar{gap:10px;padding:11px 12px;align-items:flex-start}
+ .mc-role-intro{gap:8px}
+ .mc-role-intro small{font-size:11px}
+ .mc-role-emblem{width:35px;height:35px}
+ .mc-role-select{flex-direction:column;gap:4px;align-items:flex-end}
+ .mc-role-select span{font-size:10px}
+ .mc-role-select select{min-width:112px;font-size:12px;padding:8px}
+ .mc-role-home{padding:14px;gap:12px}
+ .mc-role-priorities{gap:7px}
+ .mc-role-priority{padding:11px;min-height:128px}
+ .mc-role-priority span{font-size:11px}
+ .mc-role-priority strong{font-size:22px}
+ .mc-role-priority small{font-size:10px}
+ .mc-role-actions .btn{font-size:12px}
+}
+@media(max-width:400px){
+ .mc-role-intro small{display:none}
+ .mc-role-bar{align-items:center}
+ .mc-role-select{flex-direction:row;align-items:center}
+ .mc-role-select span{display:none}
+ .mc-role-priorities{grid-template-columns:1fr 1fr}
+ .mc-role-priority:last-child{grid-column:1/-1;min-height:90px}
+ .mc-role-priority{min-height:110px}
+}
+@media print{.mc-role-bar .mc-role-select,.mc-role-actions{display:none!important}}
