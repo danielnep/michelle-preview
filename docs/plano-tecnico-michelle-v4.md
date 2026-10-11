@@ -32,6 +32,22 @@ Status: **planejamento aprovado para detalhamento; nenhuma funcionalidade deste 
 
 ## Fase 1 | Inteligência de compreensão e validação dos arquivos
 
+### 1.0 Regra obrigatória: nome do arquivo orienta o tipo e a nomenclatura
+
+**A primeira pista deve ser o nome real do arquivo** (incluindo variações ortográficas, abreviações e plural/singular), antes da análise detalhada. O sistema extrai uma classificação provável, nomes humanos e candidatos a indicadores; em seguida confere com o nome da aba e o conteúdo. O nome **não é prova suficiente** para desconsiderar um conflito.
+
+- `Relatório de ligações.xlsx` → **Ligações**, registros de telefonia, datas/horários/duração/status se existirem. Nome do card: `Ligações registradas` (e `Duração das ligações` somente se disponível).
+- `relatorio ordem de serviços.xlsx` → **Ordens de serviço**, `Ordens de serviço registradas`, status e prazos somente com colunas válidas.
+- `CONTAS COM MAIOR NUMEROS DE DESLOCAMENTOS.xlsx` → **Deslocamentos por conta**, unidade `deslocamentos`, agregado pela coluna quantitativa, não contar linhas como deslocamentos.
+- `motivos de cuc.xlsx` → **Motivos de CUC**, unidade `eventos CUC`, somar a coluna de número de eventos quando presente, não confundir quantidade de motivos/linhas com eventos.
+- Nome desconhecido + conteúdo claro → nomear conforme a **coluna semântica confirmada**. Nome genérico + conteúdo incerto → apresentar `Dados não classificados · <arquivo/aba>` e pedir confirmação.
+- Usar `label` e `unit` consistentes no card, gráfico, legenda, tabela, insight e exportação. Nunca imprimir `indicador`, `valor` ou `quantidade` isoladamente quando uma denominação específica for disponível.
+- Mostrar a trilha de decisão: `Arquivo X → Aba Y → Coluna Z → Unidade U → Indicador T`. Se divergirem, marcar `Verificar identificação` e **não** aceitar automaticamente.
+- Preservar o nome original (arquivo/aba) e o nome interpretado separadamente. Se usuária renomear a interpretação, persistir sem modificar o nome do arquivo; manter histórico e opção de rever.
+- Testar pontuação, acentos, siglas, espaços duplos, `(1)`, `cópia`, `v2`, extensão XLS/XLSX/CSV e nomes sem indicação semântica.
+
+**Aceite específico:** carregar as quatro planilhas de referência produz corretamente o tipo e o texto dos cards/legendas, com unidades corretas e origem navegável. Teste de conflito entre `Relatório de ligações.xlsx` e colunas de ordens de serviço **não** exibe ligações incorretamente.
+
 ### 1.1 Definir contrato interno de análise
 Criar módulo `analysis/schema.js` ou compatível com carregamento simples dos scripts existentes; definir `ImportBatch`, `SourceFile`, `Sheet`, `ColumnProfile`, `SemanticField`, `MetricDefinition`, `QualityWarning`, `Provenance`, `InterpretationDecision`.
 Campos relevantes: nome/aba/linha, tipo, unidade, agregação, fórmula, período, `nullReasons`, versão do esquema e confiança/justificativa. Não salvar dados pessoais em logs.
