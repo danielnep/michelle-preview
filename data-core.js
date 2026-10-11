@@ -233,7 +233,7 @@
     const hinted = /deslocament|visitas? tecnic/.test(name) ? "deslocamentos"
       : /\bcuc\b|motivos? de (alarme|cuc)/.test(name) ? "cuc"
       : /ligac|telefonia|telefonemas|chamadas/.test(name) ? "ligacoes"
-      : /ordens? de servico|relatorio.*\bos\b|\bos\b.*relatorio/.test(name) ? "ordens"
+      : /ordem de servico|ordens de servico|relatorio.*\bos\b|\bos\b.*relatorio/.test(name) ? "ordens"
       : /indicadores|\bkpi\b/.test(name) ? "indicadores" : null;
     const fromHeaders = best.type !== "geral";
     if (!fromHeaders && hinted) best.type = hinted;
