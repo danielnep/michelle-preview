@@ -236,6 +236,33 @@ test("modo escuro: alternância salva e reaberta sem mudar o tema dos slides", a
   t.dom.window.close();
   reopened.dom.window.close();
 });
+test("busca no menu filtra o relatório e pode ser limpa sem exportar um resultado antigo", async () => {
+  const t = await boot();
+  const b = t.w.MichelleBridge;
+  await b.handleFile(file(t.w, "operacao.xlsx", workbook()));
+  await b.confirmImport();
+  b.navigate("report");
+  t.click("[data-generate-report]");
+  t.input("#global-search", "Instalação");
+  assert.equal(b.getState().report, null);
+  assert.equal(
+    t.w.document.querySelector('[data-export="report"]').disabled,
+    true,
+  );
+  t.click("[data-generate-report]");
+  assert.equal(b.getState().report.rows.length, 1);
+  assert.match(
+    t.w.document.querySelector(".active-search").textContent,
+    /Instalação/,
+  );
+  t.click("[data-clear-query]");
+  assert.equal(b.getState().query, "");
+  assert.equal(b.getState().report, null);
+  t.click("[data-generate-report]");
+  assert.equal(b.getState().report.rows.length, 3);
+  assert.equal(t.w.document.querySelectorAll("#global-search").length, 1);
+  t.dom.window.close();
+});
 test("fluxo integrado: Excel → relatório/exportação → slides → edição → TV → recarga", async () => {
   const t = await boot();
   const { w, click, input } = t,

@@ -30,7 +30,7 @@ A renderização de PPTX é local, não é o motor do Microsoft PowerPoint. Font
 
 O quadro de envio aceita múltiplos arquivos por seleção ou arrastar e soltar. Cada planilha mantém sua configuração de aba, setor, tipo, colunas e competência. O botão de importação processa os arquivos independentes e deixa erros visíveis para correção. A lista no quadro mantém arquivos importados, quantidade de linhas, setor e botões de consulta e download do original, inclusive após recarregar.
 
-A identidade usa o logo Horizon fornecido. O painel tem superfícies cinza, navegação grafite, modo claro/escuro persistido e navegação inferior em celulares. A aparência do aplicativo não modifica os temas das apresentações.
+A identidade usa o logo Horizon fornecido. O painel tem superfícies cinza, navegação grafite, modo claro/escuro persistido e navegação inferior em celulares. A aparência do aplicativo não modifica os temas das apresentações. A busca de registros fica no menu e está disponível também no celular, com indicação do filtro ativo e ação para limpar.
 
 ## Código e testes
 
@@ -43,6 +43,6 @@ npm ci
 npm test
 ```
 
-Os quatorze testes cobrem importação, totais/status, datas e competência, deduplicação/versionamento, filtros, geração/exportação de relatórios, persistência, edição/posicionamento de slides, teclado e leitura de um PPTX real com imagem e gráfico. O armazenamento e o DOM são exercitados com fake-indexeddb e jsdom. Testes de layout e tela cheia em navegador devem ser registrados separadamente; estes testes não substituem uma validação visual.
+Os quinze testes cobrem importação, totais/status, datas e competência, deduplicação/versionamento, filtros, geração/exportação de relatórios, persistência, edição/posicionamento de slides, teclado e leitura de um PPTX real com imagem e gráfico. O armazenamento e o DOM são exercitados com fake-indexeddb e jsdom. Testes de layout e tela cheia em navegador devem ser registrados separadamente; estes testes não substituem uma validação visual.
 
 `tests/responsive.html` exibe o aplicativo real em janelas de 390 × 844 e 1280 × 900 para conferência visual. A apresentação de teste não contém dados de clientes. As planilhas operacionais usadas na reconciliação permanecem fora deste repositório público.
