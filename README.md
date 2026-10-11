@@ -1,8 +1,21 @@
-# Power BI painel completo / Michelle Cândido
+# Power BI | Painel Completo / Michelle Cândido
 
 Aplicativo operacional de Michelle Cândido. A interface e os cinco modelos de apresentação existentes foram preservados e integrados a um fluxo de dados real.
 
 ## Funcionamento
+
+### Importar, entender, visualizar e excluir
+
+1. Em **Enviar Dados Excel**, selecione ou arraste os arquivos XLSX, XLS ou CSV. É possível enviar vários de uma vez.
+2. A janela **Importar e ler** explica o tipo de planilha reconhecido, a confiabilidade da interpretação, a aba, as colunas associadas e a prévia dos registros. O nome do arquivo e o da aba auxiliam a identificar planilhas de ligações, OS, CUC ou deslocamentos quando os cabeçalhos são genéricos. A identificação por colunas prevalece sobre nomes conflitantes.
+3. Clique em **Confirmar importação**. Datas e informações originais são preservadas; período e associação de colunas continuam opcionais e precisam de conferência quando houver dúvida.
+4. Clique em **Visualizar dashboard** para abrir os indicadores atualizados com filtros. **Gerar relatório** fornece visão para exportar; **Gerar e criar apresentação** abre o Estúdio.
+5. Para retirar um arquivo de todos os cálculos, clique em **Excluir arquivo** na lista de importados. O item poderá ser recuperado em **Arquivos excluídos → Restaurar arquivo**.
+
+Todos os números exibem a unidade ou a definição da medida. Nos cartões do dashboard, **Fonte** mostra arquivo e aba, e **Como este número foi obtido** detalha a operação e as colunas associadas quando identificadas. Gráficos e rankings trazem legenda da unidade e a tabela de registros mostra o tipo de quantidade ao lado do valor. Se fontes de unidades diferentes forem visualizadas em conjunto, os gráficos da visão geral contam linhas, sem somar eventos, deslocamentos e registros como uma única métrica.
+
+O título agora é **Power BI | Painel Completo**, com crédito de identificação **Michelle Cândido** e símbolo de indicadores próprio em SVG. Os dados não dependem de arquivos PBIX; a integração com o serviço Microsoft Power BI é opcional e exige um relatório existente publicado com permissões próprias.
+
 
 - Excel XLSX/XLS e CSV: seleção de arquivos abre a janela **Importar e ler**, com tipo, aba detalhada, prévia das colunas originais e datas detectados automaticamente. Basta confirmar. Aba, associação de colunas, destino e competência são ajustes opcionais. Original e histórico são preservados.
 - Arquivos idênticos são bloqueados. Sobreposição exige escolha explícita entre atualizar o mesmo período ou acumular. Ordens de serviço são reconciliadas por setor, empresa e número. Arquivar um lote retira seus dados dos cálculos e permite reativação.
@@ -38,7 +51,7 @@ A Visão Geral começa com o Dashboard central. O botão **Adicionar dados** abr
 
 O quadro aceita vários arquivos por seleção ou arrastar e soltar. A confirmação na janela processa cada planilha independentemente e mantém erros visíveis para correção. A área de arquivos importados preserva nome, linhas, destino, datas disponíveis, consulta, original e exclusão, inclusive após recarregar. Logo abaixo ficam **Gerar relatório**, **Visualizar dashboard** e **Gerar e criar apresentação**. O último cria uma nova apresentação e preserva as anteriores.
 
-A identificação no cabeçalho, menu e rodapé é “Power BI painel completo / Michelle Cândido”, sem logotipos ou créditos de desenvolvimento. O favicon, os ícones de atalho e a imagem de compartilhamento usam um símbolo neutro de indicadores. A paleta escura usa preto e cinza neutro, branco e azul celeste nas ações. O modo escuro é o padrão para novos acessos; preferências já salvas são preservadas. O modo claro/escuro é persistido, a navegação móvel respeita a área segura e o menu pode ser fechado por botão ou Esc. Os resumos de insights usam três colunas no computador e uma no celular, com tipografia e foco de teclado consistentes. A aparência do aplicativo não modifica os temas das apresentações. A busca de registros fica no menu e está disponível também no celular, com indicação do filtro ativo e ação para limpar.
+A identificação no cabeçalho, menu e rodapé é “Power BI | Painel Completo / Michelle Cândido”, sem logotipos ou créditos de desenvolvimento. O favicon, os ícones de atalho e a imagem de compartilhamento usam um símbolo neutro de indicadores. A paleta escura usa preto e cinza neutro, branco e azul celeste nas ações. O modo escuro é o padrão para novos acessos; preferências já salvas são preservadas. O modo claro/escuro é persistido, a navegação móvel respeita a área segura e o menu pode ser fechado por botão ou Esc. Os resumos de insights usam três colunas no computador e uma no celular, com tipografia e foco de teclado consistentes. A aparência do aplicativo não modifica os temas das apresentações. A busca de registros fica no menu e está disponível também no celular, com indicação do filtro ativo e ação para limpar.
 
 O manifesto fornece o nome e os ícones para atalhos do sistema. Ele não adiciona funcionamento offline. As referências de design usadas são as diretrizes oficiais de [modo escuro da Apple](https://developer.apple.com/design/human-interface-guidelines/dark-mode), [layouts adaptáveis do Android](https://developer.android.com/develop/adaptive-apps/guides/use-window-size-classes), [papéis de cores do Material Design](https://m3.material.io/styles/color/roles) e [WCAG 2.2](https://www.w3.org/TR/WCAG22/).
 
@@ -53,6 +66,6 @@ npm ci
 npm test
 ```
 
-Os trinta testes cobrem leitura semântica, unidades de tempo, dados sem datas, cruzamentos temporais e de identidade, isolamento de empresas/contas, exclusão e restauração, confirmação em janela e atalhos, além de importação, totais/status, datas e competência, deduplicação/versionamento, filtros, geração/exportação de relatórios, persistência, composição do dashboard, tela cheia e sua alternativa, validação e persistência do link Power BI, edição/posicionamento de slides, teclado e leitura de um PPTX real com imagem e gráfico. O armazenamento e o DOM são exercitados com fake-indexeddb e jsdom. A conferência visual em navegador inclui 320 px sem transbordamento horizontal e a tela dedicada do dashboard. Um relatório nativo real não pôde ser validado sem seu link e acesso Microsoft.
+A suíte de testes cobre leitura semântica, unidades de tempo, dados sem datas, cruzamentos temporais e de identidade, isolamento de empresas/contas, exclusão e restauração, confirmação em janela e atalhos, além de importação, totais/status, datas e competência, deduplicação/versionamento, filtros, geração/exportação de relatórios, persistência, composição do dashboard, tela cheia e sua alternativa, validação e persistência do link Power BI, edição/posicionamento de slides, teclado e leitura de um PPTX real com imagem e gráfico. O armazenamento e o DOM são exercitados com fake-indexeddb e jsdom. A conferência visual em navegador inclui 320 px sem transbordamento horizontal e a tela dedicada do dashboard. Um relatório nativo real não pôde ser validado sem seu link e acesso Microsoft.
 
 `tests/responsive.html` exibe o aplicativo real em janelas de 390 × 844 e 1280 × 900, com seletores de largura entre 320 e 1600 px para conferência visual. Reabrir essa página carrega a versão atual do painel nos quadros de teste. A apresentação de teste não contém dados de clientes. As planilhas operacionais usadas na reconciliação permanecem fora deste repositório público.
