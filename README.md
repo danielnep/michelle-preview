@@ -53,7 +53,27 @@ O quadro aceita vários arquivos por seleção ou arrastar e soltar. A confirma�
 
 A identificação no cabeçalho, menu e rodapé é “Power BI | Painel Completo / Michelle Cândido”, sem logotipos ou créditos de desenvolvimento. O favicon, os ícones de atalho e a imagem de compartilhamento usam um símbolo neutro de indicadores. A paleta escura usa preto e cinza neutro, branco e azul celeste nas ações. O modo escuro é o padrão para novos acessos; preferências já salvas são preservadas. O modo claro/escuro é persistido, a navegação móvel respeita a área segura e o menu pode ser fechado por botão ou Esc. Os resumos de insights usam três colunas no computador e uma no celular, com tipografia e foco de teclado consistentes. A aparência do aplicativo não modifica os temas das apresentações. A busca de registros fica no menu e está disponível também no celular, com indicação do filtro ativo e ação para limpar.
 
-O manifesto fornece o nome e os ícones para atalhos do sistema. Ele não adiciona funcionamento offline. As referências de design usadas são as diretrizes oficiais de [modo escuro da Apple](https://developer.apple.com/design/human-interface-guidelines/dark-mode), [layouts adaptáveis do Android](https://developer.android.com/develop/adaptive-apps/guides/use-window-size-classes), [papéis de cores do Material Design](https://m3.material.io/styles/color/roles) e [WCAG 2.2](https://www.w3.org/TR/WCAG22/).
+O manifesto, o service worker e os ícones próprios oferecem instalação e cache do shell em navegadores compatíveis. Os dados operacionais continuam locais no IndexedDB; o modo offline não garante acesso a recursos remotos. As referências de design usadas são as diretrizes oficiais de [modo escuro da Apple](https://developer.apple.com/design/human-interface-guidelines/dark-mode), [layouts adaptáveis do Android](https://developer.android.com/develop/adaptive-apps/guides/use-window-size-classes), [papéis de cores do Material Design](https://m3.material.io/styles/color/roles) e [WCAG 2.2](https://www.w3.org/TR/WCAG22/).
+
+## Quatro experiências no mesmo aplicativo (v4.1)
+
+O Painel Michelle **não é uma apresentação ou quatro demos**: as quatro experiências são telas do mesmo aplicativo, usando **as mesmas planilhas reais, IndexedDB, cálculos, histórico, gráficos e relatórios**. Use o seletor **Experiência**, no topo do conteúdo, para trocar o foco. A escolha fica salva no navegador.
+
+| Experiência | Tela inicial | Acesso rápido | Ordem sugerida do dashboard |
+| --- | --- | --- | --- |
+| **Operação** | Arquivos ativos, alertas de qualidade, linhas recentes | Enviar dados, setores, relatório | Origem dos dados, registros e métricas |
+| **Supervisora** | OS em aberto, setores, alertas comprovados | Setores, análises, dashboard | Insights, status, setores, métricas |
+| **Gerente** | Indicadores, comparações sustentadas, prioridades | Dashboard, análises, relatório | Métricas, insights, cruzamentos |
+| **Direção** | Resumo executivo, tendências, apresentações | Dashboard, relatórios, Estúdio | Métricas, evolução e insights |
+
+**Nomes sujeitos à confirmação:** “Supervisora” e “Gerente” foram citados pelo solicitante; “Operação” e “Direção” são nomes provisórios, definidos de forma centralizada em `profiles.js` para serem renomeados sem migrar dados.
+
+Os painéis armazenam a composição de widgets separadamente por experiência, usando `michelle.dashboard.v2.<experiência>`. O layout anterior da Gerente (`michelle.dashboard.v1`) continua sendo recuperado e não é excluído.
+
+**Segurança:** a seleção é de **modo de visualização, não login nem permissão real**. Atualmente qualquer pessoa com acesso ao mesmo navegador e banco local pode mudar de experiência. Para contas distintas, supervisão de equipe e acesso restrito por função será necessário backend com autenticação e RBAC no servidor, sincronização e LGPD. Não representar o seletor como uma barreira de segurança.
+
+**Uso:** abra o endereço HTTPS, instale pelo botão **Instalar** quando suportado (ou pelo menu do navegador), escolha uma experiência e importe seus arquivos reais pelo menu **Dados**. O painel é alimentado com os mesmos dados nos quatro modos. A instalação não cria automaticamente uma conta, banco compartilhado ou sincronização entre dispositivos. Faça backup pelo módulo de Dados.
+
 
 ## Código e testes
 
