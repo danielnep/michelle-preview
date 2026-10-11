@@ -2,7 +2,7 @@
 (() => {
   "use strict";
   const b = window.MichelleBridge, D = b.D, I = window.MCIntelligence, esc = b.esc;
-  const key = "michelle.dashboard.v1";
+  const key = () => "michelle.dashboard.v2." + (window.MCProfiles?.currentId() || "gerente");
   const blocks = {
     insights: "Insights operacionais", metrics: "Indicadores", crossings: "Cruzamento de contas", reading: "Entendimento das planilhas",
     trend: "Evolução no período", status: "Distribuição de status",
@@ -14,7 +14,7 @@
     sector: "geral", type: "all", status: "all", period: "all", start: "", end: "", query: "",
     dimension: "title", member: null, accountKey: null, chart: "line", zoom: 100, reportUrl: "", reportView: "local",
     metrics: ["records", "ordens", "ligacoes", "cuc", "deslocamentos", "indicadores", "done", "pending", "rate", "duration"],
-    order: ["metrics", "insights", "crossings", "trend", "status", "sectors", "ranking", "reading", "records"], hidden: [], sizes: { insights: 12, metrics: 12, crossings: 12, reading: 12, trend: 8, status: 4, sectors: 6, ranking: 6, records: 12 },
+    order: window.MCProfiles?.current().widgets || ["metrics", "insights", "crossings", "trend", "status", "sectors", "ranking", "reading", "records"], hidden: [], sizes: { insights: 12, metrics: 12, crossings: 12, reading: 12, trend: 8, status: 4, sectors: 6, ranking: 6, records: 12 },
   });
   function reportUrl(value) {
     try {
@@ -31,7 +31,8 @@
   function load() {
     const out = defaults();
     try {
-      const c = JSON.parse(localStorage.getItem(key) || "null");
+      const stored = localStorage.getItem(key()) || (window.MCProfiles?.currentId() === "gerente" ? localStorage.getItem("michelle.dashboard.v1") : null);
+      const c = JSON.parse(stored || "null");
       if (!c || typeof c !== "object") return out;
       if (["geral", ...b.getSectors().map(s => s.id)].includes(c.sector)) out.sector = c.sector;
       if (["all", ...Object.keys(D.types)].includes(c.type)) out.type = c.type;
@@ -55,12 +56,15 @@
     return out;
   }
   let config = load();
+  window.addEventListener("mc:profile-changed", () => {
+    config = load();
+  });
   const state = { editor: false, connectOpen: false, filtersOpen: false, expanded: false, native: false, focus: null, page: 0, drag: null };
   const date = value => value ? String(value).slice(0, 10).split("-").reverse().join("/") : "—";
   const num = value => new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 }).format(value ?? 0);
   const icon = (name, size = 18) => b.icon(name, size);
   function persist() {
-    try { localStorage.setItem(key, JSON.stringify(config)); }
+    try { localStorage.setItem(key(), JSON.stringify(config)); }
     catch (_) { b.notify("A visualização funciona, mas o navegador não permitiu salvar os ajustes.", true); }
   }
   function update(patch, focusId) {
