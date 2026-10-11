@@ -248,6 +248,23 @@
         ? "Cabeçalhos genéricos; tipo sugerido pelo nome do arquivo ou da aba. Confira antes de confirmar."
         : "Tipo não identificado com segurança; confira as colunas antes de confirmar.";
     best.filenameHint = hinted;
+    const Analyzer = typeof window !== "undefined" ? window.MCAnalysis : null;
+    if (Analyzer) {
+      const profile = Analyzer.profile(grid, context, best);
+      best.profile = profile;
+      best.label = Analyzer.specs[best.type]?.label || types[best.type];
+      best.metricLabel = Analyzer.specs[best.type]?.metric || types[best.type];
+      if (profile.conflict) {
+        best.conflict = true;
+        best.confidence = "Revisão obrigatória";
+        best.reason = profile.explanation + " Prevalece a classificação dos cabeçalhos até a revisão.";
+      }
+      if (best.type === "geral" && profile.preferredType !== "geral") {
+        best.type = profile.preferredType;
+        best.label = Analyzer.specs[best.type]?.label;
+        best.metricLabel = Analyzer.specs[best.type]?.metric;
+      }
+    }
     return best;
   }
   function cell(row, m, k) {
