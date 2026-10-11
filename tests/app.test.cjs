@@ -290,6 +290,7 @@ test("fluxo integrado: Excel → relatório/exportação → slides → edição
   assert.ok(studio.getSlides().some((s) => s.insights.length));
   input("#studio-slide-title", "Reunião validada");
   click("[data-element-add]");
+  assert.equal(studio.getSlides()[0].elements[0].color, "#eef3f6");
   input('[data-element-field="text"]', "Texto de teste");
   click(".element-editor [data-element-position]");
   input("#position-x", "99");

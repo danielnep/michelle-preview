@@ -851,9 +851,11 @@
       el.requestFullscreen()
         .then(() => {
           st.hadFullscreen = true;
+          el.dataset.fullscreen = "active";
         })
         .catch(() => {
           st.hadFullscreen = false;
+          el.dataset.fullscreen = "unavailable";
           b.notify(
             "Tela cheia indisponível. Slides ocupam a janela; Esc encerra.",
           );
@@ -962,7 +964,7 @@
         h: type === "text" ? 15 : 20,
         text: type === "text" ? "Seu texto" : type === "icon" ? "star" : "",
         fontSize: 28,
-        color: "#26384b",
+        color: elementColor(),
         image: "",
         metricId: b.D.metricOptions(rec())[0]?.id || "records",
         metricSnapshot: structuredClone(b.D.metricOptions(rec())[0]),
@@ -1193,6 +1195,21 @@
   let position = null,
     drag = null;
   const safeColor = (v) => (/^#[0-9a-f]{6}$/i.test(v) ? v : "");
+  function elementColor() {
+    const background = safeColor(st.config.background);
+    if (background) {
+      const rgb = [1, 3, 5].map((i) =>
+        parseInt(background.slice(i, i + 2), 16),
+      );
+      return rgb[0] * 0.299 + rgb[1] * 0.587 + rgb[2] * 0.114 < 145
+        ? "#eef3f6"
+        : "#26384b";
+    }
+    return st.origin !== "imported" &&
+      ["graphite", "premium"].includes(st.config.theme)
+      ? "#eef3f6"
+      : "#26384b";
+  }
   function slideStyle() {
     const c = st.config;
     return `--slide-accent:${safeColor(c.color) || "#58a4da"};${safeColor(c.background) ? "background:" + c.background + " !important;" : ""}font-family:${["Inter", "Arial", "Georgia", "Verdana"].includes(c.font) ? c.font : "Inter"};`;

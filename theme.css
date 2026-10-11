@@ -1192,3 +1192,47 @@ body {
   background: #687a8b;
   border-radius: 8px;
 }
+.studio-container
+  .studio-panel
+  input:not([type="checkbox"]):not([type="color"]),
+.studio-container .studio-panel select,
+.studio-container .studio-panel textarea {
+  background: var(--surface-raised);
+  color: var(--ink);
+  border-color: var(--line);
+  font-size: 13px;
+  min-height: 42px;
+}
+.studio-container .studio-panel label {
+  color: var(--muted);
+  font-size: 12px;
+}
+.studio-container .studio-panel .btn {
+  color: var(--ink);
+  font-size: 12px;
+}
+.studio-container .studio-panel .btn-primary {
+  color: #fff;
+}
+.studio-container .checkbox-field {
+  background: var(--surface-alt);
+  color: var(--ink);
+  border-color: var(--line);
+}
+@media (max-width: 700px) {
+  .studio-container
+    .studio-panel
+    input:not([type="checkbox"]):not([type="color"]),
+  .studio-container .studio-panel select,
+  .studio-container .studio-panel textarea {
+    font-size: 16px;
+    min-height: 48px;
+  }
+  .studio-container .studio-panel label,
+  .studio-container .studio-panel .btn {
+    font-size: 14px;
+  }
+  .studio-container .studio-panel .btn {
+    min-height: 48px;
+  }
+}
