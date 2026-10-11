@@ -263,7 +263,7 @@
     title,
     desc = "Visão centralizada dos seus indicadores e resultados.",
   ) =>
-    `<section class="overview-head"><div><div class="eyebrow">HORIZON / OPERAÇÕES</div><h1 class="title">${esc(title)}</h1><p class="subtitle">${esc(desc)}</p>${state.query ? `<div class="active-search">Busca nos registros: <strong>${esc(state.query)}</strong><button class="btn" data-clear-query>Limpar busca</button></div>` : ""}</div><div class="header-buttons">${state.page === "geral" || state.page === "insight" || idSector(state.page) ? periodButtons() : ""}${["geral", ...sectors.map((s) => s.id)].includes(state.page) ? `<button class="btn" data-nav="report">${icon("report", 14)} Gerar relatório</button>${state.page !== "geral" ? `<button class="btn btn-primary" data-nav="data">${icon("up", 14)} Importar dados</button>` : ""}` : ""}</div></section>`;
+    `<section class="overview-head"><div><div class="eyebrow">HORIZON / OPERAÇÕES</div><h1 class="title">${esc(title)}</h1><p class="subtitle">${esc(desc)}</p>${state.query ? `<div class="active-search">Busca nos registros: <strong>${esc(state.query)}</strong><button class="btn" data-clear-query>Limpar busca</button></div>` : ""}</div><div class="header-buttons">${state.page === "insight" || idSector(state.page) ? periodButtons() : ""}${["geral", ...sectors.map((s) => s.id)].includes(state.page) ? `<button class="btn" data-nav="report">${icon("report", 14)} Gerar relatório</button>${state.page !== "geral" ? `<button class="btn btn-primary" data-nav="data">${icon("up", 14)} Importar dados</button>` : ""}` : ""}</div></section>`;
   function statCards(rs, sector) {
     const ms = D.metricOptions(rs);
     if (!ms.length || !rs.length)
@@ -412,7 +412,7 @@
         "Visão Geral",
         "Indicadores, prioridades e ferramentas da sua operação.",
       ) +
-      `<section class="central-dashboard" aria-labelledby="dashboard-title"><div class="dashboard-head"><div><span class="dashboard-eyebrow">CENTRAL DE INDICADORES</span><h2 id="dashboard-title">Dashboard central</h2><p>Suas planilhas alimentam os indicadores, gráficos e relatórios.</p></div><div class="dashboard-import"><button class="btn btn-primary" data-nav="data">${icon("plus", 18)} Adicionar dados</button><small>Importar uma ou mais planilhas</small></div></div>` +
+      `<section class="central-dashboard" aria-labelledby="dashboard-title"><div class="dashboard-head"><div><span class="dashboard-eyebrow">CENTRAL DE INDICADORES</span><h2 id="dashboard-title">Dashboard central</h2><p>Suas planilhas alimentam os indicadores, gráficos e relatórios.</p></div><div class="dashboard-import"><button class="btn btn-primary" data-nav="data">${icon("plus", 18)} Adicionar dados</button><small>Importar uma ou mais planilhas</small></div><div class="dashboard-filters">${periodButtons()}</div></div>` +
       insightsPanel(rs) +
       statCards(rs) +
       graphPanels(rs) +

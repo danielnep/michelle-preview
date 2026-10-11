@@ -1367,6 +1367,7 @@ body {
 }
 .dashboard-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 24px;
@@ -1413,6 +1414,31 @@ body {
 .dashboard-import .btn-primary:hover {
   background: #a7e6ff;
   border-color: #a7e6ff;
+}
+.dashboard-filters {
+  flex: 1 0 100%;
+  border-top: 1px solid #353535;
+  padding-top: 18px;
+}
+.dashboard-filters .filter-row {
+  justify-content: flex-start;
+}
+.dashboard-filters .filter-row > label {
+  color: #bcbcbc;
+}
+.dashboard-filters .period,
+.dashboard-filters .control {
+  color: #f5f5f5;
+  background: #1c1c1c;
+  border-color: #626262;
+  color-scheme: dark;
+}
+.dashboard-filters .period button {
+  color: #bcbcbc;
+}
+.dashboard-filters .period button.selected {
+  color: #f5f5f5;
+  background: #363636;
 }
 .btn {
   padding: 10px 16px;
@@ -1885,6 +1911,9 @@ textarea:focus-visible,
   }
   .dashboard-import small {
     text-align: center;
+  }
+  .dashboard-filters {
+    flex: auto;
   }
   .insights-grid {
     grid-template-columns: minmax(0, 1fr);
