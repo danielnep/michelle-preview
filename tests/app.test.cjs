@@ -268,6 +268,7 @@ async function boot(db = new IDBFactory(), dashboardPreference) {
     "pptx.js",
     "install.js",
     "profiles.js",
+    "motion.js",
     "app.js",
     "studio.js",
     "dashboard.js",
@@ -737,5 +738,22 @@ test("as quatro experiências integram o aplicativo real e compartilham os dados
   assert.match(t.w.document.querySelector(".mc-role-home").textContent, /Resumo estratégico/);
   assert.equal(b.getAll().length, 1);
   assert.equal(t.errors.length, 0);
+  t.w.close();
+});
+
+test("dashboard possui alças de arrastar funcionais e fallback por setas", async () => {
+  const t = await boot(), b = t.w.MichelleBridge;
+  b.navigate("dashboard");
+  t.click("[data-dash-edit]");
+  const handles = t.w.document.querySelectorAll("[data-dash-touch-drag]");
+  assert.ok(handles.length >= 9);
+  assert.ok(t.w.document.querySelectorAll("[data-dash-editor-row]").length >= 9);
+  assert.match(t.w.document.querySelector(".dash-editor-tips").textContent, /arrastando/i);
+  const initial = t.w.MichelleDashboard.getConfig().order;
+  t.click('[data-dash-move="ranking:-1"]');
+  const later = t.w.MichelleDashboard.getConfig().order;
+  assert.notDeepEqual(later, initial);
+  assert.ok(t.w.document.querySelector('[data-dash-touch-drag="ranking"]'));
+  assert.equal(t.errors.length,0);
   t.w.close();
 });
