@@ -228,12 +228,12 @@
   }
   function content(id, m) { return ({ insights, metrics: metricCards, crossings, reading, trend, status: statusChart, sectors: sectorsChart, ranking, records }[id])(m); }
   function widget(id, m) {
-    return `<article class="dash-widget" style="--dash-span:${config.sizes[id]}" data-dash-widget="${id}"><header class="dash-widget-head"><h2>${esc(blocks[id])}</h2><div>${id === "trend" ? `<select id="dash-chart" aria-label="Tipo de gráfico temporal"><option value="line" ${config.chart === "line" ? "selected" : ""}>Linhas</option><option value="bar" ${config.chart === "bar" ? "selected" : ""}>Barras</option></select>` : ""}${id === "ranking" ? `<select id="dash-dimension" aria-label="Agrupar principais registros">${Object.entries(dimensions).map(([k, v]) => `<option value="${k}" ${config.dimension === k ? "selected" : ""}>${v}</option>`).join("")}</select>` : ""}${state.editor ? `<button class="dash-icon-btn dash-drag" draggable="true" data-dash-drag="${id}" title="Arrastar bloco; use as setas de Personalizar no celular" aria-label="Arrastar ${esc(blocks[id])}">${icon("menu", 16)}</button>` : ""}<button class="dash-icon-btn" data-dash-focus="${id}" title="Ampliar ${esc(blocks[id])}" aria-label="Ampliar ${esc(blocks[id])}">${icon("expand", 17)}</button></div></header><div class="dash-widget-body">${blockCaption(id, m)}${content(id, m)}</div></article>`;
+    return `<article class="dash-widget" style="--dash-span:${config.sizes[id]}" data-dash-widget="${id}"><header class="dash-widget-head"><h2>${esc(blocks[id])}</h2><div>${id === "trend" ? `<select id="dash-chart" aria-label="Tipo de gráfico temporal"><option value="line" ${config.chart === "line" ? "selected" : ""}>Linhas</option><option value="bar" ${config.chart === "bar" ? "selected" : ""}>Barras</option></select>` : ""}${id === "ranking" ? `<select id="dash-dimension" aria-label="Agrupar principais registros">${Object.entries(dimensions).map(([k, v]) => `<option value="${k}" ${config.dimension === k ? "selected" : ""}>${v}</option>`).join("")}</select>` : ""}${state.editor ? `<button class="dash-icon-btn dash-drag" draggable="true" data-dash-drag="${id}" data-dash-touch-drag="${id}" title="Arrastar para mudar de posição; as setas também funcionam" aria-label="Arrastar ${esc(blocks[id])}">${icon("menu", 16)}</button>` : ""}<button class="dash-icon-btn" data-dash-focus="${id}" title="Ampliar ${esc(blocks[id])}" aria-label="Ampliar ${esc(blocks[id])}">${icon("expand", 17)}</button></div></header><div class="dash-widget-body">${blockCaption(id, m)}${content(id, m)}</div></article>`;
   }
   function editor(m) {
     if (!state.editor) return "";
     const available = [...new Map(Object.keys(D.types).flatMap(type => D.metricOptions(m.all.filter(r => r.type === type))).map(metric => [metric.id, metric])).values()];
-    return `<section class="dash-editor" aria-labelledby="dash-editor-title"><div class="dash-editor-head"><div><h2 id="dash-editor-title">Monte seu dashboard</h2><p>Escolha os blocos, a ordem, o tamanho e os indicadores. Seus ajustes ficam salvos.</p></div><button class="btn" data-dash-edit>Concluir ajustes</button></div><div class="dash-editor-grid"><div><h3>Blocos e ordem</h3>${config.order.map((id, i) => `<div class="dash-editor-row"><label><input type="checkbox" data-dash-visible="${id}" ${config.hidden.includes(id) ? "" : "checked"}>${esc(blocks[id])}</label><div><button class="dash-icon-btn" data-dash-move="${id}:-1" aria-label="Mover ${esc(blocks[id])} para cima" ${i === 0 ? "disabled" : ""}>↑</button><button class="dash-icon-btn" data-dash-move="${id}:1" aria-label="Mover ${esc(blocks[id])} para baixo" ${i === config.order.length - 1 ? "disabled" : ""}>↓</button><select data-dash-size="${id}" aria-label="Largura de ${esc(blocks[id])}">${[[4, "1/3"], [6, "Metade"], [8, "2/3"], [12, "Inteiro"]].map(([n, name]) => `<option value="${n}" ${config.sizes[id] === n ? "selected" : ""}>${name}</option>`).join("")}</select></div></div>`).join("")}<p class="dash-note">No celular, cada bloco ocupa a largura da tela. A ordem e a seleção continuam iguais.</p></div><div><h3>Indicadores visíveis</h3><div class="dash-metric-options">${available.map(x => `<label><input type="checkbox" data-dash-metric="${esc(x.id)}" ${config.metrics.includes(x.id) ? "checked" : ""}>${esc(x.id === "indicadores" ? "Linhas de indicadores" : x.label)}</label>`).join("")}</div><p class="dash-note">Indicadores sem dados no recorte não aparecem. Conclusão e duração exigem uma única fonte.</p><button class="btn" data-dash-reset-layout>Restaurar composição padrão</button></div></div></section>`;
+    return `<section class="dash-editor" aria-labelledby="dash-editor-title"><div class="dash-editor-head"><div><h2 id="dash-editor-title">Monte seu dashboard</h2><p>Escolha os blocos, a ordem, o tamanho e os indicadores. Seus ajustes ficam salvos.</p></div><button class="btn" data-dash-edit>Concluir ajustes</button></div><div class="dash-editor-grid"><div><h3>Blocos e ordem</h3>${config.order.map((id, i) => `<div class="dash-editor-row" data-dash-editor-row="${id}"><button class="dash-editor-handle" type="button" data-dash-touch-drag="${id}" aria-label="Arrastar ${esc(blocks[id])} para reordenar" title="Toque e arraste para reordenar">${icon("menu", 19)}</button><label><input type="checkbox" data-dash-visible="${id}" ${config.hidden.includes(id) ? "" : "checked"}>${esc(blocks[id])}</label><div><button class="dash-icon-btn" data-dash-move="${id}:-1" aria-label="Mover ${esc(blocks[id])} para cima" ${i === 0 ? "disabled" : ""}>↑</button><button class="dash-icon-btn" data-dash-move="${id}:1" aria-label="Mover ${esc(blocks[id])} para baixo" ${i === config.order.length - 1 ? "disabled" : ""}>↓</button><select data-dash-size="${id}" aria-label="Largura de ${esc(blocks[id])}">${[[4, "1/3"], [6, "Metade"], [8, "2/3"], [12, "Inteiro"]].map(([n, name]) => `<option value="${n}" ${config.sizes[id] === n ? "selected" : ""}>${name}</option>`).join("")}</select></div></div>`).join("")}<div class="dash-editor-tips"><strong>Organize arrastando</strong>: segure o símbolo de linhas e deslize o bloco para a posição desejada. Funciona com toque ou caneta. No computador, arraste os blocos do painel. As setas continuam disponíveis.</div><p class="dash-note">No celular, cada bloco ocupa a largura da tela. Ordem, tamanho e seleção são salvos nesta experiência.</p></div><div><h3>Indicadores visíveis</h3><div class="dash-metric-options">${available.map(x => `<label><input type="checkbox" data-dash-metric="${esc(x.id)}" ${config.metrics.includes(x.id) ? "checked" : ""}>${esc(x.id === "indicadores" ? "Linhas de indicadores" : x.label)}</label>`).join("")}</div><p class="dash-note">Indicadores sem dados no recorte não aparecem. Conclusão e duração exigem uma única fonte.</p><button class="btn" data-dash-reset-layout>Restaurar composição padrão</button></div></div></section>`;
   }
   function source(m) {
     const activeLots = new Set(m.rows.map(r => r.lotId));
@@ -345,13 +345,32 @@
         window.XLSX.writeFile(workbook, "dashboard-michelle.xlsx");
       }
     });
-    root.querySelectorAll("[data-dash-drag]").forEach(el => el.addEventListener("dragstart", e => { state.drag = el.dataset.dashDrag; e.dataTransfer?.setData("text/plain", state.drag); }));
+    const reorder = (from, to) => {
+      if (!config.order.includes(from) || !config.order.includes(to) || from === to) return;
+      const order = window.MCMotion?.orderAfter(config.order, from, to) ||
+        (() => { const list = config.order.filter(id => id !== from); list.splice(list.indexOf(to), 0, from); return list; })();
+      update({ order });
+      window.MCMotion?.animatePage();
+      b.notify("Bloco reposicionado. Nova ordem salva.");
+    };
+    window.MCMotion?.bindDashboardDrag(root, reorder);
+    root.querySelectorAll("[data-dash-drag]").forEach(el => el.addEventListener("dragstart", e => {
+      state.drag = el.dataset.dashDrag;
+      e.dataTransfer?.setData("text/plain", state.drag);
+      e.dataTransfer?.setDragImage?.(el.closest("[data-dash-widget]"), 30, 16);
+      el.closest("[data-dash-widget]")?.classList.add("mc-drag-source");
+    }));
     root.querySelectorAll("[data-dash-widget]").forEach(el => {
       el.addEventListener("dragover", e => { if (state.drag) { e.preventDefault(); el.classList.add("drag-target"); } });
       el.addEventListener("dragleave", () => el.classList.remove("drag-target"));
-      el.addEventListener("drop", e => { e.preventDefault(); const from = state.drag, to = el.dataset.dashWidget; state.drag = null; if (!from || from === to) return; const order = config.order.filter(x => x !== from); order.splice(order.indexOf(to), 0, from); update({ order }); });
+      el.addEventListener("drop", e => {
+        e.preventDefault();
+        const from = state.drag, to = el.dataset.dashWidget; state.drag = null;
+        root.querySelectorAll(".drag-target,.mc-drag-source").forEach(node => node.classList.remove("drag-target", "mc-drag-source"));
+        reorder(from, to);
+      });
     });
-    root.addEventListener("dragend", () => { state.drag = null; root.querySelectorAll(".drag-target").forEach(el => el.classList.remove("drag-target")); });
+    root.addEventListener("dragend", () => { state.drag = null; root.querySelectorAll(".drag-target,.mc-drag-source").forEach(el => el.classList.remove("drag-target", "mc-drag-source")); });
     const dialog = document.getElementById("dashboard-focus");
     if (dialog) { if (dialog.showModal) dialog.showModal(); else dialog.setAttribute("open", ""); dialog.addEventListener("cancel", e => { e.preventDefault(); state.focus = null; b.render(); }); }
   }
