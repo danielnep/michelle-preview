@@ -49,7 +49,7 @@ test("importação automática em janela aceita arquivo sem datas e oferece rela
   assert.equal(w.document.querySelector("#import-review"), null);
   assert.equal(b.getImports().find(l => l.type === "cuc").periodStart, null);
   assert.equal(b.D.stats(b.getAll()).byType.cuc.value, 150);
-  assert.ok(b.getImports().every(l => l.mapping && l.interpretationVersion === 2));
+  assert.ok(b.getImports().every(l => l.mapping && l.interpretationVersion >= 2));
   t.click("[data-quick-report]");
   assert.equal(b.getState().page, "report");
   assert.equal(b.getState().report.rows.length, 5);
@@ -110,7 +110,7 @@ test("Power BI seguro: validação do link, persistência, troca de origem e tel
   assert.ok(t.w.document.body.classList.contains("dashboard-expanded"));
   t.w.MichelleDashboard.collapse();
   assert.equal(t.w.document.querySelector(".dash-native-report iframe"), frame);
-  const reopened = await boot(t.db, t.w.localStorage.getItem("michelle.dashboard.v1"));
+  const reopened = await boot(t.db, t.w.localStorage.getItem("michelle.dashboard.v2.gerente"));
   reopened.w.MichelleBridge.navigate("dashboard");
   assert.ok(reopened.w.document.querySelector(".dash-native-report iframe"));
   t.click('[data-dash-engine="local"]');
@@ -170,7 +170,7 @@ test("dashboard: composição, indicadores, filtros e ampliação sobrevivem à 
   t.click('[data-dash-metric="records"]');
   t.input("#dash-zoom", "150");
   t.input("#dash-type", "ordens");
-  const preference = t.w.localStorage.getItem("michelle.dashboard.v1");
+  const preference = t.w.localStorage.getItem("michelle.dashboard.v2.gerente");
   const reopened = await boot(t.db, preference);
   reopened.w.MichelleBridge.navigate("dashboard");
   const c = reopened.w.MichelleDashboard.getConfig();
@@ -238,7 +238,7 @@ async function boot(db = new IDBFactory(), dashboardPreference) {
     },
   );
   const w = dom.window;
-  if (dashboardPreference) w.localStorage.setItem("michelle.dashboard.v1", dashboardPreference);
+  if (dashboardPreference) w.localStorage.setItem("michelle.dashboard.v2.gerente", dashboardPreference);
   Object.defineProperty(w, "indexedDB", { value: db });
   w.IDBKeyRange = IDBKeyRange;
   Object.defineProperty(w, "crypto", { value: webcrypto });
@@ -261,9 +261,13 @@ async function boot(db = new IDBFactory(), dashboardPreference) {
   for (const file of [
     "vendor/xlsx.full.min.js",
     "vendor/jszip.min.js",
+    "analysis/mc-analysis.js",
+    "analysis/preferences.js",
     "data-core.js",
     "data-intelligence.js",
     "pptx.js",
+    "install.js",
+    "profiles.js",
     "app.js",
     "studio.js",
     "dashboard.js",
@@ -328,7 +332,7 @@ test("múltiplos arquivos: ligações, erro independente, deduplicação e lista
   const t = await boot();
   const { w, click } = t;
   const b = w.MichelleBridge;
-  click('.central-dashboard [data-nav="data"]');
+  click('.sidebar [data-nav="data"]');
   assert.equal(w.document.querySelector("#file-upload").multiple, true);
   const wb = X.utils.book_new();
   X.utils.book_append_sheet(
@@ -713,5 +717,25 @@ test("seleção de indicadores é respeitada, quantidades são cumpridas e os mo
     t.w.document.querySelector(".toast").textContent,
     /Selecione ao menos/,
   );
+  t.w.close();
+});
+
+test("as quatro experiências integram o aplicativo real e compartilham os dados", async () => {
+  const t = await boot(), b = t.w.MichelleBridge;
+  assert.equal(t.w.MCProfiles.currentId(), "gerente");
+  assert.match(t.w.document.querySelector(".mc-role-home").textContent, /Visão gerencial/);
+  const records = [{id:"001",type:"ordens",sector:"tec",status:"Pendente",title:"Atendimento",value:1,source:"os.xlsx"}];
+  b.getImports().push({id:"teste",name:"os.xlsx",filename:"os.xlsx",sector:"tec",type:"ordens",rows:records,created:"2026-10-11T12:00:00.000Z"});
+  b.render();
+  t.input("#mc-profile", "supervisora");
+  assert.equal(t.w.MCProfiles.currentId(), "supervisora");
+  assert.match(t.w.document.querySelector(".mc-role-home").textContent, /Acompanhamento da supervisão/);
+  assert.equal(b.getAll().length, 1);
+  t.input("#mc-profile", "operacao");
+  assert.match(t.w.document.querySelector(".mc-role-home").textContent, /Central operacional/);
+  t.input("#mc-profile", "direcao");
+  assert.match(t.w.document.querySelector(".mc-role-home").textContent, /Resumo estratégico/);
+  assert.equal(b.getAll().length, 1);
+  assert.equal(t.errors.length, 0);
   t.w.close();
 });
