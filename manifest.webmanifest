@@ -1,8 +1,8 @@
 {
   "id": "./",
-  "name": "Power BI | Painel Completo / Michelle Cândido",
-  "short_name": "Painel Michelle",
-  "description": "Indicadores, análises, relatórios e apresentações da operação.",
+  "name": "Painel Completo | Michelle Cândido",
+  "short_name": "Michelle MC",
+  "description": "Painel executivo de indicadores, relatórios e análises de Michelle Cândido.",
   "lang": "pt-BR",
   "start_url": "./#/geral",
   "scope": "./",
@@ -11,22 +11,26 @@
   "theme_color": "#080808",
   "icons": [
     {
-      "src": "assets/painel-icon.svg?v=3.4.0",
+      "src": "assets/mc-icon-192.png?v=4.0.0",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/mc-icon-512.png?v=4.0.0",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/mc-symbol.svg?v=4.0.0",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
-    },
-    {
-      "src": "assets/icon-192.png?v=3.2.3",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "assets/icon-512.png?v=3.2.3",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
     }
-  ]
+  ],
+  "display_override": [
+    "standalone"
+  ],
+  "orientation": "any"
 }
