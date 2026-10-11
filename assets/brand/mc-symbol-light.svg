@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+<title id="title">MC · Michelle Cândido</title><desc id="desc">Monograma MC geométrico azul claro e prata com curva rose sutil sobre fundo azul-noite</desc>
+<defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#081325"/><stop offset="1" stop-color="#152c49"/></linearGradient><linearGradient id="m" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#effbff"/><stop offset=".47" stop-color="#75d7fb"/><stop offset="1" stop-color="#2f9cc6"/></linearGradient><linearGradient id="c" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f3e5f0"/><stop offset=".5" stop-color="#cdb3d3"/><stop offset="1" stop-color="#90d9ec"/></linearGradient></defs>
+<rect width="256" height="256" rx="53" fill="#f5fbff"/><rect x="9" y="9" width="238" height="238" rx="45" fill="none" stroke="#d3f2ff" stroke-opacity=".13" stroke-width="1.8"/>
+<path d="M44 177V78c0-8 9-12 15-5l48 59 43-58c5-7 16-4 16 5v98" fill="none" stroke="#13729e" stroke-width="19" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M205 83c-14-14-34-19-52-12-14 6-25 17-31 31-8 20-5 44 7 60 15 21 49 29 76 8" fill="none" stroke="#9b6f98" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M50 204h156" fill="none" stroke="#157b9d" stroke-opacity=".33" stroke-width="2.5" stroke-linecap="round"/>
+</svg>
