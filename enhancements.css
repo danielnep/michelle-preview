@@ -1097,3 +1097,61 @@ textarea {
   min-height: 0;
   flex: none;
 }
+.crumb {
+  display: block;
+  white-space: normal;
+  min-width: 0;
+}
+.topbar > .row {
+  min-width: 0;
+  flex: 1;
+}
+.head-actions {
+  flex-shrink: 0;
+}
+.hero-metric b {
+  color: white;
+}
+.hero-right {
+  flex-shrink: 0;
+}
+.content {
+  width: 100%;
+}
+.hero-left {
+  min-width: 0;
+}
+@media (max-width: 1500px) {
+  .head-actions .searchbox {
+    display: none;
+  }
+  .head-actions > .badge,
+  .head-actions > .avatar {
+    display: none;
+  }
+}
+@media (max-width: 700px) {
+  .topbar {
+    gap: 9px;
+  }
+  .hero {
+    flex-wrap: wrap;
+    gap: 20px;
+  }
+  .hero-right {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .hero-metric {
+    text-align: left;
+  }
+  .header-buttons {
+    max-width: 100%;
+  }
+  .filter-row {
+    max-width: 100%;
+  }
+  .panel-sub {
+    line-height: 1.6;
+  }
+}

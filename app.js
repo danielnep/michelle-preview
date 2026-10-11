@@ -39,6 +39,8 @@
     spark:
       '<path d="m12 3 1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="m19 16 .9 2.1L22 19l-2.1.9L19 22l-.9-2.1L16 19l2.1-.9z"/>',
     close: '<path d="M5 5l14 14M19 5 5 19"/>',
+    moon: '<path d="M20.5 13a9 9 0 0 1-9.5-9.5A9 9 0 1 0 20.5 13z"/>',
+    sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 1.5 1.5M5 19l1.5-1.5M17.5 6.5 1.5-1.5"/>',
   };
   const icon = (id, size = 18) =>
     `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[id] || I.grid}</svg>`;
@@ -147,6 +149,8 @@
     ready: false,
     query: "",
     pending: null,
+    uploadQueue: [],
+    readingFiles: false,
     chatModes: loadChats(),
     assistantMode: "dados",
     assistantOpen: false,
@@ -241,7 +245,17 @@
           present: "Estúdio de apresentações",
           settings: "Configurações",
         }[state.page] || "Visão geral";
-    return `<div class="app"><div class="backdrop ${state.sidebar ? "open" : ""}" data-close="1"></div><aside class="sidebar ${state.sidebar ? "open" : ""}"><div class="brand"><div class="brand-icon">${icon("chart", 23)}</div><div><div class="brand-name">HORIZON</div><div class="brand-sub">OPERAÇÕES E INDICADORES</div></div></div><div class="nav-scroll"><div class="nav-group"><div class="side-label">PRINCIPAL</div>${nav("geral", "Visão Geral")}${nav("present", "Estúdio de Apresentações")}</div><div class="nav-group"><div class="side-label">DEPARTAMENTOS</div>${sectors.map((s) => nav(s.id, s.name)).join("")}</div><div class="nav-group"><div class="side-label">GESTÃO E DADOS</div>${nav("data", "Enviar Dados Excel")}${nav("report", "Relatórios")}${nav("insight", "Insights e análises")}${nav("settings", "Configurações")}</div></div><div class="side-bottom"><div class="side-status"><span class="online-dot"></span> ${state.ready ? "Dados salvos neste navegador" : "Carregando armazenamento"}</div><div class="side-credit">MC Power BI Painel Completo • v3.0</div></div></aside><div class="main"><header class="topbar"><div class="row" style="gap:12px"><button aria-label="Abrir menu" class="small-icon-btn mob-toggle" data-toggle="1">${icon("menu", 19)}</button><div class="crumb"><span class="owner-name">Michelle Cândido<small>Gerente Central de Operações Integradas</small></span>MC Power BI Painel Completo <span style="color:#bec9d3">/</span> <strong>${esc(title)}</strong></div></div><div class="head-actions"><button class="btn studio-top-button" data-nav="present">${icon("report", 15)} Estúdio de Apresentações</button><label class="searchbox">${icon("search", 15)}<input aria-label="Pesquisar registros" id="global-search" placeholder="Buscar registros..." value="${esc(state.query)}" /></label><button type="button" class="top-assistant" data-assistant-open="1" aria-label="Abrir assistente">${icon("spark", 15)} <span>Assistente</span></button><span class="badge info" style="white-space:nowrap">${imports.length ? "Dados reais" : "Aguardando dados"}</span><div class="avatar">M</div></div></header><main class="content"><div class="print-header">POWER BI PAINEL COMPLETO | MICHELLE</div>${body()}</main><footer class="footer"><span>MC Power BI Painel Completo © 2026 • ${state.ready ? "Dados salvos neste navegador" : "Carregando armazenamento"}</span><span>Desenvolvido por Horizon</span></footer></div></div>${assistantDock()}`;
+    return `<div class="app"><div class="backdrop ${state.sidebar ? "open" : ""}" data-close="1"></div><aside class="sidebar ${state.sidebar ? "open" : ""}"><div class="brand"><div class="brand-logo-plate"><img src="assets/horizon-logo.png" alt="Horizon" class="brand-logo" width="208" height="72"></div><div class="brand-sub">OPERAÇÕES E INDICADORES</div></div><div class="nav-scroll"><div class="nav-group"><div class="side-label">PRINCIPAL</div>${nav("geral", "Visão Geral")}${nav("present", "Estúdio de Apresentações")}</div><div class="nav-group"><div class="side-label">DEPARTAMENTOS</div>${sectors.map((s) => nav(s.id, s.name)).join("")}</div><div class="nav-group"><div class="side-label">GESTÃO E DADOS</div>${nav("data", "Enviar Dados Excel")}${nav("report", "Relatórios")}${nav("insight", "Insights e análises")}${nav("settings", "Configurações")}</div></div><div class="side-bottom"><div class="side-status"><span class="online-dot"></span> ${state.ready ? "Dados salvos neste navegador" : "Carregando armazenamento"}</div><div class="side-credit">MC Power BI Painel Completo • v3.0</div></div></aside><div class="main"><header class="topbar"><div class="header-identity"><button aria-label="Abrir menu" class="small-icon-btn mob-toggle" data-toggle="1">${icon("menu", 19)}</button><div class="header-brand"><img src="assets/horizon-logo.png" alt="Horizon" width="96" height="34"></div><div class="crumb"><span class="owner-name">Michelle Cândido<small>Gerente Central de Operações Integradas</small></span><span class="app-caption">MC Power BI Painel Completo<span class="crumb-page"> · ${esc(title)}</span></span></div></div><div class="head-actions">${themeButton()}<button aria-label="Estúdio de Apresentações" class="btn studio-top-button" data-nav="present">${icon("report", 15)} Estúdio de Apresentações</button><label class="searchbox">${icon("search", 15)}<input aria-label="Pesquisar registros" id="global-search" placeholder="Buscar registros..." value="${esc(state.query)}" /></label><button type="button" class="top-assistant" data-assistant-open="1" aria-label="Abrir assistente">${icon("spark", 15)} <span>Assistente</span></button><span class="badge info" style="white-space:nowrap">${imports.length ? "Dados reais" : "Aguardando dados"}</span><div class="avatar">M</div></div></header><main class="content"><div class="print-header">POWER BI PAINEL COMPLETO | MICHELLE</div>${body()}</main><footer class="footer"><span>MC Power BI Painel Completo © 2026 • ${state.ready ? "Dados salvos neste navegador" : "Carregando armazenamento"}</span><span>Desenvolvido por Horizon</span></footer></div><nav class="mobile-nav" aria-label="Navegação principal">${[
+      ["geral", "Visão Geral", "grid"],
+      ["data", "Enviar Dados", "up"],
+      ["report", "Relatórios", "report"],
+      ["present", "Estúdio", "files"],
+    ]
+      .map(
+        ([id, label, ico]) =>
+          `<button class="${state.page === id ? "active" : ""}" data-nav="${id}" ${state.page === id ? 'aria-current="page"' : ""}>${icon(ico, 22)}<span>${label}</span></button>`,
+      )
+      .join("")}</nav></div>${assistantDock()}`;
   }
   const periodButtons = () =>
     `<div class="filter-row"><div class="period" role="group" aria-label="Selecionar período">${["all", 7, 30, 90, 365].map((n) => `<button data-period="${n}" class="${state.period === n ? "selected" : ""}">${n === "all" ? "Todos" : n === 365 ? "12m" : n + "d"}</button>`).join("")}</div><label>De <input type="date" class="control compact" id="range-start" value="${esc(state.rangeStart)}"></label><label>Até <input type="date" class="control compact" id="range-end" value="${esc(state.rangeEnd)}"></label></div>`;
@@ -249,7 +263,7 @@
     title,
     desc = "Visão centralizada dos seus indicadores e resultados.",
   ) =>
-    `<section class="overview-head"><div><div class="eyebrow">HORIZON / OPERAÇÕES</div><h1 class="title">${esc(title)}</h1><p class="subtitle">${esc(desc)}</p></div><div class="header-buttons">${periodButtons()}<button class="btn" data-nav="report">${icon("report", 14)} Gerar relatório</button><button class="btn btn-primary" data-nav="data">${icon("up", 14)} Importar dados</button></div></section>`;
+    `<section class="overview-head"><div><div class="eyebrow">HORIZON / OPERAÇÕES</div><h1 class="title">${esc(title)}</h1><p class="subtitle">${esc(desc)}</p></div><div class="header-buttons">${state.page === "geral" || state.page === "insight" || idSector(state.page) ? periodButtons() : ""}<button class="btn" data-nav="report">${icon("report", 14)} Gerar relatório</button><button class="btn btn-primary" data-nav="data">${icon("up", 14)} Importar dados</button></div></section>`;
   const hero = (title, desc, rs) => {
     let c = counts(rs);
     return `<div class="hero"><div class="hero-left"><span class="hero-tag"><span class="online-dot" style="background:#8de6e2"></span> CENTRAL DE INDICADORES</span><h2>${esc(title)}</h2><p>${esc(desc)}</p></div><div class="hero-right"><div class="hero-metric"><b>${rate(rs) == null ? "—" : rate(rs) + "%"}</b><small>Índice de conclusão</small></div><div style="height:42px;width:1px;background:#ffffff30"></div><div class="hero-metric"><b>${fmtNum(c.total)}</b><small>Linhas no recorte</small></div></div></div>`;
@@ -448,6 +462,25 @@
       `<section class="card panel"><div class="panel-head"><h3>Registros do setor</h3><button class="btn" data-export="${sec.id}" ${rs.length ? "" : "disabled"}>Exportar Excel (.xlsx)</button></div>${table(rs, 30, state.tablePage * 30)}<div class="pagination"><button class="btn" data-table-page="-1" ${state.tablePage ? "" : "disabled"}>Anterior</button><span>${state.tablePage + 1} / ${Math.max(1, Math.ceil(rs.length / 30))} · ${rs.length} linhas</span><button class="btn" data-table-page="1" ${(state.tablePage + 1) * 30 >= rs.length ? "disabled" : ""}>Próximo</button></div></section>`
     );
   }
+  function uploadBox() {
+    const queued = state.uploadQueue.filter((p) => !p.lotId);
+    const statuses = {
+      reading: "Lendo arquivo",
+      ready: "Pronto para importar",
+      error: "Precisa de atenção",
+    };
+    return `<div class="dropzone" id="dropzone"><div class="upload-prompt"><div class="drop-symbol">${icon("up", 25)}</div><h3>Suas planilhas, em um só lugar</h3><p>Arraste arquivos aqui ou selecione no seu dispositivo.</p><p class="upload-formats">XLSX, XLS ou CSV · até 50 MB por arquivo</p><label for="file-upload" class="btn btn-primary">${icon("plus", 18)} Selecionar arquivos</label><input class="file-input" type="file" id="file-upload" accept=".csv,.xlsx,.xls" multiple ${state.ready && !state.readingFiles && !state.importBusy ? "" : "disabled"}></div><div class="upload-file-list" aria-live="polite"><div class="upload-list-heading"><strong>Arquivos selecionados e importados</strong><span>${queued.length + imports.length}</span></div>${queued.map((p) => `<article class="upload-file ${p.status === "error" ? "has-error" : ""} ${state.pending === p ? "is-selected" : ""}"><span class="upload-file-icon">${icon("files", 20)}</span><div class="upload-file-info"><strong>${esc(p.name)}</strong><small>${esc(statuses[p.status] || p.status)}${p.grid ? ` · ${esc(idSector(p.sector)?.name)} · ${esc(D.types[p.type])}` : ""}</small>${p.error ? `<p class="upload-file-error">${esc(p.error)}</p>` : ""}<div class="upload-file-actions">${p.grid ? `<button class="btn" data-configure-file="${p.queueId}">Conferir dados</button>` : ""}${p.status !== "reading" ? `<button class="btn btn-quiet" data-remove-queued="${p.queueId}">Remover da seleção</button>` : ""}</div></div></article>`).join("")}${[
+      ...imports,
+    ]
+      .reverse()
+      .map(
+        (l) =>
+          `<article class="upload-file is-imported"><span class="upload-file-icon">${icon("check", 20)}</span><div class="upload-file-info"><strong>${esc(l.name)}</strong><small>${l.archived ? "Arquivado" : l.supersededBy ? "Versão anterior" : "Importado e salvo"} · ${fmtNum(l.rows.length)} linhas · ${esc(idSector(l.sector)?.name || l.sector)}</small><small>${esc(l.sheet)} · ${fmtDate(l.periodStart)} a ${fmtDate(l.periodEnd)}</small><div class="upload-file-actions"><button class="btn" data-view-lot="${l.id}">Consultar dados</button><button class="btn btn-quiet" data-original="${l.fileId || ""}" ${l.fileId ? "" : "disabled"}>${icon("down", 15)} Original</button></div></div></article>`,
+      )
+      .join(
+        "",
+      )}${queued.length || imports.length ? "" : '<p class="upload-empty">Os arquivos aparecerão aqui e continuarão disponíveis depois da importação.</p>'}</div>${queued.length ? `<button class="btn btn-primary upload-confirm" data-import-queue ${state.importBusy || state.readingFiles || !queued.some((p) => p.grid) ? "disabled" : ""}>${icon("up", 18)} ${state.readingFiles ? "Lendo arquivos…" : state.importBusy ? "Importando…" : `Importar arquivos (${queued.filter((p) => p.grid).length})`}</button><p class="upload-hint">Confira o setor e a competência de cada arquivo. Erros ficam nesta lista para correção.</p>` : ""}</div>`;
+  }
   function pageData() {
     const p = state.pending;
     return (
@@ -455,7 +488,7 @@
         "Enviar Dados Excel",
         "As planilhas alimentam os indicadores, análises e relatórios do sistema.",
       ) +
-      `<div class="notice">Os dados e arquivos ficam salvos neste navegador. Use o backup para transferir sua base ou guardar uma cópia.</div><div class="page-grid"><section class="card panel"><h3>Importar Dados</h3><p class="panel-sub">Selecione a planilha e confira o destino e as colunas.</p><div class="dropzone" id="dropzone"><div class="drop-symbol">${icon("up", 25)}</div><h3>Envie sua planilha</h3><p>XLSX, XLS ou CSV · até 50 MB</p><label for="file-upload" class="btn btn-primary">Selecionar arquivo</label><input class="file-input" type="file" id="file-upload" accept=".csv,.xlsx,.xls" ${state.ready ? "" : "disabled"}></div><div class="backup-actions"><button class="btn" data-backup>Exportar backup completo</button><label class="btn">Restaurar backup<input type="file" id="restore-backup" accept=".json" hidden></label><button class="btn" data-export="geral" ${getAll().length ? "" : "disabled"}>Exportar Excel (.xlsx)</button></div></section><section class="card panel"><h3>${p ? "Configurar importação" : "Seu fluxo de dados"}</h3>${p ? importWizard(p) : `<ol class="flow-list"><li>Escolha um arquivo Excel.</li><li>Confira a aba, as colunas e o setor.</li><li>Valide os dados e confirme o envio.</li><li>Consulte indicadores, insights e relatórios atualizados.</li></ol>`}</section></div><section class="card panel section-space"><h3>Histórico de importações</h3>${
+      `<div class="notice">Os dados e arquivos ficam salvos neste navegador. Use o backup para transferir sua base ou guardar uma cópia.</div><div class="page-grid"><section class="card panel"><h3>Importar Dados</h3><p class="panel-sub">Selecione um ou mais arquivos e confira o destino de cada planilha.</p>${uploadBox()}<div class="backup-actions"><button class="btn" data-backup>Exportar backup completo</button><label class="btn">Restaurar backup<input type="file" id="restore-backup" accept=".json" hidden></label><button class="btn" data-export="geral" ${getAll().length ? "" : "disabled"}>Exportar Excel (.xlsx)</button></div></section><section id="import-configuration" class="card panel"><h3>${p ? "Configurar importação" : "Seu fluxo de dados"}</h3>${p ? importWizard(p) : `<ol class="flow-list"><li>Escolha um ou mais arquivos Excel.</li><li>Confira a aba, as colunas e o setor.</li><li>Valide os dados e confirme o envio.</li><li>Consulte indicadores, insights e relatórios atualizados.</li></ol>`}</section></div><section class="card panel section-space"><h3>Histórico de importações</h3>${
         imports.length
           ? `<div class="file-list">${[...imports]
               .reverse()
@@ -465,7 +498,7 @@
               )
               .join("")}</div>`
           : '<div class="empty">Nenhuma planilha importada.</div>'
-      }</section>${state.viewLot ? `<section class="card panel section-space"><h3>Dados do lote</h3>${table(imports.find((l) => l.id === state.viewLot)?.rows || [], 100)}</section>` : ""}`
+      }</section>${state.viewLot ? `<section id="lot-preview" class="card panel section-space"><h3>Dados do lote</h3>${table(imports.find((l) => l.id === state.viewLot)?.rows || [], 100)}</section>` : ""}`
     );
   }
   function previewRows(rows) {
@@ -539,7 +572,7 @@
         "Configurações",
         "Personalize metas, identificação e preferências do seu painel.",
       ) +
-      `<div class="page-grid"><section class="card panel"><div class="panel-head"><div><h3 class="panel-title">Identidade do painel</h3><p class="panel-sub">Informações desta operação</p></div>${icon("settings", 19)}</div><div class="field"><label>Nome da operação</label><input class="control" id="operation" value="${esc(settings.operation)}" /></div><button class="btn btn-primary section-space" data-save="1">Salvar configurações</button><div class="info-box section-space"><strong>Seus dados operacionais</strong><p>Exporte as planilhas do sistema de origem e importe por Enviar Dados Excel. O painel preserva os arquivos originais e o histórico de atualização.</p></div></section><section class="card panel"><div class="panel-head"><div><h3 class="panel-title">Metas por departamento</h3><p class="panel-sub">Percentual de conclusão desejado</p></div>${icon("target", 18)}</div><div class="settings-list section-space">${sectors.map((s) => `<div class="settings-item"><div><strong>${s.name}</strong><small>Meta de conclusão (percentual)</small><div class="progress"><div style="width:${settings.goals?.[s.id] ?? 0}%"></div></div></div><div class="row" style="gap:4px"><input class="control" type="number" min="0" max="100" step="1" data-goal="${s.id}" value="${settings.goals?.[s.id] ?? ""}" placeholder="Sem meta"/><span>%</span></div></div>`).join("")}</div><button class="btn btn-primary section-space" data-save="1">${icon("check", 14)} Aplicar metas</button></section></div>`
+      `<div class="page-grid"><section class="card panel"><div class="panel-head"><div><h3 class="panel-title">Identidade do painel</h3><p class="panel-sub">Informações desta operação</p></div>${icon("settings", 19)}</div><div class="field appearance-field"><label for="appearance-select">Aparência do aplicativo</label><select id="appearance-select" class="control"><option value="light" ${appearance() === "light" ? "selected" : ""}>Claro · cinza e grafite</option><option value="dark" ${appearance() === "dark" ? "selected" : ""}>Escuro · grafite</option></select><p class="panel-sub">A preferência fica salva. Os temas dos slides são configurados no Estúdio.</p></div><div class="field"><label>Nome da operação</label><input class="control" id="operation" value="${esc(settings.operation)}" /></div><button class="btn btn-primary section-space" data-save="1">Salvar configurações</button><div class="info-box section-space"><strong>Seus dados operacionais</strong><p>Exporte as planilhas do sistema de origem e importe por Enviar Dados Excel. O painel preserva os arquivos originais e o histórico de atualização.</p></div></section><section class="card panel"><div class="panel-head"><div><h3 class="panel-title">Metas por departamento</h3><p class="panel-sub">Percentual de conclusão desejado</p></div>${icon("target", 18)}</div><div class="settings-list section-space">${sectors.map((s) => `<div class="settings-item"><div><strong>${s.name}</strong><small>Meta de conclusão (percentual)</small><div class="progress"><div style="width:${settings.goals?.[s.id] ?? 0}%"></div></div></div><div class="row" style="gap:4px"><input class="control" type="number" min="0" max="100" step="1" data-goal="${s.id}" value="${settings.goals?.[s.id] ?? ""}" placeholder="Sem meta"/><span>%</span></div></div>`).join("")}</div><button class="btn btn-primary section-space" data-save="1">${icon("check", 14)} Aplicar metas</button></section></div>`
     );
   }
   function body() {
@@ -556,11 +589,49 @@
     return pageOverview();
   }
   function render() {
+    applyAppearance();
     document.getElementById("app").innerHTML = shell();
     document
       .querySelectorAll("[data-assistant-messages]")
       .forEach((el) => (el.scrollTop = el.scrollHeight));
     wire();
+  }
+  function appearance() {
+    if (["light", "dark"].includes(settings.appearance))
+      return settings.appearance;
+    try {
+      const stored = localStorage.getItem("horizon.appearance");
+      if (["light", "dark"].includes(stored)) return stored;
+    } catch (_) {}
+    return window.matchMedia?.("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light";
+  }
+  function applyAppearance() {
+    const theme = appearance();
+    document.documentElement.dataset.theme = theme;
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute("content", theme === "dark" ? "#171c23" : "#e6e9ed");
+  }
+  function themeButton() {
+    const dark = appearance() === "dark";
+    return `<button type="button" class="theme-toggle small-icon-btn" data-toggle-theme aria-label="${dark ? "Ativar modo claro" : "Ativar modo escuro"}" title="${dark ? "Ativar modo claro" : "Ativar modo escuro"}">${icon(dark ? "sun" : "moon", 20)}</button>`;
+  }
+  async function setAppearance(value) {
+    const previous = settings.appearance;
+    settings.appearance = value;
+    applyAppearance();
+    try {
+      await S.put("meta", { id: "settings", value: settings });
+      try {
+        localStorage.setItem("horizon.appearance", value);
+      } catch (_) {}
+    } catch (e) {
+      settings.appearance = previous;
+      notify("Não foi possível salvar a aparência: " + e.message, true);
+    }
+    render();
   }
   function notify(t, error = false) {
     document.querySelector(".toast")?.remove();
@@ -747,57 +818,81 @@
     }
   }
   async function handleFile(file) {
-    if (!file) return;
-    try {
-      if (!/\.(xlsx|xls|csv)$/i.test(file.name))
-        throw Error("Selecione um arquivo XLSX, XLS ou CSV.");
-      if (file.size > 50 * 1024 * 1024)
-        throw Error("Limite de 50 MB por arquivo.");
-      const bytes = await file.arrayBuffer(),
-        digest = await crypto.subtle.digest("SHA-256", bytes),
-        hash = Array.from(new Uint8Array(digest))
-          .map((n) => n.toString(16).padStart(2, "0"))
-          .join(""),
-        wb = XLSX.read(bytes, { type: "array", cellDates: false });
-      state.pending = {
+    return handleFiles(file ? [file] : []);
+  }
+  async function handleFiles(files) {
+    if (state.readingFiles || state.importBusy) return;
+    state.readingFiles = true;
+    for (const file of Array.from(files || [])) {
+      const item = {
+        queueId: crypto.randomUUID(),
         name: file.name,
-        hash,
-        bytes,
-        wb,
-        sheet: [...wb.SheetNames].sort(
-          (a, z) =>
-            D.detect(
-              XLSX.utils.sheet_to_json(wb.Sheets[z], { header: 1, raw: false }),
-            ).score -
-            D.detect(
-              XLSX.utils.sheet_to_json(wb.Sheets[a], { header: 1, raw: false }),
-            ).score,
-        )[0],
-        sector: "coi",
-        type: "geral",
-        periodStart: "",
-        periodEnd: "",
-        policy: "reject",
+        size: file.size,
+        status: "reading",
       };
-      selectImportSheet();
-      notify("Planilha lida. Confira o mapeamento antes de importar.");
-    } catch (e) {
-      notify("Não foi possível ler a planilha: " + e.message, true);
+      state.uploadQueue.push(item);
+      render();
+      try {
+        if (!/\.(xlsx|xls|csv)$/i.test(file.name))
+          throw Error("Selecione um arquivo XLSX, XLS ou CSV.");
+        if (file.size > 50 * 1024 * 1024)
+          throw Error("Limite de 50 MB por arquivo.");
+        const bytes = await file.arrayBuffer(),
+          digest = await crypto.subtle.digest("SHA-256", bytes),
+          hash = Array.from(new Uint8Array(digest))
+            .map((n) => n.toString(16).padStart(2, "0"))
+            .join(""),
+          wb = XLSX.read(bytes, { type: "array", cellDates: false });
+        Object.assign(item, {
+          name: file.name,
+          hash,
+          bytes,
+          wb,
+          sheet: [...wb.SheetNames].sort(
+            (a, z) =>
+              D.detect(
+                XLSX.utils.sheet_to_json(wb.Sheets[z], {
+                  header: 1,
+                  raw: false,
+                }),
+              ).score -
+              D.detect(
+                XLSX.utils.sheet_to_json(wb.Sheets[a], {
+                  header: 1,
+                  raw: false,
+                }),
+              ).score,
+          )[0],
+          sector: "coi",
+          type: "geral",
+          periodStart: "",
+          periodEnd: "",
+          policy: "reject",
+          status: "ready",
+        });
+        const previous = state.pending;
+        state.pending = item;
+        selectImportSheet();
+        if (previous) state.pending = previous;
+      } catch (e) {
+        item.status = "error";
+        item.error = "Não foi possível ler a planilha: " + e.message;
+      }
     }
+    state.readingFiles = false;
+    state.pending ||= state.uploadQueue.find((p) => p.grid && !p.lotId) || null;
+    render();
   }
   async function saveImports() {
     await S.batch(imports.map((value) => ({ store: "lots", value })));
   }
-  async function confirmImport() {
-    const p = state.pending;
+  async function confirmImport(p = state.pending) {
+    if (p instanceof Event) p = state.pending;
     if (!p || state.importBusy) return;
     state.importBusy = true;
     try {
-      const result = validatePending();
-      if (
-        result.errors.length &&
-        !document.getElementById("accept-invalid")?.checked
-      )
+      const result = validatePending(p);
+      if (result.errors.length && !p.acceptInvalid)
         throw Error(
           "Confira as linhas inválidas e marque a opção para importar somente as válidas.",
         );
@@ -822,9 +917,18 @@
         };
       const next = D.ingest(imports, lot, p.policy);
       if (next.duplicate) {
-        notify(
-          "Este arquivo e destino já foram importados. Nenhum dado foi duplicado.",
-        );
+        p.status = "duplicate";
+        p.lotId = imports.find(
+          (l) =>
+            l.hash === p.hash &&
+            l.sheet === p.sheet &&
+            l.sector === p.sector &&
+            l.type === p.type,
+        )?.id;
+        p.error =
+          "Este arquivo e destino já estão no histórico. Nenhuma linha foi duplicada.";
+        state.pending =
+          state.uploadQueue.find((x) => x.grid && !x.lotId && x !== p) || null;
         return;
       }
       await S.batch([
@@ -832,7 +936,11 @@
         { store: "files", value: { id: p.hash, name: p.name, bytes: p.bytes } },
       ]);
       imports = next.lots;
-      state.pending = null;
+      p.status = "saved";
+      p.lotId = lot.id;
+      p.error = "";
+      state.pending =
+        state.uploadQueue.find((x) => x.grid && !x.lotId && x !== p) || null;
       state.report = null;
       state.tablePage = 0;
       notify(
@@ -840,10 +948,25 @@
       );
       render();
     } catch (e) {
+      p.status = "error";
+      p.error = e.message;
       notify(e.message, true);
     } finally {
       state.importBusy = false;
+      render();
     }
+  }
+  async function importQueue() {
+    if (state.importBusy || state.readingFiles) return;
+    const pending = state.uploadQueue.filter((p) => p.grid && !p.lotId);
+    for (const p of pending) await confirmImport(p);
+    const remaining = pending.filter((p) => !p.lotId);
+    notify(
+      remaining.length
+        ? `${remaining.length} arquivo(s) precisam de conferência. Veja o motivo no quadro de envio.`
+        : "Importação concluída. Os arquivos estão salvos e disponíveis no quadro de envio.",
+      !!remaining.length,
+    );
   }
   function wireAssistantChat(root) {
     root
@@ -891,6 +1014,16 @@
     });
   }
   function wire() {
+    document
+      .querySelectorAll("[data-toggle-theme]")
+      .forEach(
+        (el) =>
+          (el.onclick = () =>
+            setAppearance(appearance() === "dark" ? "light" : "dark")),
+      );
+    document
+      .getElementById("appearance-select")
+      ?.addEventListener("change", (e) => setAppearance(e.target.value));
     document
       .querySelectorAll("[data-assistant-root]")
       .forEach(wireAssistantChat);
@@ -994,7 +1127,7 @@
       });
     document
       .querySelector("#file-upload")
-      ?.addEventListener("change", (e) => handleFile(e.target.files?.[0]));
+      ?.addEventListener("change", (e) => handleFiles(e.target.files));
     const drop = document.getElementById("dropzone");
     if (drop) {
       drop.ondragover = (e) => {
@@ -1004,7 +1137,7 @@
       drop.ondragleave = () => drop.classList.remove("dragging");
       drop.ondrop = (e) => {
         e.preventDefault();
-        handleFile(e.dataTransfer.files?.[0]);
+        handleFiles(e.dataTransfer.files);
       };
     }
     document.getElementById("imp-sheet")?.addEventListener("change", (e) => {
@@ -1039,11 +1172,46 @@
     document
       .querySelector("[data-confirm-import]")
       ?.addEventListener("click", confirmImport);
+    document
+      .querySelector("[data-import-queue]")
+      ?.addEventListener("click", importQueue);
+    document
+      .getElementById("accept-invalid")
+      ?.addEventListener("change", (e) => {
+        state.pending.acceptInvalid = e.target.checked;
+      });
+    document.querySelectorAll("[data-configure-file]").forEach(
+      (el) =>
+        (el.onclick = () => {
+          state.pending = state.uploadQueue.find(
+            (p) => p.queueId === el.dataset.configureFile,
+          );
+          render();
+          document
+            .getElementById("import-configuration")
+            ?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }),
+    );
+    document.querySelectorAll("[data-remove-queued]").forEach(
+      (el) =>
+        (el.onclick = () => {
+          state.uploadQueue = state.uploadQueue.filter(
+            (p) => p.queueId !== el.dataset.removeQueued,
+          );
+          if (state.pending?.queueId === el.dataset.removeQueued)
+            state.pending =
+              state.uploadQueue.find((p) => p.grid && !p.lotId) || null;
+          render();
+        }),
+    );
     document.querySelectorAll("[data-view-lot]").forEach(
       (el) =>
         (el.onclick = () => {
           state.viewLot = el.dataset.viewLot;
           render();
+          document
+            .getElementById("lot-preview")
+            ?.scrollIntoView({ behavior: "smooth", block: "start" });
         }),
     );
     document.querySelectorAll("[data-archive-lot]").forEach(
@@ -1177,14 +1345,13 @@
             : "coi";
     render();
   }
-  function validatePending() {
-    const p = state.pending;
+  function validatePending(p = state.pending) {
     return D.parse(p.grid, { ...p, filename: p.name });
   }
   function importWizard(p) {
     const h = p.grid[p.headerRow] || [],
       r = validatePending();
-    return `<div class="import-fields"><label>Aba<select id="imp-sheet" class="control">${p.wb.SheetNames.map((n) => `<option ${p.sheet === n ? "selected" : ""}>${esc(n)}</option>`).join("")}</select></label><label>Linha dos cabeçalhos<input id="imp-header" class="control" type="number" min="1" max="${p.grid.length}" value="${p.headerRow + 1}"></label><label>Setor<select id="imp-sector" class="control">${sectors.map((s) => `<option value="${s.id}" ${s.id === p.sector ? "selected" : ""}>${s.name}</option>`).join("")}</select></label><label>Tipo<select id="imp-type" class="control">${Object.entries(
+    return `<p class="import-filename">${esc(p.name)}</p><div class="import-fields"><label>Aba<select id="imp-sheet" class="control">${p.wb.SheetNames.map((n) => `<option ${p.sheet === n ? "selected" : ""}>${esc(n)}</option>`).join("")}</select></label><label>Linha dos cabeçalhos<input id="imp-header" class="control" type="number" min="1" max="${p.grid.length}" value="${p.headerRow + 1}"></label><label>Setor<select id="imp-sector" class="control">${sectors.map((s) => `<option value="${s.id}" ${s.id === p.sector ? "selected" : ""}>${s.name}</option>`).join("")}</select></label><label>Tipo<select id="imp-type" class="control">${Object.entries(
       D.types,
     )
       .map(
@@ -1209,7 +1376,7 @@
             .map((e) => `<p>Linha ${e.line}: ${esc(e.message)}</p>`)
             .join(
               "",
-            )}<label><input type="checkbox" id="accept-invalid"> Importar somente as linhas válidas e registrar os erros</label></div>`
+            )}<label><input type="checkbox" id="accept-invalid" ${p.acceptInvalid ? "checked" : ""}> Importar somente as linhas válidas e registrar os erros</label></div>`
         : ""
     }<label>Quando já houver dados no período<select id="imp-policy" class="control">${[
       ["reject", "Bloquear para conferir"],
@@ -1302,7 +1469,9 @@
           value: { id: "settings", value: data.settings || settings },
         },
       ]);
-      imports = await S.all("lots");
+      imports = (await S.all("lots")).sort((a, b) =>
+        String(a.created).localeCompare(String(b.created)),
+      );
       settings = data.settings || settings;
       invalidate();
       await window.MichelleStudio?.reload();
@@ -1382,6 +1551,7 @@
     getImports: () => imports,
     getAll,
     handleFile,
+    handleFiles,
     confirmImport,
     exportExcel: exportCSV,
     getState: () => state,

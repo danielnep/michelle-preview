@@ -61,6 +61,8 @@
     warnings: [],
     saveQueue: Promise.resolve(),
     ready: false,
+    saveStatus: "",
+    saveRevision: 0,
   };
 
   let debounce;
@@ -68,6 +70,10 @@
     sectors = b.getSectors();
   function persist() {
     if (!st.slides.length) return Promise.resolve();
+    const revision = ++st.saveRevision;
+    st.saveStatus = "Salvando alterações...";
+    const visibleStatus = document.getElementById("studio-save-status");
+    if (visibleStatus) visibleStatus.textContent = st.saveStatus;
     const item = {
       id: st.currentId || crypto.randomUUID(),
       name: st.config.title,
@@ -93,12 +99,18 @@
         if (i < 0) st.library.unshift(item);
         else st.library[i] = item;
         const status = document.getElementById("studio-save-status");
-        if (status) status.textContent = "Alterações salvas";
+        if (revision === st.saveRevision) {
+          st.saveStatus = "Alterações salvas";
+          if (status) status.textContent = st.saveStatus;
+        }
       })
       .catch((e) => {
         b.notify("Não foi possível salvar: " + e.message, true);
         const status = document.getElementById("studio-save-status");
-        if (status) status.textContent = "Alterações não salvas";
+        if (revision === st.saveRevision) {
+          st.saveStatus = "Alterações não salvas";
+          if (status) status.textContent = st.saveStatus;
+        }
         throw e;
       });
     return st.saveQueue;
@@ -178,13 +190,6 @@
       );
       return;
     }
-    st.currentId = null;
-    st.created = null;
-    st.origin = "created";
-    st.fileId = null;
-    st.width = 1600;
-    st.height = 900;
-    st.warnings = [];
     const selected =
         st.config.scope === "todos"
           ? "oito setores"
@@ -203,14 +208,11 @@
       b.notify("Selecione ao menos um indicador.", true);
       return;
     }
-    const standard = picked
-      .slice(0, 3)
-      .map((o) => ({
-        value:
-          String(Math.round(o.value * 100) / 100) +
-          (o.id === "rate" ? "%" : ""),
-        label: o.label,
-      }));
+    const standard = picked.slice(0, 3).map((o) => ({
+      value:
+        String(Math.round(o.value * 100) / 100) + (o.id === "rate" ? "%" : ""),
+      label: o.label,
+    }));
     const ranking = m.by
       .slice(0, 5)
       .map((s) => ({ label: s.label, value: s.total }));
@@ -562,14 +564,78 @@
         ],
       ),
     ];
+    for (const sec of m.by) {
+      const rows = m.r.filter(
+        (r) => r.sector === sectors.find((s) => s.name === sec.label)?.id,
+      );
+      extra.push(
+        newSlide(
+          "points",
+          "LEITURA POR SETOR",
+          sec.label,
+          "Dados específicos do setor selecionado.",
+          b.D.insights(rows, {
+            sector: rows[0]?.sector,
+            goals: b.getSettings().goals,
+          })
+            .slice(0, 3)
+            .map((x) => x.title + " · " + x.text),
+        ),
+      );
+    }
+    for (const metric of picked)
+      extra.push(
+        Object.assign(
+          newSlide(
+            "metrics",
+            "DETALHAMENTO",
+            metric.label,
+            "Indicador do recorte selecionado.",
+            [],
+            [
+              {
+                label: metric.label,
+                value:
+                  String(Math.round(metric.value * 100) / 100) +
+                  (metric.id === "rate" ? "%" : ""),
+              },
+            ],
+          ),
+          { detail: true },
+        ),
+      );
+    for (const row of m.r.slice(0, 20))
+      extra.push(
+        newSlide(
+          "points",
+          "REGISTRO DA FONTE",
+          row.title || "Registro operacional",
+          "Informação preservada da planilha.",
+          [
+            `${row.source} · linha ${row.line}`,
+            `Identificação: ${row.id}`,
+            `Quantidade / valor: ${row.value}`,
+            `Status: ${row.status}`,
+          ],
+        ),
+      );
     while (arr.length < c.quantity && extra.length)
       arr.splice(arr.length - 1, 0, extra.shift());
+    if (arr.length < c.quantity) {
+      b.notify(
+        "Há informação suficiente para " +
+          arr.length +
+          " slides. Ajuste a quantidade solicitada.",
+        true,
+      );
+      return;
+    }
     if (arr.length > c.quantity) {
       const last = arr[arr.length - 1];
       arr.splice(c.quantity - 1);
       arr[c.quantity - 1] = last;
     }
-    let metricSlides = arr.filter((x) => x.kind === "metrics");
+    let metricSlides = arr.filter((x) => x.kind === "metrics" && !x.detail);
     while (picked.length > metricSlides.length * 3 && arr.length < 20) {
       const x = newSlide(
         "metrics",
@@ -584,14 +650,12 @@
     let mi = 0;
     metricSlides.forEach((x) => {
       x.metricIds = picked.slice(mi, mi + 3).map((o) => o.id);
-      x.metrics = picked
-        .slice(mi, mi + 3)
-        .map((o) => ({
-          value:
-            String(Math.round(o.value * 100) / 100) +
-            (o.id === "rate" ? "%" : ""),
-          label: o.label,
-        }));
+      x.metrics = picked.slice(mi, mi + 3).map((o) => ({
+        value:
+          String(Math.round(o.value * 100) / 100) +
+          (o.id === "rate" ? "%" : ""),
+        label: o.label,
+      }));
       mi += 3;
       if (!x.metrics.length) {
         x.kind = "points";
@@ -657,13 +721,26 @@
         );
       if (c.notes && slide.kind === "final") slide.subtitle = c.notes;
     });
+    st.currentId = null;
+    st.created = null;
+    st.origin = "created";
+    st.fileId = null;
+    st.width = 1600;
+    st.height = 900;
+    st.warnings = [];
     st.metricOptions = structuredClone(picked);
     st.slides = arr;
     st.selected = 0;
     st.generatedAt = new Date().toISOString();
-    persist().catch(() => {});
+    persist()
+      .then(() => {
+        b.render();
+        b.notify(
+          `${arr.length} slides criados e salvos com os indicadores selecionados.`,
+        );
+      })
+      .catch(() => b.render());
     b.render();
-    b.notify(`${arr.length} slides criados com os indicadores selecionados.`);
   }
   function slideMarkup(slide, index, total, theme = "graphite") {
     if (slide.kind === "imported")
@@ -736,7 +813,7 @@
       )
       .join(
         "",
-      )}</select></label></div><div class="studio-field"><label>Mensagem de encerramento<textarea id="studio-notes">${esc(c.notes)}</textarea></label></div><button class="btn btn-primary" data-studio-generate ${b.getState().ready ? "" : "disabled"}>Gerar Apresentação</button></section>${settingsMarkup()}</aside><section class="studio-workspace"><section class="studio-panel"><div class="studio-preview-head"><div><h3>${slide ? "Prévia e edição" : "Prévia da apresentação"}</h3><span id="studio-save-status" class="studio-hint">${st.currentId ? "Alterações salvas" : "Crie ou importe uma apresentação"}</span></div><div class="row"><button class="btn" data-studio-save ${slide ? "" : "disabled"}>Salvar</button><button class="btn btn-primary" data-studio-present ${slide ? "" : "disabled"}>Apresentar na TV</button></div></div>${st.warnings.length ? `<div class="notice import-warnings"><b>Arquivo importado · limites de renderização</b>${st.warnings.map((w) => `<p>${esc(w)}</p>`).join("")}<button class="btn" data-pptx-original>Baixar original</button></div>` : ""}<div class="studio-stage">${slide ? slideMarkup(slide, st.selected, st.slides.length, c.theme) : '<div class="studio-empty"><h3>Panorama da Operação</h3><p>Os slides aparecerão aqui com os dados selecionados.</p></div>'}</div><div class="studio-thumbnails">${st.slides.map((s, i) => `<button class="studio-thumb ${i === st.selected ? "active" : ""}" data-studio-slide="${i}"><span>${i + 1}</span><div class="studio-thumb-screen">${s.kind === "imported" ? `<img src="${s.svg}" alt="">` : esc(s.title)}</div></button>`).join("")}</div></section>${slide ? editorMarkup(slide) : ""}</section></div></div>${positionMarkup()}`;
+      )}</select></label></div><div class="studio-field"><label>Mensagem de encerramento<textarea id="studio-notes">${esc(c.notes)}</textarea></label></div><button class="btn btn-primary" data-studio-generate ${b.getState().ready ? "" : "disabled"}>Gerar Apresentação</button></section>${settingsMarkup()}</aside><section class="studio-workspace"><section class="studio-panel"><div class="studio-preview-head"><div><h3>${slide ? "Prévia e edição" : "Prévia da apresentação"}</h3><span id="studio-save-status" class="studio-hint">${st.saveStatus || "Crie ou importe uma apresentação"}</span></div><div class="row"><button class="btn" data-studio-save ${slide ? "" : "disabled"}>Salvar</button><button class="btn btn-primary" data-studio-present ${slide ? "" : "disabled"}>Apresentar na TV</button></div></div>${st.warnings.length ? `<div class="notice import-warnings"><b>Avisos da apresentação</b>${st.warnings.map((w) => `<p>${esc(w)}</p>`).join("")}${st.fileId ? '<button class="btn" data-pptx-original>Baixar original</button>' : ""}</div>` : ""}<div class="studio-stage">${slide ? slideMarkup(slide, st.selected, st.slides.length, c.theme) : '<div class="studio-empty"><h3>Panorama da Operação</h3><p>Os slides aparecerão aqui com os dados selecionados.</p></div>'}</div><div class="studio-thumbnails">${st.slides.map((s, i) => `<button class="studio-thumb ${i === st.selected ? "active" : ""}" data-studio-slide="${i}"><span>${i + 1}</span><div class="studio-thumb-screen">${s.kind === "imported" ? `<img src="${s.svg}" alt="">` : esc(s.title)}</div></button>`).join("")}</div></section>${slide ? editorMarkup(slide) : ""}</section></div></div>${positionMarkup()}`;
   }
   function updateCurrent(field, value) {
     if (!st.slides[st.selected]) return;
@@ -840,7 +917,11 @@
         b.notify("Selecione ao menos um setor.", true);
         return;
       }
-      if (st.config.quantity < 3 || st.config.quantity > 20) {
+      if (
+        !Number.isInteger(st.config.quantity) ||
+        st.config.quantity < 3 ||
+        st.config.quantity > 20
+      ) {
         b.notify("Escolha de 3 a 20 slides.", true);
         return;
       }
@@ -1297,6 +1378,7 @@
   }
   async function openPresentation(id) {
     try {
+      await st.saveQueue;
       const item = await b.S.read("presentations", id);
       if (!item) throw Error("Apresentação não encontrada.");
       st.currentId = item.id;
@@ -1312,6 +1394,7 @@
       st.warnings = item.warnings || [];
       st.generatedAt = item.generatedAt;
       st.metricOptions = item.metricOptions || [];
+      st.saveStatus = "Alterações salvas";
       b.render();
     } catch (e) {
       b.notify(e.message, true);
@@ -1464,6 +1547,9 @@
             transition: "fade",
           }));
           st.generatedAt = old.generatedAt;
+          st.warnings = [
+            "Apresentação migrada da versão anterior. Os números são os que foram gravados naquela versão; confira a fonte antes de usá-los.",
+          ];
           await persist();
         }
       }
