@@ -113,7 +113,8 @@
     },
   ];
   const D = window.MCData,
-    S = window.MCStore;
+    S = window.MCStore,
+    P = window.MCProfiles;
   const current = new Date();
   let imports = [],
     settings = { operation: "Operação Michelle", goals: {} };
@@ -253,7 +254,7 @@
           present: "Estúdio de apresentações",
           settings: "Configurações",
         }[state.page] || "Visão geral";
-    return `<div class="app"><div class="backdrop ${state.sidebar ? "open" : ""}" data-close="1"></div><aside id="panel-navigation" class="sidebar ${state.sidebar ? "open" : ""}" aria-label="Navegação do painel"><button type="button" class="sidebar-close small-icon-btn" data-close-nav aria-label="Fechar menu">${icon("close", 20)}</button><div class="brand"><span class="panel-logo" aria-hidden="true">${icon("brand", 26)}</span><strong class="panel-brand-title">Power BI | Painel Completo</strong><span class="panel-brand-owner">Michelle Cândido</span></div><label class="searchbox sidebar-search">${icon("search", 18)}<input aria-label="Pesquisar registros" id="global-search" placeholder="Buscar registros..." value="${esc(state.query)}" /></label><div class="nav-scroll"><div class="nav-group"><div class="side-label">PRINCIPAL</div>${nav("geral", "Visão Geral")}${nav("dashboard", "Visualizar dashboard")}${nav("present", "Estúdio de Apresentações")}</div><div class="nav-group"><div class="side-label">DEPARTAMENTOS</div>${sectors.map((s) => nav(s.id, s.name)).join("")}</div><div class="nav-group"><div class="side-label">GESTÃO E DADOS</div>${nav("data", "Enviar Dados Excel")}${nav("report", "Relatórios")}${nav("insight", "Insights e análises")}${nav("settings", "Configurações")}</div></div><div class="side-bottom"><div class="side-credit">Power BI | Painel Completo / Michelle Cândido</div></div></aside><div class="main"><header class="topbar"><button aria-label="${state.sidebar ? "Fechar menu" : "Abrir menu"}" aria-expanded="${state.sidebar}" aria-controls="panel-navigation" class="small-icon-btn mob-toggle" data-toggle="1">${icon("menu", 20)}</button><div class="header-identity"><span class="panel-logo panel-logo-small" aria-hidden="true">${icon("brand", 19)}</span><div class="crumb"><strong class="app-title">Power BI | Painel Completo</strong><span class="owner-name">Michelle Cândido</span><span class="app-caption crumb-page">${esc(title)}</span></div></div><div class="head-actions">${themeButton()}<button type="button" class="install-shortcut" data-mc-install title="Instalar aplicativo" aria-label="Instalar aplicativo">${icon("down", 16)}<span class="install-label">Instalar</span></button><button aria-label="Estúdio de Apresentações" class="btn studio-top-button" data-nav="present">${icon("report", 15)} Estúdio de Apresentações</button><button type="button" class="top-assistant" data-assistant-open="1" aria-label="Abrir assistente">${icon("spark", 15)} <span>Assistente</span></button><span class="badge info" style="white-space:nowrap">${imports.length ? "Dados reais" : "Aguardando dados"}</span><div class="avatar">M</div></div></header><main class="content"><div class="print-header">Power BI | Painel Completo / Michelle Cândido</div>${body()}</main><footer class="footer"><span>Power BI | Painel Completo / Michelle Cândido</span></footer></div><nav class="mobile-nav" aria-label="Navegação principal">${[
+    return `<div class="app"><div class="backdrop ${state.sidebar ? "open" : ""}" data-close="1"></div><aside id="panel-navigation" class="sidebar ${state.sidebar ? "open" : ""}" aria-label="Navegação do painel"><button type="button" class="sidebar-close small-icon-btn" data-close-nav aria-label="Fechar menu">${icon("close", 20)}</button><div class="brand"><span class="panel-logo" aria-hidden="true">${icon("brand", 26)}</span><strong class="panel-brand-title">Power BI | Painel Completo</strong><span class="panel-brand-owner">Michelle Cândido</span></div><label class="searchbox sidebar-search">${icon("search", 18)}<input aria-label="Pesquisar registros" id="global-search" placeholder="Buscar registros..." value="${esc(state.query)}" /></label><div class="nav-scroll"><div class="nav-group"><div class="side-label">PRINCIPAL</div>${nav("geral", "Visão Geral")}${nav("sectors", "Setores")}${nav("dashboard", "Visualizar dashboard")}${nav("present", "Estúdio de Apresentações")}</div><div class="nav-group"><div class="side-label">DEPARTAMENTOS</div>${sectors.map((s) => nav(s.id, s.name)).join("")}</div><div class="nav-group"><div class="side-label">GESTÃO E DADOS</div>${nav("data", "Enviar Dados Excel")}${nav("report", "Relatórios")}${nav("insight", "Insights e análises")}${nav("settings", "Configurações")}</div></div><div class="side-bottom"><div class="side-credit">Power BI | Painel Completo / Michelle Cândido</div></div></aside><div class="main"><header class="topbar"><button aria-label="${state.sidebar ? "Fechar menu" : "Abrir menu"}" aria-expanded="${state.sidebar}" aria-controls="panel-navigation" class="small-icon-btn mob-toggle" data-toggle="1">${icon("menu", 20)}</button><div class="header-identity"><span class="panel-logo panel-logo-small" aria-hidden="true">${icon("brand", 19)}</span><div class="crumb"><strong class="app-title">Power BI | Painel Completo</strong><span class="owner-name">Michelle Cândido</span><span class="app-caption crumb-page">${esc(title)}</span></div></div><div class="head-actions">${themeButton()}<button type="button" class="install-shortcut" data-mc-install title="Instalar aplicativo" aria-label="Instalar aplicativo">${icon("down", 16)}<span class="install-label">Instalar</span></button><button aria-label="Estúdio de Apresentações" class="btn studio-top-button" data-nav="present">${icon("report", 15)} Estúdio de Apresentações</button><button type="button" class="top-assistant" data-assistant-open="1" aria-label="Abrir assistente">${icon("spark", 15)} <span>Assistente</span></button><span class="badge info" style="white-space:nowrap">${imports.length ? "Dados reais" : "Aguardando dados"}</span><div class="avatar">M</div></div></header><main class="content"><section class="mc-role-bar" aria-label="Selecionar experiência por função"><div class="mc-role-intro"><span class="mc-role-emblem">${icon(P.current().icon, 19)}</span><div><strong>${esc(P.current().title)}</strong><small>${esc(P.current().description)}</small></div></div><label class="mc-role-select"><span>Experiência</span><select id="mc-profile" aria-label="Experiência do painel por função">${P.ids.map(id => '<option value="' + id + '"' + (P.currentId() === id ? ' selected' : '') + '>' + esc(P.profiles[id].title) + '</option>').join("")}</select></label></section><div class="print-header">Power BI | Painel Completo / Michelle Cândido</div>${body()}</main><footer class="footer"><span>Power BI | Painel Completo / Michelle Cândido</span></footer></div><nav class="mobile-nav" aria-label="Navegação principal">${[
       ["geral", "Resumo", "grid"],
       ["sectors", "Setores", "coi"],
       ["data", "Dados", "up"],
@@ -431,27 +432,57 @@
   function graphPanels(rs, sec) {
     return `<div class="chart-area"><section class="card panel"><div class="panel-head"><div><h3 class="panel-title">Evolução do volume</h3><div class="panel-sub">Volume de registros no período selecionado</div></div><span class="badge info">${state.period === "all" ? "Todos os dados" : state.period + " dias"}</span></div>${lineChart(rs)}<div class="legend"><span class="legend-item"><span class="legend-dot" style="background:var(--brand)"></span> ${new Set(rs.map(r => r.type)).size > 1 ? "Linhas por data (fontes diferentes não são somadas pela quantidade)" : rs[0]?.type === "cuc" ? "Eventos CUC por data" : rs[0]?.type === "deslocamentos" ? "Deslocamentos por data" : "Registros por data"}</span></div></section><section class="card panel"><div class="panel-head"><div><h3 class="panel-title">Distribuição de status</h3><div class="panel-sub">Situação das demandas</div></div>${icon("more", 18)}</div>${donut(rs)}</section></div>`;
   }
+  function roleHome(rs) {
+    const active = P.current();
+    const cards = P.focusItems(rs, imports);
+    const latest = P.summary(rs, imports).latest;
+    const dateInfo = latest ? 'Última importação: ' + new Date(latest).toLocaleString('pt-BR') : 'Ainda não foram importadas planilhas';
+    return '<section class="mc-role-home card" aria-labelledby="mc-role-head">' +
+      '<div class="mc-role-home-header"><div><span class="eyebrow">PAINEL POR FUNÇÃO / ' + esc(active.title.toUpperCase()) + '</span>' +
+      '<h1 id="mc-role-head">' + esc(active.heading) + '</h1><p>' + esc(active.subheading) + '</p>' +
+      '<small>' + esc(dateInfo) + ' · ' + fmtNum(rs.length) + ' linhas no recorte atual</small></div></div>' +
+      '<div class="mc-role-priorities">' + cards.map(x =>
+        '<button type="button" class="mc-role-priority ' + esc(x.status) + '" data-nav="' + esc(x.page) + '">' +
+        '<span>' + esc(x.label) + '</span><strong>' + esc(typeof x.value === "number" ? fmtNum(x.value) : x.value) +
+        '</strong><small>' + esc(x.description) + '</small></button>').join("") + '</div>' +
+      '<div class="mc-role-actions">' + active.quick.map(a =>
+        '<button type="button" class="btn' + (a === active.quick[0] ? ' btn-primary' : '') +
+        '" data-nav="' + esc(a[0]) + '">' + icon(a[2], 16) + ' ' + esc(a[1]) + '</button>').join("") + '</div>' +
+      '</section>';
+  }
+  function homeSectors(rs) {
+    return '<section class="mc-home-section" aria-label="Setores da operação"><div class="mc-home-section-head"><h2>Setores</h2><button class="btn btn-quiet" data-nav="sectors">Ver todos</button></div><div class="sector-grid">' + sectors
+      .map(sec => {
+        const count = rs.filter(r => r.sector === sec.id).length;
+        return '<button class="sector-tile" data-nav="' + esc(sec.id) + '"><div class="tile-top">' +
+          icon(sec.id,16) + ' ' + esc(sec.name) + '</div><div class="tile-bottom"><strong>' + fmtNum(count) +
+          '</strong><small>' + (count ? 'linhas importadas' : 'Aguardando dados') + '</small></div></button>';
+      }).join('') + '</div></section>';
+  }
+  function recentActivity(rs) {
+    return '<section class="card panel"><div class="panel-head"><h3>Atividade recente</h3><button class="btn btn-quiet" data-nav="data">Gerenciar arquivos</button></div>' + table(rs) +
+      '<button class="btn" data-export="geral" ' + (rs.length ? '' : 'disabled') + '>Exportar Excel (.xlsx)</button></section>';
+  }
   function pageOverview() {
-    const rs = recordsFor();
-    return (
-      header(
-        "Visão Geral",
-        "Indicadores, prioridades e ferramentas da sua operação.",
-      ) +
-      `<section class="central-dashboard" aria-labelledby="dashboard-title"><div class="dashboard-head"><div><span class="dashboard-eyebrow">CENTRAL DE INDICADORES</span><h2 id="dashboard-title">Dashboard central</h2><p>Suas planilhas alimentam os indicadores, gráficos e relatórios.</p></div><div class="dashboard-import"><button class="btn btn-primary" data-nav="dashboard">${icon("chart", 18)} Visualizar dashboard</button><button class="btn" data-nav="data">${icon("plus", 18)} Adicionar dados</button><small>Importar uma ou mais planilhas</small></div><div class="dashboard-filters">${periodButtons()}</div></div>` +
-      managerialHighlights(rs) +
-      insightsPanel(rs) +
-      statCards(rs) +
-      graphPanels(rs) +
-      `<div class="sector-grid">${sectors
-        .map((sec) => {
-          let rows = rs.filter((r) => r.sector === sec.id);
-          return `<button class="sector-tile" data-nav="${sec.id}"><div class="tile-top">${icon(sec.id, 16)} ${esc(sec.name)}</div><div class="tile-bottom"><strong>${fmtNum(rows.length)}</strong><small>${rows.length ? "linhas importadas" : "Aguardando dados"}</small></div></button>`;
-        })
-        .join(
-          "",
-        )}</div></section><section class="studio-promo"><div class="studio-promo-icon">${icon("report", 22)}</div><div><strong>Estúdio de Apresentações</strong><span>Transforme os resultados em slides para suas reuniões.</span></div><button class="btn btn-primary" data-nav="present">Criar Apresentação ${icon("arrow", 15)}</button></section><section class="card panel"><h3>Atividade recente</h3>${table(rs)}<button class="btn" data-export="geral" ${rs.length ? "" : "disabled"}>Exportar Excel (.xlsx)</button></section>`
-    );
+    const rs = recordsFor(), role = P.currentId();
+    const essential = roleHome(rs);
+    if (role === "operacao") {
+      return essential + statCards(rs) + recentActivity(rs) +
+        '<section class="mc-role-next card panel"><h2>Próximo passo</h2><p>Selecione um arquivo Excel ou CSV, confira a identificação automática e confirme. O painel dos demais perfis é atualizado com os mesmos dados.</p><button class="btn btn-primary" data-nav="data">Enviar dados</button></section>';
+    }
+    if (role === "supervisora") {
+      return essential + managerialHighlights(rs) + statCards(rs) + homeSectors(rs) +
+        recentActivity(rs);
+    }
+    if (role === "direcao") {
+      return essential + managerialHighlights(rs) + statCards(rs) + graphPanels(rs) +
+        '<section class="studio-promo"><div class="studio-promo-icon">' + icon("report",22) +
+        '</div><div><strong>Apresentar resultados</strong><span>Prepare uma apresentação usando somente indicadores realmente importados.</span></div>' +
+        '<button class="btn btn-primary" data-nav="present">Abrir Estúdio</button></section>';
+    }
+    return essential + managerialHighlights(rs) + statCards(rs) + graphPanels(rs) +
+      homeSectors(rs) + '<div class="mc-role-actions"><button class="btn" data-nav="dashboard">Ver dashboard completo</button>' +
+      '<button class="btn" data-nav="insight">Explorar análises</button></div>';
   }
   function pageSector(sec) {
     const rs = recordsFor(sec.id),
@@ -1153,6 +1184,12 @@
     document
       .querySelectorAll("[data-assistant-root]")
       .forEach(wireAssistantChat);
+    document.getElementById("mc-profile")?.addEventListener("change", e => {
+      if (!P.set(e.target.value)) return;
+      invalidate();
+      navigate("geral");
+      notify("Experiência alterada para " + P.current().title + ". Os dados permanecem os mesmos.");
+    });
     document.querySelectorAll("[data-nav]").forEach(
       (el) =>
         (el.onclick = () => {
