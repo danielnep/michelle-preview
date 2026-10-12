@@ -39,7 +39,7 @@ Importações e apresentações antigas do localStorage são migradas sem apagar
 
 ## Limites explícitos
 
-A Copilota Michelle pode usar DeepSeek por função serverless do Netlify, com chave somente no ambiente do servidor. Sem a variável DEEPSEEK_API_KEY ou sem a função publicada, a conversa geral indica erro; consultas operacionais podem usar o motor local, claramente identificado. Interpretações de planilhas geradas por IA exigem confirmação. Veja [manual completo da Copilota](docs/copilota-michelle.md) para configuração, prompt, privacidade e limites.
+O Copiloto pode usar DeepSeek por função serverless do Netlify, com chave somente no ambiente do servidor. Sem a variável DEEPSEEK_API_KEY ou sem a função publicada, a conversa geral indica erro; consultas operacionais podem usar o motor local, claramente identificado. Interpretações de planilhas geradas por IA exigem confirmação. Veja [manual completo do Copiloto](docs/copiloto.md) para configuração, prompt, privacidade e limites.
 
 O dashboard de planilhas é uma implementação deste aplicativo; ele não cria arquivos PBIX nem envia dados ao Microsoft Power BI. O modo nativo depende do link de um relatório publicado no serviço, das permissões e do licenciamento do usuário. O layout interno no celular depende do relatório original. A incorporação segue a [documentação oficial da Microsoft](https://learn.microsoft.com/en-us/power-bi/collaborate-share/service-embed-secure); não recebe tokens de acesso no formulário e não amplia permissões de visualização.
 

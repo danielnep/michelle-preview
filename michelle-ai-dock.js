@@ -1,4 +1,4 @@
-/* Dock adaptativo da Copilota Michelle. Sem alterações aos dados da operação. */
+/* Dock adaptativo do Copiloto. Sem alterações aos dados da operação. */
 (function(root) {
   "use strict";
   const KEY="michelle.ai.dock.v1";
@@ -20,8 +20,8 @@
     if(!el) {
       el=document.createElement("button");
       el.id="mc-ai-return";el.type="button";el.className="mc-ai-return";
-      el.textContent="✦";el.title="Reativar a Copilota Michelle";
-      el.setAttribute("aria-label","Reativar o chat da Copilota Michelle");
+      el.textContent="✦";el.title="Reativar o Copiloto";
+      el.setAttribute("aria-label","Reativar o chat do Copiloto");
       el.onclick=()=>{cfg.hidden=false;save(cfg);sync();};
       document.body.appendChild(el);
     }
@@ -31,7 +31,7 @@
     let el=document.getElementById("mc-ai-dropzone");
     if(!el) {
       el=document.createElement("div");el.id="mc-ai-dropzone";el.className="mc-ai-dropzone";
-      el.textContent="↓ Arraste aqui para ocultar a copilota";
+      el.textContent="↓ Arraste aqui para ocultar o Copiloto";
       el.setAttribute("aria-hidden","true");document.body.appendChild(el);
     }
     return el;
@@ -45,7 +45,7 @@
     const p=bubblePosition(); cfg.x=p.x;cfg.y=p.y;
     fab.style.left=p.x+"px";fab.style.top=p.y+"px";
     fab.style.right="auto";fab.style.bottom="auto";
-    fab.setAttribute("aria-label",cfg.hidden?"Copilota ocultada":"Abrir ou fechar Copilota Michelle; arraste para posicionar");
+    fab.setAttribute("aria-label",cfg.hidden?"Copiloto ocultado":"Abrir ou fechar Copiloto; arraste para posicionar");
     const win=document.querySelector(".assistant-window");
     if(!win)return;
     if(cfg.sidebar && !mobile()) {
