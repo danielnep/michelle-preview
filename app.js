@@ -866,24 +866,79 @@
       return "Podemos conversar sobre isso. Nesta prévia, minhas respostas gerais seguem algumas regras locais e são limitadas. Uma integração com IA generativa permitirá acompanhar assuntos livres com mais profundidade.";
     return "Entendi sua mensagem. Este modo geral já permite trocar mensagens, mas ainda usa respostas locais limitadas. Para conversar livremente sobre qualquer assunto, a versão final precisará da IA generativa conectada. Você também pode usar o modo Análises para consultar os dados atuais da operação.";
   }
-  function ask(q) {
-    let question = String(q || "").trim();
-    if (!question) return;
-    let mode = state.assistantMode;
-    state.chatModes[mode].push(
-      { role: "user", text: question },
-      {
-        role: "bot",
-        text: mode === "dados" ? answer(question) : generalAnswer(question),
-      },
-    );
-    state.chatModes[mode] = state.chatModes[mode].slice(-60);
-    saveChats();
+  async function generateAIInsights({ silent = false } = {}) {
+    if (!window.MCAI || state.aiInsightBusy || !getAll().length) return;
+    state.aiInsightBusy = true;
+    if (!silent) render();
+    try {
+      const result = await window.MCAI.request("insights", {
+        context: window.MCAI.context(recordsFor(), imports, sectors)
+      });
+      state.aiInsightText = result.answer || "";
+      if (silent && state.aiInsightText) notify("✦ A copilota preparou novos insights.");
+    } catch (error) {
+      if (!silent) notify(error.message, true);
+    } finally {
+      state.aiInsightBusy = false;
+      if (!state.importReviewOpen || state.page === "insight") render();
+    }
+  }
+  async function interpretImport() {
+    const p = state.pending;
+    if (!p?.grid || p.aiInterpretBusy || !window.MCAI) return;
+    p.aiInterpretBusy = true;
+    render();
+    try {
+      const cols = p.grid[p.headerRow] || [];
+      const result = await window.MCAI.request("interpret", {
+        context: window.MCAI.interpretationContext(p, cols, sectors, Object.keys(D.labels))
+      });
+      p.aiProposal = result.interpretation;
+      notify("Sugestão pronta. Confira antes de aplicar.");
+    } catch (error) {
+      notify(error.message, true);
+    } finally {
+      p.aiInterpretBusy = false;
+      render();
+    }
+  }
+  async function ask(q) {
+    const question = String(q || "").trim();
+    if (!question || state.assistantBusy) return;
+    const mode = state.assistantMode;
+    const history = state.chatModes[mode].filter(m=>m.role==="user" || m.role==="bot")
+      .slice(-8).map(m=>({role:m.role==="user"?"user":"assistant",content:m.text}));
+    state.chatModes[mode].push({role:"user",text:question});
+    // A demonstração local continua disponível se não houver cliente remoto.
+    if (!window.MCAI || typeof window.fetch !== "function") {
+      state.chatModes[mode].push({role:"bot",text:mode==="dados"?answer(question):generalAnswer(question)});
+      state.chatModes[mode] = state.chatModes[mode].slice(-60);
+      saveChats();refreshAssistantChats();return;
+    }
+    state.assistantBusy = true;
     refreshAssistantChats();
-    let focus = document.getElementById(
-      state.assistantOpen ? "assistant-text-dock" : "assistant-text-full",
-    );
-    focus?.focus({ preventScroll: true });
+    try {
+      const reply = await window.MCAI.request("chat",{
+        channel: mode, message: question, history,
+        context: mode === "dados" ? window.MCAI.context(recordsFor(),imports,sectors) : {}
+      });
+      state.chatModes[mode].push({role:"bot",text:reply.answer});
+      window.MCAI.rememberQuestion(question);
+    } catch (error) {
+      const fallback = mode === "dados" ? answer(question) : "";
+      state.chatModes[mode].push({
+        role:"bot",
+        text: "Não consegui acessar a IA online: "+error.message+
+          (fallback ? "\\n\\nConsulta local (sem IA generativa):\\n"+fallback : "")
+      });
+    } finally {
+      state.assistantBusy = false;
+      state.chatModes[mode] = state.chatModes[mode].slice(-60);
+      saveChats();
+      refreshAssistantChats();
+      const focus = document.getElementById(state.assistantOpen ? "assistant-text-dock" : "assistant-text-full");
+      focus?.focus({preventScroll:true});
+    }
   }
   function clearAssistant() {
     state.chatModes[state.assistantMode] = [
@@ -1071,6 +1126,7 @@
         `${lot.rows.length} linhas salvas. Indicadores e insights atualizados.`,
       );
       render();
+      if (window.MCAI?.consent()) void generateAIInsights({silent:true});
     } catch (e) {
       p.status = "error";
       p.error = e.message;
@@ -1302,6 +1358,38 @@
         };
         render();
       });
+    document.querySelector("[data-ai-generate-insights]")?.addEventListener("click", () => generateAIInsights());
+    document.querySelector("[data-ai-auto]")?.addEventListener("change", e => {
+      window.MCAI?.setConsent(e.target.checked);
+      notify(e.target.checked?"Análises automáticas ativadas.":"Análises automáticas desativadas.");
+    });
+    document.querySelector("[data-ai-clear-memory]")?.addEventListener("click", () => {
+      localStorage.removeItem("michelle.ai.behavior.v1");
+      render();notify("Preferências da copilota apagadas deste navegador.");
+    });
+    document.querySelectorAll("[data-ai-favorite]").forEach(el=>el.addEventListener("click",()=>{
+      state.assistantMode="dados";
+      state.assistantOpen=true;
+      render();
+      ask("Mostre o resumo e as prioridades de "+el.dataset.aiFavorite+".");
+    }));
+    document.querySelector("[data-ai-interpret]")?.addEventListener("click",interpretImport);
+    document.querySelector("[data-ai-apply-interpret]")?.addEventListener("click",()=>{
+      const p=state.pending, suggestion=p?.aiProposal;
+      if(!p?.grid||!suggestion)return;
+      if(D.types[suggestion.type])p.type=suggestion.type;
+      if(sectors.some(s=>s.id===suggestion.sector))p.sector=suggestion.sector;
+      if(Number.isInteger(suggestion.headerRow)&&suggestion.headerRow<p.grid.length)p.headerRow=suggestion.headerRow;
+      const headers=p.grid[p.headerRow]||[];
+      const valid=Object.fromEntries(Object.entries(suggestion.mapping||{}).filter(([k,v])=>
+        Object.hasOwn(D.labels,k)&&Number.isInteger(v)&&v>=0&&v<headers.length));
+      p.mapping={...D.suggest(headers),...valid};
+      p.userEdited=true;
+      p.aiProposal=null;
+      p.validationKey=null;
+      render();
+      notify("Sugestão aplicada. Revise colunas, setor e tipo antes de confirmar.");
+    });
     document
       .querySelector("[data-refresh-insights]")
       ?.addEventListener("click", () => {
