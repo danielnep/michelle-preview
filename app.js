@@ -119,7 +119,7 @@
   let imports = [],
     settings = { operation: "Operação Michelle", goals: {} };
   const panelWelcome =
-    "Olá! Posso consultar os oito setores, resumir resultados e ajudar a interpretar indicadores. Escolha uma sugestão ou pergunte livremente.";
+    "Olá! Conheço os resumos de todos os arquivos deste navegador. Vou direto aos resultados e explico de onde vêm. Escolha uma sugestão ou pergunte livremente.";
   const generalWelcome =
     "Olá! ✨ Sou o Copiloto: posso conversar, ajudar no sistema e explorar os dados quando você escolher Análises do painel.";
   function loadChats() {
@@ -163,6 +163,7 @@
     assistantBusy: false,
     aiInsightBusy: false,
     aiInsightText: "",
+    aiInsightScope: "",
     aiCheckBusy: false,
     aiCheckStatus: "",
     reportSector: "geral",
@@ -403,11 +404,11 @@
       detailed,
     });
     if (!window.MCIntelligence) return basic;
-    const analytical = window.MCIntelligence.analyze(rs).cards.map(c => ({ ...c, text: `${c.text} Base: ${c.basis} ${c.caveat}` }));
+    const analytical = window.MCIntelligence.analyze(rs).cards.map(c => ({ ...c, text: c.text }));
     return [...analytical, ...basic.filter(c => /^Meta de|Comparação/.test(c.title))];
   }
   const insightsPanel = (rs, sector, detailed = false, range = {}) =>
-    `<section class="card panel operational-insights"><div class="panel-head"><div><h3 class="panel-title">Insights operacionais</h3><p class="panel-sub">Leitura dos dados da sua operação</p></div>${icon("insight", 18)}</div><div class="insights-grid">${insights(
+    `<section class="card panel operational-insights"><div class="panel-head"><div><h3 class="panel-title">O que os dados mostram</h3><p class="panel-sub">Números calculados localmente. O Copiloto complementa com interpretação</p></div>${icon("insight", 18)}</div><div class="insights-grid">${insights(
       rs,
       sector,
       detailed,
@@ -623,7 +624,7 @@
       )
       .join(
         "",
-      )}</div><form class="assistant-form" data-assistant-form="1"><label class="sr-only" for="${full ? "assistant-text-full" : "assistant-text-dock"}">Mensagem ao assistente</label><textarea id="${full ? "assistant-text-full" : "assistant-text-dock"}" data-assistant-input="1" rows="1" maxlength="1800" placeholder="${state.assistantMode === "dados" ? "Pergunte sobre seus indicadores..." : "Escreva sua mensagem..."}" aria-label="Mensagem ao assistente"></textarea><button type="submit" aria-label="Enviar mensagem">${icon("arrow", 18)}</button></form><p class="assistant-disclaimer">${state.assistantBusy ? "✦ Copiloto analisando… " : ""}${state.assistantMode === "dados" ? "Interpretação com IA sobre cálculos e evidências locais." : "Conversa com o Copiloto conectada quando a API estiver disponível."}</p></div>`;
+      )}</div><form class="assistant-form" data-assistant-form="1"><label class="sr-only" for="${full ? "assistant-text-full" : "assistant-text-dock"}">Mensagem ao assistente</label><textarea id="${full ? "assistant-text-full" : "assistant-text-dock"}" data-assistant-input="1" rows="1" maxlength="1800" placeholder="${state.assistantMode === "dados" ? "Pergunte sobre seus indicadores..." : "Escreva sua mensagem..."}" aria-label="Mensagem ao assistente"></textarea><button type="submit" aria-label="Enviar mensagem">${icon("arrow", 18)}</button></form><p class="assistant-disclaimer">${state.assistantBusy ? "✦ Copiloto analisando… " : ""}${state.assistantMode === "dados" ? "IA com resumos dos arquivos ativos e cálculos do painel. Dados agregados enviados ao DeepSeek." : "Conversa com o Copiloto conectada quando a API estiver disponível."}</p></div>`;
   }
   function assistantDock() {
     return `<div class="assistant-layer ${state.assistantOpen ? "open" : ""}"><button type="button" class="assistant-dismiss" data-assistant-close="1" aria-label="Fechar assistente" tabindex="${state.assistantOpen ? "0" : "-1"}"></button><section class="assistant-window" role="dialog" aria-modal="false" aria-label="Copiloto" aria-hidden="${!state.assistantOpen}"><div class="assistant-window-header"><div class="assistant-identity"><span class="assistant-emblem" aria-hidden="true">${icon("spark", 22)}</span><span><strong>Copiloto</strong><small>Seu espaço para análises e conversas</small></span></div><div class="assistant-header-actions"><button type="button" class="mc-ai-sidebar-toggle" data-mc-ai-sidebar title="Alternar chat flutuante e barra lateral" aria-pressed="false">Barra lateral</button><button type="button" data-assistant-clear="1" title="Limpar conversa deste modo" aria-label="Limpar conversa">${icon("trash", 15)}</button><button type="button" data-assistant-expand="1" title="Abrir em página inteira" aria-label="Abrir assistente em página inteira">${icon("grid", 15)}</button><button type="button" data-assistant-close="1" title="Fechar" aria-label="Fechar assistente">${icon("close", 16)}</button></div></div><div class="assistant-chat-root" data-assistant-root="dock">${assistantChat()}</div></section></div><button type="button" class="assistant-fab ${state.assistantOpen ? "active" : ""}" data-assistant-toggle="1" aria-expanded="${state.assistantOpen}" aria-label="${state.assistantOpen ? "Fechar assistente" : "Abrir Copiloto"}"><span class="fab-emblem">${icon(state.assistantOpen ? "close" : "spark", 20)}</span><span class="fab-label">${state.assistantOpen ? "Fechar assistente" : "Assistente"}</span><span class="fab-presence"></span></button>`;
@@ -636,7 +637,7 @@
       ) +
       managerialHighlights(recordsFor()) +
       insightsPanel(recordsFor(), null, true) +
-      `<div class="insight-actions"><button class="btn btn-primary" data-refresh-insights>Gerar Insights com Dados Atuais</button><button class="btn" data-ai-generate-insights ${state.aiInsightBusy ? "disabled" : ""}>${state.aiInsightBusy ? "Copiloto analisando…" : "✦ Interpretar com DeepSeek"}</button><button class="btn" data-nav="data">Importar Novos Dados</button><button class="btn" data-nav="report">Gerar Relatório</button></div>${state.aiInsightText ? `<section class="mc-ai-insight" aria-label="Insights produzidos pelo Copiloto"><strong>✦ Análise do Copiloto</strong><p>${esc(state.aiInsightText)}</p></section>` : ""}<section class="card panel assistant-full-card section-space"><div class="panel-head"><div><h3>Copiloto</h3><p class="panel-sub">Consultas locais ao painel. IA online via DeepSeek (conexão necessária).</p></div><button class="btn" data-assistant-clear>Limpar conversa</button></div><div class="assistant-chat-root assistant-chat-full" data-assistant-root="full">${assistantChat(true)}</div></section>`
+      `<div class="insight-actions"><button class="btn btn-primary" data-refresh-insights>Atualizar cálculos</button><button class="btn btn-primary" data-ai-generate-insights ${state.aiInsightBusy ? "disabled" : ""}>${state.aiInsightBusy ? "Copiloto analisando…" : "✦ Gerar análise inteligente"}</button><button class="btn" data-nav="data">Importar Novos Dados</button><button class="btn" data-nav="report">Gerar Relatório</button></div>${state.aiInsightText ? `<section class="mc-ai-insight" aria-label="Insights produzidos pelo Copiloto"><strong>✦ Descobertas do Copiloto · ${esc(state.aiInsightScope || "Recorte atual")}</strong><p>${esc(state.aiInsightText).replace(/\n/g,"<br>")}</p></section>` : ""}<section class="card panel assistant-full-card section-space"><div class="panel-head"><div><h3>Copiloto</h3><p class="panel-sub">Consultas locais ao painel. IA online via DeepSeek (conexão necessária).</p></div><button class="btn" data-assistant-clear>Limpar conversa</button></div><div class="assistant-chat-root assistant-chat-full" data-assistant-root="full">${assistantChat(true)}</div></section>`
     );
   }
   function pageSettings() {
@@ -868,15 +869,17 @@
       return "Podemos conversar sobre isso. Nesta prévia, minhas respostas gerais seguem algumas regras locais e são limitadas. Uma integração com IA generativa permitirá acompanhar assuntos livres com mais profundidade.";
     return "Entendi sua mensagem. Este modo geral já permite trocar mensagens, mas ainda usa respostas locais limitadas. Para conversar livremente sobre qualquer assunto, a versão final precisará da IA generativa conectada. Você também pode usar o modo Análises para consultar os dados atuais da operação.";
   }
-  async function generateAIInsights({ silent = false } = {}) {
+  async function generateAIInsights({ silent = false, viewRows = null } = {}) {
     if (!window.MCAI || state.aiInsightBusy || !getAll().length) return;
     state.aiInsightBusy = true;
     if (!silent) render();
     try {
+      const active = viewRows || (state.page === "dashboard" && window.MichelleDashboard?.model ? window.MichelleDashboard.model().rows : recordsFor());
       const result = await window.MCAI.request("insights", {
-        context: window.MCAI.context(recordsFor(), imports, sectors)
+        context: window.MCAI.context(active, imports, sectors, {allRows:getAll()})
       });
       state.aiInsightText = result.answer || "";
+      state.aiInsightScope = state.page === "dashboard" ? "Filtros do dashboard" : "Recorte atual";
       if (silent && state.aiInsightText) notify("✦ O Copiloto preparou novos insights.");
     } catch (error) {
       if (!silent) notify(error.message, true);
@@ -922,7 +925,7 @@
     try {
       const reply = await window.MCAI.request("chat",{
         channel: mode, message: question, history,
-        context: mode === "dados" ? window.MCAI.context(recordsFor(),imports,sectors) : {}
+        context: mode === "dados" ? window.MCAI.context(state.page === "dashboard" && window.MichelleDashboard?.model ? window.MichelleDashboard.model().rows : recordsFor(),imports,sectors,{allRows:getAll(),question}) : {}
       });
       state.chatModes[mode].push({role:"bot",text:reply.answer});
       window.MCAI.rememberQuestion(question);
@@ -1115,6 +1118,7 @@
         { store: "files", value: { id: p.hash, name: p.name, bytes: p.bytes } },
       ]);
       imports = next.lots;
+      state.aiInsightText = "";
       if (p.userEdited || p.manualReview) window.MCPreferences?.confirm(p);
       p.status = "saved";
       p.lotId = lot.id;
@@ -1609,6 +1613,7 @@
   }
 
   function invalidate() {
+    state.aiInsightText = "";
     state.report = null;
     state.tablePage = 0;
   }
@@ -1883,6 +1888,9 @@
     getRecords: (sector, days, range) => recordsFor(sector, days, range),
     getSectors: () => sectors,
     getSettings: () => settings,
+    getAIInsight: () => ({ text: state.aiInsightText, scope: state.aiInsightScope, busy: state.aiInsightBusy }),
+    clearAIInsight: () => { state.aiInsightText = ""; },
+    generateAIInsights,
     render,
     navigate,
     icon,
