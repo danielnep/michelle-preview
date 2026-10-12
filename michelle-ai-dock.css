@@ -1,4 +1,4 @@
-/* Copilota Michelle: alterações apenas ao dock/chat. O restante do layout é preservado. */
+/* Copiloto: círculo +30%, símbolo ampliado e movimento com propósito. */
 .mc-ai-home{margin:12px 0 20px;padding:16px 20px;border:1px solid var(--border,#3b4a59);border-radius:15px;background:var(--surface-raised,rgba(60,130,190,.08))}
 .mc-ai-home-title{display:flex;align-items:center;gap:9px;margin-bottom:8px}
 .mc-ai-home-title span:last-child{opacity:.7;font-size:12px}
@@ -8,7 +8,7 @@
 .mc-ai-import-help{margin:12px 0;padding:12px;border:1px solid var(--border,#6b92b7);border-radius:12px}
 .mc-ai-import-help p{font-size:12px;margin:8px 0}
 .mc-ai-import-help button{margin:4px 0}
-.mc-ai-return{display:none;position:fixed;z-index:95;bottom:max(16px,env(safe-area-inset-bottom));left:12px;width:36px;height:36px;padding:0;border:1px solid #79b4df;border-radius:50%;background:#286fa8;color:#fff;box-shadow:0 3px 12px #0004;cursor:pointer;font-size:19px}
+.mc-ai-return{display:none;position:fixed;z-index:95;bottom:max(16px,env(safe-area-inset-bottom));left:12px;width:47px;height:47px;padding:0;border:1px solid #79b4df;border-radius:50%;background:#286fa8;color:#fff;box-shadow:0 3px 12px #0004;cursor:pointer;font-size:25px}
 .mc-ai-hidden .assistant-fab{display:none!important}
 .mc-ai-hidden .assistant-layer{display:none!important}
 .mc-ai-hidden .mc-ai-return{display:grid;place-items:center}
@@ -18,9 +18,9 @@
 .assistant-fab{touch-action:none;user-select:none;cursor:grab}
 .mc-ai-dragging .assistant-fab{cursor:grabbing;transition:none!important}
 @media(min-width:701px) {
-  .assistant-fab{width:56px;height:56px;min-height:56px;padding:7px;justify-content:center;border-radius:50%}
+  .assistant-fab{width:73px;height:73px;min-height:73px;padding:7px;justify-content:center;border-radius:50%}
   .assistant-fab .fab-label,.assistant-fab .fab-presence{display:none}
-  .assistant-fab .fab-emblem{border:0;width:40px;height:40px;border-radius:50%}
+  .assistant-fab .fab-emblem{border:0;width:52px;height:52px;border-radius:50%}
   .assistant-window{position:fixed;width:min(430px,calc(100vw - 28px));max-height:calc(100dvh - 35px)}
   .assistant-window-header{cursor:grab;user-select:none;touch-action:none}
   .assistant-window-header:active{cursor:grabbing}
@@ -29,8 +29,8 @@
   .mc-ai-sidebar-open .app{padding-right:min(420px,38vw)}
 }
 @media(max-width:700px) {
-  .assistant-fab{width:50px!important;height:50px!important;min-height:50px!important;padding:6px!important;border-radius:50%!important;justify-content:center}
-  .assistant-fab .fab-emblem{width:36px;height:36px;border-radius:50%}
+  .assistant-fab{width:65px!important;height:65px!important;min-height:65px!important;padding:6px!important;border-radius:50%!important;justify-content:center}
+  .assistant-fab .fab-emblem{width:47px;height:47px;border-radius:50%}
   .assistant-fab .fab-label,.assistant-fab .fab-presence{display:none!important}
   .mc-ai-home{padding:13px}
   .mc-ai-import-help{padding:11px}
@@ -38,4 +38,51 @@
 }
 @media(prefers-reduced-motion:reduce) {
   .mc-ai-dropzone{transition:none}
+}
+
+/* Ícone ampliado em 30%, com movimento discreto e estado de encaixe. */
+.assistant-fab {
+  border: 1px solid rgba(169,221,255,.84);
+  box-shadow: 0 10px 28px rgba(15,95,178,.26), 0 0 0 3px rgba(62,159,231,.10);
+  transition: left 380ms cubic-bezier(.2,1.28,.25,1),top 380ms cubic-bezier(.2,1.28,.25,1),transform 230ms ease,box-shadow 250ms ease,border-color 240ms ease;
+  will-change: left,top;
+}
+.assistant-fab .fab-emblem {
+  position:relative;
+  background:linear-gradient(145deg,rgba(255,255,255,.28),rgba(255,255,255,.06));
+  box-shadow:inset 0 1px 2px rgba(255,255,255,.35);
+}
+.assistant-fab .fab-emblem svg {
+  width:26px!important;height:26px!important;
+  transition:transform 300ms cubic-bezier(.2,1.28,.2,1);
+}
+.assistant-fab:not(.active) .fab-emblem svg {animation:mcCopilotoShine 7.5s ease-in-out infinite}
+.assistant-fab:hover,.assistant-fab:focus-visible {
+  border-color:#cfedff;
+  box-shadow:0 14px 36px rgba(21,118,205,.37),0 0 0 6px rgba(72,171,239,.14);
+}
+.assistant-fab:hover .fab-emblem svg,.assistant-fab:focus-visible .fab-emblem svg {transform:rotate(14deg) scale(1.13)}
+.assistant-fab.mc-ai-snapped {animation:mcCopilotoSnap 390ms cubic-bezier(.15,1.3,.24,1) both}
+.mc-ai-dragging .assistant-fab {
+  transition:transform 90ms ease,box-shadow 150ms ease!important;
+  transform:scale(1.08)!important;
+  box-shadow:0 18px 42px rgba(20,105,190,.39),0 0 0 8px rgba(97,183,239,.13);
+}
+@keyframes mcCopilotoShine {
+  0%,77%,100% {transform:rotate(0) scale(1)}
+  81% {transform:rotate(-14deg) scale(1.12)}
+  86% {transform:rotate(10deg) scale(1.14)}
+  91% {transform:rotate(0) scale(1)}
+}
+@keyframes mcCopilotoSnap {
+  0% {filter:brightness(1.04)}
+  45% {filter:brightness(1.24)}
+  100% {filter:brightness(1)}
+}
+@media (max-width:700px) {
+  .assistant-fab .fab-emblem svg {width:26px!important;height:26px!important}
+  .mc-ai-return{bottom:max(14px,env(safe-area-inset-bottom));left:12px}
+}
+@media (prefers-reduced-motion:reduce) {
+  .assistant-fab,.assistant-fab .fab-emblem svg {transition:none!important;animation:none!important}
 }
