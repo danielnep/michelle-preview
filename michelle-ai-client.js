@@ -25,37 +25,110 @@
       throw error;
     } finally { clearTimeout(timer); }
   }
-  function context(rows=[], imports=[], sectors=[]) {
-    const active=Array.isArray(rows)?rows:[];
-    const sectorMap=new Map((sectors||[]).map(x=>[x.id,x.name]));
-    const groups=new Map(), kinds=new Map();
-    for(const r of active) {
-      const key=r.sector||"não identificado";
-      groups.set(key,(groups.get(key)||0)+1);
-      const t=r.type||"geral";
-      if(!kinds.has(t)) kinds.set(t,{rows:0,quantity:0,unit:["cuc","deslocamentos"].includes(t)?"quantidade informada":"linhas"});
-      const g=kinds.get(t);g.rows++;
-      g.quantity+=g.unit==="linhas"?1:(Number.isFinite(Number(r.value))?Number(r.value):0);
+  // Uma única fotografia dos dados alimenta o chat e os insights. Não envia linhas brutas.
+  function context(rows=[], imports=[], sectors=[], options={}) {
+    const selected=Array.isArray(rows)?rows:[];
+    const all=Array.isArray(options.allRows)?options.allRows:selected;
+    const question=String(options.question||"").toLocaleLowerCase("pt-BR");
+    const names=new Map((sectors||[]).map(s=>[s.id,s.name]));
+    const fmt=n=>Math.round(n*10)/10;
+    const percentage=(part,total)=>total?fmt(part/total*100):null;
+    const counted=type=>["cuc","deslocamentos"].includes(type);
+    const top=(map,limit=6)=>[...map.entries()].sort((a,b)=>b[1]-a[1]).slice(0,limit)
+      .map(([label,value])=>({label:String(label).slice(0,110),value,percent:percentage(value,[...map.values()].reduce((a,b)=>a+b,0))}));
+    const add=(map,k,v=1)=>map.set(k,(map.get(k)||0)+v);
+    function summarize(dataset,rich=true) {
+      const types=new Map(),bySector=new Map(),byMonth=new Map(),byStatus=new Map();
+      const dimensions={title:new Map(),direction:new Map(),client:new Map(),operator:new Map(),company:new Map()};
+      for(const r of dataset) {
+        const type=r.type||"geral",weighted=counted(type);
+        if(!types.has(type))types.set(type,{type,rows:0,quantity:0,unit:weighted?"quantidade informada":"registros",dated:0,timed:0,totalMinutes:0,done:0,pending:0,knownStatus:0});
+        const v=types.get(type);
+        v.rows++;v.quantity+=weighted?(Number.isFinite(Number(r.value))?Number(r.value):0):1;
+        if(r.date){v.dated++;if(/^\d{4}-\d{2}-\d{2}$/.test(r.date))add(byMonth,type+" · "+r.date.slice(0,7),weighted?(Number(r.value)||0):1);}
+        if(Number.isFinite(r.duration)){v.timed++;v.totalMinutes+=r.duration;}
+        if(r.status==="Concluído"){v.done++;v.knownStatus++;}
+        if(["Pendente","Em andamento"].includes(r.status))v.pending++;
+        if(["Cancelado","Não atendido"].includes(r.status))v.knownStatus++;
+        add(bySector,names.get(r.sector)||r.sector||"Não identificado");
+        add(byStatus,r.status||"Não informado");
+        for(const [field,map] of Object.entries(dimensions)){
+          const value=String(r[field]||"").trim();
+          if(value && value!=="Não informado")add(map,type+" · "+value,weighted?(Number(r.value)||0):1);
+        }
+      }
+      const s=root.MCData?.stats(dataset)||{};
+      const kinds=[...types.values()].map(x=>({...x,completionPercent:x.knownStatus?percentage(x.done,x.knownStatus):null,averageDurationMinutes:x.timed?fmt(x.totalMinutes/x.timed):null}));
+      const breakdown={};
+      const requested=/client|cliente|conta/.test(question)?"client":/operad|equipe|atendente/.test(question)?"operator":/dire[cç]|origem|recebid|realizad/.test(question)?"direction":/empresa/.test(question)?"company":"title";
+      if(rich){
+        for(const field of new Set([requested,"direction","title"])){
+          breakdown[field]=top(dimensions[field],field===requested?12:5);
+        }
+      }
+      return {
+        totalRows:dataset.length,
+        byType:kinds,bySector:[...bySector].map(([sector,rows])=>({sector,rows,percent:percentage(rows,dataset.length)})),
+        status:[...byStatus].map(([status,rows])=>({status,rows,percent:percentage(rows,dataset.length)})),
+        completionPercent:s.rate??null,
+        temporalSeries:rich?[...byMonth].sort((a,b)=>a[0].localeCompare(b[0])).slice(-18).map(([period,value])=>({period,value})):[],
+        topGroups:breakdown
+      };
     }
-    const stats=root.MCData?.stats(active)||{};
-    const notes=(root.MCAnalysis?.analyze(active,imports)||[]).slice(0,9).map(n=>({
-      title:n.title,summary:n.text,basis:n.basis,limitation:n.caveat,kind:n.kind,
-      sources:(n.sources||[]).slice(0,4)
+    const activeFiles=(imports||[]).filter(f=>!f.deleted&&!f.archived&&!f.supersededBy);
+    const groups=new Map();
+    for(const r of all) {
+      const key=String(r.lotId||r.source||"sem-fonte");
+      if(!groups.has(key))groups.set(key,[]);
+      groups.get(key).push(r);
+    }
+    const fileCatalog=activeFiles.map(f=>{
+      const list=groups.get(String(f.id))||groups.get(String(f.name||f.filename))||[];
+      const first=list[0];
+      const weighted=counted(f.type||first?.type);
+      const status=new Map();
+      for(const r of list)add(status,r.status||"Não informado");
+      const dates=list.map(r=>r.date||r.periodEnd||r.periodStart).filter(Boolean).sort();
+      return {
+        id:String(f.id||"").slice(0,70),file:String(f.name||f.filename||"Planilha").slice(0,120),
+        sheet:String(f.sheet||"Não informada").slice(0,90),
+        type:f.type||first?.type||"geral",sector:names.get(f.sector)||f.sector||null,
+        rows:list.length,quantity:weighted?fmt(list.reduce((n,r)=>n+(Number(r.value)||0),0)):list.length,
+        unit:weighted?"quantidade informada":"registros",
+        firstDate:dates[0]||null,lastDate:dates.at(-1)||null,
+        status:[...status].slice(0,6),
+        columns:Object.keys(first?.raw||{}).slice(0,22)
+      };
+    });
+    const findings=(root.MCAnalysis?.analyze(selected,imports)||[]).slice(0,7).map(n=>({
+      title:n.title,conclusion:n.text,basis:n.basis,limit:n.caveat,
+      sources:(n.evidence||[]).slice(0,2).map(e=>({file:e.file,sheet:e.sheet,line:e.line}))
     }));
-    return {
-      totalRows:active.length,
-      // Gráficos e totais permanecem computados pelo motor local.
-      counts:{done:stats.done??null,pending:stats.pending??null,open:stats.open??null,
-        cancelled:stats.cancelled??null,unanswered:stats.unanswered??null,
-        knownStatus:stats.known??null,completionPercent:stats.rate??null},
-      bySector:[...groups].map(([id,lines])=>({sector:sectorMap.get(id)||id,lines})),
-      byType:[...kinds].map(([type,x])=>({type,...x})),
-      files:(imports||[]).filter(f=>!f.deleted&&!f.archived&&!f.supersededBy).slice(-12).map(f=>({
-        name:String(f.name||f.filename||"").slice(0,140),sheet:String(f.sheet||"").slice(0,80),
-        type:f.type,sector:f.sector,rows:f.rows?.length||0,periodStart:f.periodStart||null,periodEnd:f.periodEnd||null
-      })),
-      findings:notes
+    const localInsights=(root.MCIntelligence?.analyze(selected)?.cards||[]).slice(0,5).map(n=>({
+      title:n.title,conclusion:n.text,basis:n.basis,limit:n.caveat
+    }));
+    const result={
+      scope:"Catálogo: todos os arquivos ativos deste navegador. Resumo selecionado: filtros atuais. Rankings parciais, não linhas individuais.",
+      totalImportedFiles:activeFiles.length,allData:summarize(all,false),
+      selectedData:summarize(selected,true),files:fileCatalog,
+      calculatedFindings:findings,calculatedInsights:localInsights,
+      analyzedAt:new Date().toISOString()
     };
+    // Reserva espaço para as fontes: nunca envia um JSON acima do teto do servidor.
+    const size=()=>JSON.stringify(result).length;
+    if(size()>15500)result.selectedData.topGroups={};
+    if(size()>15500)result.selectedData.temporalSeries=[];
+    if(size()>15500)result.calculatedInsights=result.calculatedInsights.slice(0,2);
+    if(size()>15500)result.calculatedFindings=result.calculatedFindings.slice(0,3);
+    if(size()>15500)for(const file of result.files){file.columns=file.columns.slice(0,6);file.status=[];}
+    if(size()>15500){
+      result.fileCatalogTruncated=true;
+      result.files=result.files.slice(0,Math.max(1,Math.floor(result.files.length/2)));
+    }
+    result.coverage={completeRowsAnalyzed:all.length,selectedRowsAnalyzed:selected.length,
+      visibleFileProfiles:result.files.length,totalImportedFiles:activeFiles.length,
+      detailLimit:"O Copiloto recebe agregações e nomes de colunas, não o conteúdo integral de cada linha."};
+    return result;
   }
   function shape(val) {
     const s=String(val??"").trim();
