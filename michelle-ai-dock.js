@@ -5,7 +5,7 @@
   const read=()=>{try{return JSON.parse(localStorage.getItem(KEY)||"{}");}catch(_){return {};}};
   const save=val=>{try{localStorage.setItem(KEY,JSON.stringify(val));}catch(_){}};
   let cfg=read(),dragging=false;
-  const mobile=()=>root.matchMedia("(max-width: 700px)").matches;
+  const mobile=()=>root.matchMedia ? root.matchMedia("(max-width: 700px)").matches : root.innerWidth<=700;
   const clamp=(n,min,max)=>Math.max(min,Math.min(n,Math.max(min,max)));
   function bubblePosition() {
     const size=mobile()?50:56,margin=mobile()?12:20;
