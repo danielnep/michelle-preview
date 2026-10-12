@@ -1,0 +1,41 @@
+/* Copilota Michelle: alterações apenas ao dock/chat. O restante do layout é preservado. */
+.mc-ai-home{margin:12px 0 20px;padding:16px 20px;border:1px solid var(--border,#3b4a59);border-radius:15px;background:var(--surface-raised,rgba(60,130,190,.08))}
+.mc-ai-home-title{display:flex;align-items:center;gap:9px;margin-bottom:8px}
+.mc-ai-home-title span:last-child{opacity:.7;font-size:12px}
+.mc-ai-home p{margin:7px 0;font-size:13px;line-height:1.5}
+.mc-ai-home small{opacity:.8}
+.mc-ai-insight{margin:12px 0;padding:15px;border:1px solid #4582b3;border-radius:12px;white-space:pre-wrap;line-height:1.55}
+.mc-ai-import-help{margin:12px 0;padding:12px;border:1px solid var(--border,#6b92b7);border-radius:12px}
+.mc-ai-import-help p{font-size:12px;margin:8px 0}
+.mc-ai-import-help button{margin:4px 0}
+.mc-ai-return{display:none;position:fixed;z-index:95;bottom:max(16px,env(safe-area-inset-bottom));left:12px;width:36px;height:36px;padding:0;border:1px solid #79b4df;border-radius:50%;background:#286fa8;color:#fff;box-shadow:0 3px 12px #0004;cursor:pointer;font-size:19px}
+.mc-ai-hidden .assistant-fab{display:none!important}
+.mc-ai-hidden .assistant-layer{display:none!important}
+.mc-ai-hidden .mc-ai-return{display:grid;place-items:center}
+.mc-ai-dropzone{position:fixed;z-index:110;bottom:max(7px,env(safe-area-inset-bottom));left:50%;transform:translate(-50%,130%) scale(.9);opacity:0;pointer-events:none;border-radius:22px;padding:14px 22px;background:#25364a;color:#fff;box-shadow:0 10px 20px #0005;transition:transform .16s,opacity .16s;font-size:12px;max-width:90vw;text-align:center}
+.mc-ai-dragging .mc-ai-dropzone{transform:translate(-50%,0) scale(1);opacity:1}
+.mc-ai-close-target .mc-ai-dropzone{background:#a32c41}
+.assistant-fab{touch-action:none;user-select:none;cursor:grab}
+.mc-ai-dragging .assistant-fab{cursor:grabbing;transition:none!important}
+@media(min-width:701px) {
+  .assistant-fab{width:56px;height:56px;min-height:56px;padding:7px;justify-content:center;border-radius:50%}
+  .assistant-fab .fab-label,.assistant-fab .fab-presence{display:none}
+  .assistant-fab .fab-emblem{border:0;width:40px;height:40px;border-radius:50%}
+  .assistant-window{position:fixed;width:min(430px,calc(100vw - 28px));max-height:calc(100dvh - 35px)}
+  .assistant-window-header{cursor:grab;user-select:none;touch-action:none}
+  .assistant-window-header:active{cursor:grabbing}
+  .mc-ai-sidebar-open .assistant-layer.open .assistant-window{position:fixed;top:0!important;right:0!important;left:auto!important;bottom:0!important;width:min(420px,38vw);height:100dvh;max-height:100dvh;min-height:0;border-radius:0;box-shadow:-12px 0 40px #0003}
+  .mc-ai-sidebar-open .assistant-window-header{cursor:default}
+  .mc-ai-sidebar-open .app{padding-right:min(420px,38vw)}
+}
+@media(max-width:700px) {
+  .assistant-fab{width:50px!important;height:50px!important;min-height:50px!important;padding:6px!important;border-radius:50%!important;justify-content:center}
+  .assistant-fab .fab-emblem{width:36px;height:36px;border-radius:50%}
+  .assistant-fab .fab-label,.assistant-fab .fab-presence{display:none!important}
+  .mc-ai-home{padding:13px}
+  .mc-ai-import-help{padding:11px}
+  .assistant-window{max-width:calc(100vw - 24px)}
+}
+@media(prefers-reduced-motion:reduce) {
+  .mc-ai-dropzone{transition:none}
+}
