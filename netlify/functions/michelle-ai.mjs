@@ -29,20 +29,21 @@ function cleanContext(c) {
   return JSON.parse(raw);
 }
 export default async function handler(request) {
-  const key = env("DEEPSEEK_API_KEY");
+  // Mantém o nome já cadastrado pelo usuário no Netlify. O nome antigo segue aceito.
+  const key = env("POWER_BI_MICHELLE_IA") || env("DEEPSEEK_API_KEY");
   // Esta rota não revela o segredo, apenas informa se a função pode encontrá-lo.
   if (request.method === "GET") return json({
     service:"Copiloto",
     backend:"online",
     keyConfigured:!!key,
     note:key ? "Chave encontrada no ambiente da função." :
-      "Variável DEEPSEEK_API_KEY ausente no runtime. Confirme nome, escopo Functions e republicação."
+      "Variável POWER_BI_MICHELLE_IA ausente no runtime. Confira nome, escopo Functions e republicação."
   });
   if (request.method !== "POST") return json({error:"Método não permitido."},405);
   const type = request.headers.get("content-type") || "";
   if (!type.includes("application/json")) return json({error:"Envie JSON."},415);
   if (Number(request.headers.get("content-length") || 0) > 48000) return json({error:"Solicitação muito grande."},413);
-  if (!key) return json({error:"O Netlify não entregou a variável DEEPSEEK_API_KEY à função. Confira o nome exato e o escopo Functions, salve e republique."},503);
+  if (!key) return json({error:"O Netlify não entregou POWER_BI_MICHELLE_IA à função. Confira escopo Functions e publique novamente."},503);
   // Autenticação opcional para ambiente privado. Recomendado em produção, especialmente com arquivos de clientes.
   const access = env("MICHELLE_AI_ACCESS_TOKEN");
   if (access && request.headers.get("x-michelle-ai-token") !== access)
@@ -99,7 +100,7 @@ export default async function handler(request) {
     if (!response.ok) {
       // Não repassar corpo remoto, que pode conter informações internas.
       if (response.status === 400) return json({error:"O DeepSeek rejeitou a solicitação (400). Verifique o formato do pedido e as opções do modelo."},502);
-      if (response.status === 401) return json({error:"O DeepSeek recusou a chave (401). Confira DEEPSEEK_API_KEY no Netlify."},502);
+      if (response.status === 401) return json({error:"O DeepSeek recusou a chave (401). Confira POWER_BI_MICHELLE_IA no Netlify."},502);
       if (response.status === 403) return json({error:"A API DeepSeek negou acesso à chave (403)."},502);
       if (response.status === 402) return json({error:"Saldo da API DeepSeek insuficiente."},502);
       if (response.status === 429) return json({error:"DeepSeek temporariamente limitado. Tente mais tarde."},429);
