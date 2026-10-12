@@ -68,7 +68,7 @@
     catch (_) { b.notify("A visualização funciona, mas o navegador não permitiu salvar os ajustes.", true); }
   }
   function update(patch, focusId) {
-    config = { ...config, ...patch }; state.page = 0; persist(); b.render();
+    config = { ...config, ...patch }; state.page = 0; b.clearAIInsight?.(); persist(); b.render();
     if (focusId) document.getElementById(focusId)?.focus({ preventScroll: true });
   }
   function model() {
@@ -93,7 +93,20 @@
   }
   function weighted(m) { return ["cuc", "deslocamentos"].includes(m.effectiveType); }
   function weight(r, m) { return weighted(m) ? Number(r.value) || 0 : 1; }
-  function unit(m) { return m.effectiveType === "cuc" ? "Eventos CUC" : m.effectiveType === "deslocamentos" ? "Deslocamentos" : "Linhas"; }
+  function unit(m) { return m.effectiveType === "cuc" ? "Eventos CUC" : m.effectiveType === "deslocamentos" ? "Deslocamentos" : m.effectiveType === "ligacoes" ? "Ligações" : m.effectiveType === "ordens" ? "Ordens de serviço" : m.effectiveType === "indicadores" ? "Registros de indicadores" : "Registros"; }
+  function titleFor(id,m) {
+    const label=unit(m),name=label.toLowerCase();
+    return ({
+      trend: m.effectiveType === "all" ? "Registros por dia" : label+" por dia",
+      status: m.effectiveType === "all" ? "Status dos registros" : "Status de "+name,
+      ranking: label+" por "+dimensions[config.dimension].toLowerCase(),
+      sectors: m.effectiveType === "all" ? "Registros por setor" : label+" por setor",
+      metrics: m.effectiveType === "all" ? "Indicadores do painel" : "Indicadores de "+name,
+      insights: m.effectiveType === "all" ? "O que os dados mostram" : "Análise de "+name,
+      reading: "Origem e significado dos números",
+      records: m.effectiveType === "all" ? "Registros detalhados" : "Detalhes de "+name
+    })[id]||blocks[id];
+  }
   function metricDescription(m, rows) {
     if (m.id === "records") return "Linhas ativas após os filtros";
     if (m.id === "rate") return `${num(D.stats(rows).done)} concluídos / ${num(D.stats(rows).known)} com status reconhecido; não é SLA`;
@@ -121,15 +134,13 @@
     });
   }
   function metricOrigin(metric, rows) {
-    const sources = metricSources(metric, rows);
-    if (!sources.length) return '<p class="dash-metric-source">Origem: registros importados no recorte atual.</p>';
-    const role = ["cuc", "deslocamentos"].includes(metric.id) ? "Soma da coluna"
-      : metric.id === "duration" ? "Média da coluna"
-      : ["done", "pending", "rate"].includes(metric.id) ? "Cálculo sobre"
-      : metric.id === "indicadores" ? "Contagem de linhas de indicadores"
-      : "Contagem de registros";
-    const first = sources[0];
-    return `<div class="dash-metric-source"><b>Fonte:</b> ${esc(first.name)} · aba ${esc(first.sheet)}<span> · ${esc(first.field ? role + " " + first.field : role)}</span>${sources.length > 1 ? ` · +${sources.length - 1} arquivo(s)` : ""}</div><details class="dash-metric-lineage"><summary>Como este número foi obtido</summary><ul>${sources.map(x => `<li>${esc(x.name)} · aba ${esc(x.sheet)} · ${esc(x.field ? role + " " + x.field : x.type + " / " + role)}</li>`).join("")}</ul><p>${esc(metricDescription(metric, rows))}</p></details>`;
+    const sources=metricSources(metric,rows);
+    if(!sources.length)return '<p class="dash-metric-source">Cálculo feito sobre o recorte atual.</p>';
+    const role=["cuc","deslocamentos"].includes(metric.id)?"Soma da coluna":metric.id==="duration"?"Média da coluna":
+      ["done","pending","rate"].includes(metric.id)?"Status da coluna":"Contagem das linhas";
+    return '<details class="dash-metric-lineage"><summary>De onde saiu este número?</summary><p>'+esc(metricDescription(metric,rows))+'</p><ul>'+
+      sources.map(x=>'<li>'+esc(x.name)+' · aba '+esc(x.sheet)+' · '+esc(x.field?role+' '+x.field:x.type+' / '+role)+'</li>').join("")+
+      '</ul></details>';
   }
   function recordUnit(r) {
     if (r.type === "ligacoes") return "1 registro de ligação";
@@ -139,21 +150,26 @@
     if (r.type === "indicadores") return "valor do indicador" + (sourceColumn(r, "value") ? " · coluna " + sourceColumn(r, "value") : "");
     return "registro da planilha";
   }
-  function blockCaption(id, m) {
-    const filenames = [...new Set(m.rows.map(r => r.source).filter(Boolean))];
-    const sources = filenames.length ? filenames.slice(0, 2).join(" · ") + (filenames.length > 2 ? ` · +${filenames.length - 2} fontes` : "") : "nenhuma fonte no recorte";
-    const labels = {
-      insights: "Interpretação das fontes. Cálculos explicados na evidência.",
-      metrics: "Cada valor informa sua origem e a fórmula. Abra Como este número foi obtido.",
-      crossings: "OS e deslocamentos por empresa + conta, com ressalvas de período.",
-      reading: "Colunas originais identificadas, cobertura e finalidade.",
-      trend: `Eixo horizontal: data · eixo vertical: ${unit(m).toLowerCase()}. Apenas registros com data individual.`,
-      status: "Quantidade de linhas por status, não soma de valores monetários nem mede SLA.",
-      sectors: "Quantidade de linhas importadas por setor, não soma de quantidades de cada fonte.",
-      ranking: `Classificação por ${dimensions[config.dimension].toLowerCase()} · unidade: ${unit(m).toLowerCase()}.`,
-      records: "Cada linha mostra sua unidade, o arquivo, a aba e as colunas originais.",
+  function blockCaption(id,m) {
+    const sources=[...new Set(m.rows.map(r=>r.lotId).filter(Boolean))];
+    const lots=b.getImports().filter(l=>sources.includes(l.id));
+    const labels={
+      insights:"Fatos calculados e interpretação complementar do Copiloto.",
+      metrics:"Valores prontos, com explicação do cálculo ao tocar no indicador.",
+      crossings:"Relação entre OS e deslocamentos por empresa e conta, quando comprovada.",
+      reading:"Quais campos entram nos cálculos e o que cada dado representa.",
+      trend:"Cada ponto soma os registros com data individual. Valores por dia.",
+      status:"Quantidade de registros em cada situação informada.",
+      sectors:"Quantidade de registros por setor, sem misturar unidades de desempenho.",
+      ranking:"Principais resultados agrupados por "+dimensions[config.dimension].toLowerCase()+".",
+      records:"Dados que compõem o recorte, com origem verificável."
     };
-    return `<p class="dash-widget-caption">${esc(labels[id] || "")} <span>Fontes: ${esc(sources)}.</span></p>`;
+    const links=lots.map(l=>esc(l.name||l.filename||"Planilha")+" · aba "+esc(l.sheet||"não informada"));
+    const origin=links.length?links.join("; "):[...new Set(m.rows.map(r=>esc(r.source)).filter(Boolean))].join("; ")||"Sem arquivo no recorte";
+    return '<p class="dash-widget-caption">'+esc(labels[id]||"")+'</p>'+
+      '<details class="dash-source"><summary>De onde vêm esses números?</summary><p>'+origin+'</p><p>'+
+      esc(num(m.rows.length)+' registros incluídos pelos filtros. '+(weighted(m)?"O valor do gráfico soma as quantidades das linhas.":"Cada registro vale uma unidade no gráfico."))+
+      '</p></details>';
   }
   function metricCards(m) {
     if (!m.rows.length) return empty("Nenhum dado neste recorte", "Importe planilhas ou ajuste os filtros.");
@@ -202,11 +218,15 @@
     return horizontal(items, "data-dash-member") + `<p class="dash-note">Até 8 por ${esc(dimensions[config.dimension].toLowerCase())} · ${unit(m).toLowerCase()}. Toque para explorar.</p>`;
   }
   function insights(m) {
+    const ai=b.getAIInsight?.()||{};
+    const smart='<section class="mc-ai-insight" aria-label="Análise complementar de inteligência artificial"><strong>✦ Copiloto · interpretação dos dados</strong>'+
+      (ai.text?'<p>'+esc(ai.text).replace(/\\n/g,"<br>")+'</p>':'<p>O painel já calculou os indicadores. Ative o Copiloto para destacar oportunidades e pontos de atenção além dos totais.</p>')+
+      '<button type="button" class="btn btn-primary" data-dash-ai-insights '+(ai.busy||!m.rows.length?"disabled":"")+'>'+(ai.busy?"Analisando…":ai.text?"Atualizar análise da IA":"✦ Analisar com IA")+'</button></section>';
     const cards = m.intelligence.cards, types = new Set(), featured = cards.filter(c => { if (types.has(c.type)) return false; types.add(c.type); return true; });
     const extra = cards.filter(c => !featured.includes(c));
     const advanced = window.MCAnalysis?.analyze(m.rows, b.getImports()).filter(c => ["comparison", "attention", "concentration"].includes(c.kind)).slice(0, 4) || [];
     const trace = advanced.map(c => '<article class="mc-intelligence-card"><strong>' + esc(c.title) + '</strong><p>' + esc(c.text) + '</p><details><summary>Fórmula, fonte e limitações</summary><p>' + esc(c.basis) + '</p><p>' + esc(c.caveat) + '</p><p>' + c.evidence.map(x => esc(x.file) + ' · ' + esc(x.sheet) + (x.line ? ' · linha ' + x.line : '')).join('; ') + '</p></details></article>').join("");
-    return `<p class="dash-note">Análise local recalculada com os filtros. Abra a evidência para conferir cada conclusão.</p>${trace}<div class="dash-insights">${featured.map(insightCard).join("")}</div>${extra.length ? `<details class="dash-extra-insights"><summary>Mais ${extra.length} leituras do recorte</summary><div class="dash-insights">${extra.map(insightCard).join("")}</div></details>` : ""}`;
+    return smart+`<p class="dash-note">Números calculados localmente. Abra a evidência para conferir as fontes.</p>${trace}<div class="dash-insights">${featured.map(insightCard).join("")}</div>${extra.length ? `<details class="dash-extra-insights"><summary>Mais ${extra.length} leituras do recorte</summary><div class="dash-insights">${extra.map(insightCard).join("")}</div></details>` : ""}`;
   }
   function insightCard(c) {
     return `<div class="dash-insight-card"><span>${icon(c.ico, 18)}</span><strong>${esc(c.title)}</strong><p>${esc(c.text)}</p><details><summary>Entender este insight</summary><p><b>Base do cálculo:</b> ${esc(c.basis)}</p><p><b>Limite:</b> ${esc(c.caveat)}</p>${c.evidence.length ? `<ul>${c.evidence.map(r => `<li>${esc(r.source)} · linha ${esc(r.line || "—")}</li>`).join("")}</ul>` : ""}</details>${c.type === "cross" ? '<button class="btn" data-dash-focus="crossings">Ver contas relacionadas</button>' : Object.hasOwn(D.types, c.type) ? `<button class="btn" data-dash-insight-type="${esc(c.type)}">Explorar esta fonte</button>` : ""}</div>`;
@@ -228,7 +248,7 @@
   }
   function content(id, m) { return ({ insights, metrics: metricCards, crossings, reading, trend, status: statusChart, sectors: sectorsChart, ranking, records }[id])(m); }
   function widget(id, m) {
-    return `<article class="dash-widget" style="--dash-span:${config.sizes[id]}" data-dash-widget="${id}"><header class="dash-widget-head"><h2>${esc(blocks[id])}</h2><div>${id === "trend" ? `<select id="dash-chart" aria-label="Tipo de gráfico temporal"><option value="line" ${config.chart === "line" ? "selected" : ""}>Linhas</option><option value="bar" ${config.chart === "bar" ? "selected" : ""}>Barras</option></select>` : ""}${id === "ranking" ? `<select id="dash-dimension" aria-label="Agrupar principais registros">${Object.entries(dimensions).map(([k, v]) => `<option value="${k}" ${config.dimension === k ? "selected" : ""}>${v}</option>`).join("")}</select>` : ""}${state.editor ? `<button class="dash-icon-btn dash-drag" draggable="true" data-dash-drag="${id}" data-dash-touch-drag="${id}" title="Arrastar para mudar de posição; as setas também funcionam" aria-label="Arrastar ${esc(blocks[id])}">${icon("menu", 16)}</button>` : ""}<button class="dash-icon-btn" data-dash-focus="${id}" title="Ampliar ${esc(blocks[id])}" aria-label="Ampliar ${esc(blocks[id])}">${icon("expand", 17)}</button></div></header><div class="dash-widget-body">${blockCaption(id, m)}${content(id, m)}</div></article>`;
+    return `<article class="dash-widget" style="--dash-span:${config.sizes[id]}" data-dash-widget="${id}"><header class="dash-widget-head"><h2>${esc(titleFor(id,m))}</h2><div>${id === "trend" ? `<select id="dash-chart" aria-label="Tipo de gráfico temporal"><option value="line" ${config.chart === "line" ? "selected" : ""}>Linhas</option><option value="bar" ${config.chart === "bar" ? "selected" : ""}>Barras</option></select>` : ""}${id === "ranking" ? `<select id="dash-dimension" aria-label="Agrupar principais registros">${Object.entries(dimensions).map(([k, v]) => `<option value="${k}" ${config.dimension === k ? "selected" : ""}>${v}</option>`).join("")}</select>` : ""}${state.editor ? `<button class="dash-icon-btn dash-drag" draggable="true" data-dash-drag="${id}" data-dash-touch-drag="${id}" title="Arrastar para mudar de posição; as setas também funcionam" aria-label="Arrastar ${esc(blocks[id])}">${icon("menu", 16)}</button>` : ""}<button class="dash-icon-btn" data-dash-focus="${id}" title="Ampliar ${esc(blocks[id])}" aria-label="Ampliar ${esc(blocks[id])}">${icon("expand", 17)}</button></div></header><div class="dash-widget-body">${blockCaption(id, m)}${content(id, m)}</div></article>`;
   }
   function editor(m) {
     if (!state.editor) return "";
@@ -245,7 +265,7 @@
   function localPage() {
     const m = model();
     const selected = config.order.filter(id => !config.hidden.includes(id));
-    return `<section id="interactive-dashboard" class="interactive-dashboard ${state.editor ? "editing" : ""}" style="--dash-scale:${config.zoom / 100}" aria-label="Dashboard interativo"><header class="dash-head"><div><span class="eyebrow">POWER BI PAINEL COMPLETO / MICHELLE CÂNDIDO</span><h1>Seu painel de indicadores</h1><p>Resultados identificados por fonte, período e unidade.</p></div><div class="dash-actions"><label class="dash-zoom-label" for="dash-zoom">Ampliação<select id="dash-zoom" aria-label="Ampliação do dashboard">${[80, 100, 125, 150].map(n => `<option value="${n}" ${config.zoom === n ? "selected" : ""}>${n}%</option>`).join("")}</select></label><button class="btn" data-dash-edit aria-expanded="${state.editor}">${icon("settings")} ${state.editor ? "Concluir ajustes" : "Personalizar"}</button><button class="btn btn-primary" data-dash-fullscreen aria-pressed="${state.expanded}">${icon(state.expanded ? "close" : "expand")} ${state.expanded ? "Sair de tela cheia" : "Tela cheia"}</button></div></header><details class="dash-filter-panel" ${state.filtersOpen ? "open" : ""}><summary>Filtros e período <span>${num(m.rows.length)} linhas no recorte</span></summary><div class="dash-filters"><label>Setor<select id="dash-sector"><option value="geral">Todos os setores</option>${b.getSectors().map(s => `<option value="${s.id}" ${config.sector === s.id ? "selected" : ""}>${esc(s.name)}</option>`).join("")}</select></label><label>Fonte<select id="dash-type"><option value="all">Todas · totais separados</option>${Object.entries(D.types).map(([k, label]) => `<option value="${k}" ${config.type === k ? "selected" : ""}>${esc(label)}</option>`).join("")}</select></label><label>Status<select id="dash-status"><option value="all">Todos os status</option>${statuses.map(s => `<option ${config.status === s ? "selected" : ""}>${esc(s)}</option>`).join("")}</select></label><label>Período<select id="dash-period">${[["all", "Todo o histórico"], ["7", "Últimos 7 dias da fonte"], ["30", "Últimos 30 dias da fonte"], ["90", "Últimos 90 dias da fonte"], ["365", "Últimos 12 meses da fonte"]].map(([k, text]) => `<option value="${k}" ${String(config.period) === k ? "selected" : ""}>${text}</option>`).join("")}</select></label><label>De<input id="dash-start" type="date" value="${esc(config.start)}"></label><label>Até<input id="dash-end" type="date" value="${esc(config.end)}"></label><form class="dash-search" id="dash-search"><label>Buscar nos dados<input id="dash-query" type="search" maxlength="200" placeholder="Cliente, descrição, conta..." value="${esc(config.query)}"></label><button class="dash-icon-btn" aria-label="Aplicar busca no dashboard">${icon("search")}</button></form><button class="btn" data-dash-clear>Limpar filtros</button></div></details><div class="dash-context" role="status"><span>${m.start || m.end ? `${date(m.start)} a ${date(m.end)}` : "Todo o histórico"} · ${num(m.rows.length)} linhas · dados até ${date(m.latest)}</span>${config.accountKey ? `<button class="btn" data-dash-clear-account>Remover conta: ${esc(JSON.parse(config.accountKey).join(" / "))} ×</button>` : ""}${config.member ? `<button class="btn" data-dash-clear-member>Remover filtro: ${esc(config.member.value)} ×</button>` : ""}${b.getState().query ? `<span>Busca global: ${esc(b.getState().query)}</span>` : ""}<button class="btn" data-dash-export ${m.rows.length ? "" : "disabled"}>${icon("down", 16)} Exportar este recorte</button></div><div class="dash-quick-guide"><strong>Como ler este painel</strong><span>Os números usam a legenda e unidade de cada fonte.</span><span>Toque em uma barra ou indicador para detalhar e filtrar.</span><button class="btn" data-nav="data">Importar ou excluir arquivos</button></div>${editor(m)}<div class="dash-grid">${selected.map(id => widget(id, m)).join("")}</div>${source(m)}${state.focus ? `<dialog id="dashboard-focus" class="dash-focus-dialog" aria-labelledby="dash-focus-title"><header><div><span class="eyebrow">DASHBOARD / MICHELLE CÂNDIDO</span><h2 id="dash-focus-title">${esc(blocks[state.focus])}</h2><p>${num(m.rows.length)} linhas · filtros atuais</p></div><button class="btn" data-dash-close-focus>Fechar ampliação ${icon("close", 17)}</button></header><div class="dash-focus-body">${content(state.focus, m)}</div></dialog>` : ""}</section>`;
+    return `<section id="interactive-dashboard" class="interactive-dashboard ${state.editor ? "editing" : ""}" style="--dash-scale:${config.zoom / 100}" aria-label="Dashboard interativo"><header class="dash-head"><div><span class="eyebrow">POWER BI PAINEL COMPLETO / MICHELLE CÂNDIDO</span><h1>Seu painel de indicadores</h1><p>Resultados identificados por fonte, período e unidade.</p></div><div class="dash-actions"><label class="dash-zoom-label" for="dash-zoom">Ampliação<select id="dash-zoom" aria-label="Ampliação do dashboard">${[80, 100, 125, 150].map(n => `<option value="${n}" ${config.zoom === n ? "selected" : ""}>${n}%</option>`).join("")}</select></label><button class="btn" data-dash-edit aria-expanded="${state.editor}">${icon("settings")} ${state.editor ? "Concluir ajustes" : "Personalizar"}</button><button class="btn btn-primary" data-dash-fullscreen aria-pressed="${state.expanded}">${icon(state.expanded ? "close" : "expand")} ${state.expanded ? "Sair de tela cheia" : "Tela cheia"}</button></div></header><details class="dash-filter-panel" ${state.filtersOpen ? "open" : ""}><summary>Filtros e período <span>${num(m.rows.length)} linhas no recorte</span></summary><div class="dash-filters"><label>Setor<select id="dash-sector"><option value="geral">Todos os setores</option>${b.getSectors().map(s => `<option value="${s.id}" ${config.sector === s.id ? "selected" : ""}>${esc(s.name)}</option>`).join("")}</select></label><label>Fonte<select id="dash-type"><option value="all">Todas · totais separados</option>${Object.entries(D.types).map(([k, label]) => `<option value="${k}" ${config.type === k ? "selected" : ""}>${esc(label)}</option>`).join("")}</select></label><label>Status<select id="dash-status"><option value="all">Todos os status</option>${statuses.map(s => `<option ${config.status === s ? "selected" : ""}>${esc(s)}</option>`).join("")}</select></label><label>Período<select id="dash-period">${[["all", "Todo o histórico"], ["7", "Últimos 7 dias da fonte"], ["30", "Últimos 30 dias da fonte"], ["90", "Últimos 90 dias da fonte"], ["365", "Últimos 12 meses da fonte"]].map(([k, text]) => `<option value="${k}" ${String(config.period) === k ? "selected" : ""}>${text}</option>`).join("")}</select></label><label>De<input id="dash-start" type="date" value="${esc(config.start)}"></label><label>Até<input id="dash-end" type="date" value="${esc(config.end)}"></label><form class="dash-search" id="dash-search"><label>Buscar nos dados<input id="dash-query" type="search" maxlength="200" placeholder="Cliente, descrição, conta..." value="${esc(config.query)}"></label><button class="dash-icon-btn" aria-label="Aplicar busca no dashboard">${icon("search")}</button></form><button class="btn" data-dash-clear>Limpar filtros</button></div></details><div class="dash-context" role="status"><span>${m.start || m.end ? `${date(m.start)} a ${date(m.end)}` : "Todo o histórico"} · ${num(m.rows.length)} linhas · dados até ${date(m.latest)}</span>${config.accountKey ? `<button class="btn" data-dash-clear-account>Remover conta: ${esc(JSON.parse(config.accountKey).join(" / "))} ×</button>` : ""}${config.member ? `<button class="btn" data-dash-clear-member>Remover filtro: ${esc(config.member.value)} ×</button>` : ""}${b.getState().query ? `<span>Busca global: ${esc(b.getState().query)}</span>` : ""}<button class="btn" data-dash-export ${m.rows.length ? "" : "disabled"}>${icon("down", 16)} Exportar este recorte</button></div><div class="dash-quick-guide"><strong>Como ler este painel</strong><span>Os números usam a legenda e unidade de cada fonte.</span><span>Toque em uma barra ou indicador para detalhar e filtrar.</span><button class="btn" data-nav="data">Importar ou excluir arquivos</button></div>${editor(m)}<div class="dash-grid">${selected.map(id => widget(id, m)).join("")}</div>${source(m)}${state.focus ? `<dialog id="dashboard-focus" class="dash-focus-dialog" aria-labelledby="dash-focus-title"><header><div><span class="eyebrow">DASHBOARD / MICHELLE CÂNDIDO</span><h2 id="dash-focus-title">${esc(titleFor(state.focus,m))}</h2><p>${num(m.rows.length)} linhas · filtros atuais</p></div><button class="btn" data-dash-close-focus>Fechar ampliação ${icon("close", 17)}</button></header><div class="dash-focus-body">${content(state.focus, m)}</div></dialog>` : ""}</section>`;
   }
   function connection() {
     if (!state.connectOpen) return "";
@@ -319,8 +339,9 @@
     root.querySelectorAll("[data-dash-metric]").forEach(el => el.addEventListener("change", () => { const metrics = config.metrics.filter(x => x !== el.dataset.dashMetric); if (el.checked) metrics.push(el.dataset.dashMetric); update({ metrics }); }));
     root.querySelectorAll("[data-dash-size]").forEach(el => el.addEventListener("change", () => update({ sizes: { ...config.sizes, [el.dataset.dashSize]: Number(el.value) } })));
     root.addEventListener("click", e => {
-      const el = e.target.closest("[data-dash-connect],[data-dash-disconnect],[data-dash-engine],[data-dash-edit],[data-dash-fullscreen],[data-dash-focus],[data-dash-close-focus],[data-dash-clear],[data-dash-clear-member],[data-dash-clear-account],[data-dash-account],[data-dash-insight-type],[data-dash-move],[data-dash-status],[data-dash-sector],[data-dash-member],[data-dash-page],[data-dash-reset-layout],[data-dash-export]");
+      const el = e.target.closest("[data-dash-connect],[data-dash-disconnect],[data-dash-engine],[data-dash-edit],[data-dash-fullscreen],[data-dash-focus],[data-dash-close-focus],[data-dash-clear],[data-dash-clear-member],[data-dash-clear-account],[data-dash-account],[data-dash-insight-type],[data-dash-move],[data-dash-status],[data-dash-sector],[data-dash-member],[data-dash-page],[data-dash-reset-layout],[data-dash-export],[data-dash-ai-insights]");
       if (!el) return;
+      if (el.hasAttribute("data-dash-ai-insights")) { void b.generateAIInsights({viewRows:model().rows}); return; }
       if (el.hasAttribute("data-dash-connect")) { state.connectOpen = !state.connectOpen; b.render(); if (state.connectOpen) document.getElementById("dash-powerbi-url")?.focus({ preventScroll: true }); return; }
       if (el.hasAttribute("data-dash-disconnect")) { state.connectOpen = false; update({ reportUrl: "", reportView: "local" }); return; }
       if (el.dataset.dashEngine) { state.focus = null; update({ reportView: el.dataset.dashEngine }); return; }
