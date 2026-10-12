@@ -86,3 +86,5 @@
 @media (prefers-reduced-motion:reduce) {
   .assistant-fab,.assistant-fab .fab-emblem svg {transition:none!important;animation:none!important}
 }
+
+.mc-ai-status{margin-top:10px;padding:11px 13px;border-radius:9px;background:rgba(68,142,206,.1);font-size:13px;line-height:1.5;overflow-wrap:anywhere}
