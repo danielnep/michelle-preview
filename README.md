@@ -33,7 +33,7 @@ O título agora é **Power BI | Painel Completo**, com crédito de identificaç�
 
 ## Armazenamento
 
-Não existe backend neste repositório. Dados, apresentações e originais ficam no IndexedDB do navegador, no dispositivo e no endereço utilizados. Atualizar a página conserva o conteúdo. Para transferir entre dispositivos ou guardar uma cópia externa, use **Exportar backup completo** e **Restaurar backup** em Enviar Dados Excel. Limpar os dados do navegador remove esse armazenamento.
+Não existe backend de armazenamento compartilhado neste projeto. A IA usa uma função segura Netlify; dados, apresentações e originais ficam no IndexedDB do navegador, no dispositivo e no endereço utilizados. Atualizar a página conserva o conteúdo. Para transferir entre dispositivos ou guardar uma cópia externa, use **Exportar backup completo** e **Restaurar backup** em Enviar Dados Excel. Limpar os dados do navegador remove esse armazenamento.
 
 Importações e apresentações antigas do localStorage são migradas sem apagar a cópia anterior. Importações antigas precisam ser reconferidas quando sua normalização original perdeu informações.
 
@@ -89,3 +89,15 @@ npm test
 A suíte de testes cobre leitura semântica, unidades de tempo, dados sem datas, cruzamentos temporais e de identidade, isolamento de empresas/contas, exclusão e restauração, confirmação em janela e atalhos, além de importação, totais/status, datas e competência, deduplicação/versionamento, filtros, geração/exportação de relatórios, persistência, composição do dashboard, tela cheia e sua alternativa, validação e persistência do link Power BI, edição/posicionamento de slides, teclado e leitura de um PPTX real com imagem e gráfico. O armazenamento e o DOM são exercitados com fake-indexeddb e jsdom. A conferência visual em navegador inclui 320 px sem transbordamento horizontal e a tela dedicada do dashboard. Um relatório nativo real não pôde ser validado sem seu link e acesso Microsoft.
 
 `tests/responsive.html` exibe o aplicativo real em janelas de 390 × 844 e 1280 × 900, com seletores de largura entre 320 e 1600 px para conferência visual. Reabrir essa página carrega a versão atual do painel nos quadros de teste. A apresentação de teste não contém dados de clientes. As planilhas operacionais usadas na reconciliação permanecem fora deste repositório público.
+
+## GitHub Pages com IA
+
+O painel também funciona em https://danielnep.github.io/michelle-preview/.
+Nesse endereço estático, o Copiloto envia solicitações à função segura
+`https://powerbicompleto.netlify.app/api/michelle-ai`, no Netlify, via CORS.
+**O GitHub Pages não executa a função nem armazena a chave DeepSeek.**
+A chave `POWER_BI_MICHELLE_IA` permanece somente no ambiente Netlify.
+
+Se a função Netlify ficar indisponível, a conversa remota também ficará.
+Os dados importados ficam no navegador/origem, separados entre os dois domínios.
+Mais detalhes: [manual do Copiloto](docs/copiloto.md).

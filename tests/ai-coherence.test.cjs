@@ -64,3 +64,50 @@ test("títulos e explicações de origem são contextuais, sem exibir fórmula c
   assert.match(dashboard,/data-dash-ai-insights/);
   assert.match(dashboard,/b\.generateAIInsights/);
 });
+
+test("Copiloto usa a função remota segura quando aberto no GitHub Pages",async()=>{
+  for(const [hostname,expected] of [
+    ["danielnep.github.io","https://powerbicompleto.netlify.app/api/michelle-ai"],
+    ["powerbicompleto.netlify.app","/api/michelle-ai"]
+  ]){
+    let called="";
+    const root={location:{hostname}};
+    const store={getItem:()=>null,setItem:()=>{}};
+    const backendFetch=async(url,options)=>{
+      called=url;
+      assert.equal(options.method,"POST");
+      assert.equal(JSON.parse(options.body).mode,"chat");
+      return {ok:true,json:async()=>({answer:"Copiloto online"})};
+    };
+    vm.runInNewContext(fs.readFileSync(path.join(__dirname,"../michelle-ai-client.js"),"utf8"),{
+      window:root,localStorage:store,fetch:backendFetch,AbortController,setTimeout,clearTimeout
+    });
+    const answer=await root.MCAI.request("chat",{message:"Olá"});
+    assert.equal(answer.answer,"Copiloto online");
+    assert.equal(called,expected);
+  }
+});
+
+test("CORS aceita GitHub Pages com preflight e protege outras origens no navegador",async()=>{
+  const {default:handler}=await import("../netlify/functions/michelle-ai.mjs");
+  const preflight=await handler(new Request("https://powerbicompleto.netlify.app/api/michelle-ai",{
+    method:"OPTIONS",headers:{
+      origin:"https://danielnep.github.io",
+      "access-control-request-method":"POST",
+      "access-control-request-headers":"content-type"
+    }
+  }));
+  assert.equal(preflight.status,204);
+  assert.equal(preflight.headers.get("access-control-allow-origin"),"https://danielnep.github.io");
+  assert.match(preflight.headers.get("access-control-allow-methods"),/POST/);
+  assert.match(preflight.headers.get("access-control-allow-headers"),/Content-Type/i);
+  const status=await handler(new Request("https://powerbicompleto.netlify.app/api/michelle-ai",{
+    method:"GET",headers:{origin:"https://danielnep.github.io"}
+  }));
+  assert.equal(status.headers.get("access-control-allow-origin"),"https://danielnep.github.io");
+  const blocked=await handler(new Request("https://powerbicompleto.netlify.app/api/michelle-ai",{
+    method:"OPTIONS",headers:{origin:"https://outro-site.example"}
+  }));
+  assert.equal(blocked.status,403);
+  assert.equal(blocked.headers.get("access-control-allow-origin"),null);
+});

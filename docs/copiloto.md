@@ -17,7 +17,7 @@ Ao receber planilhas, os nomes e títulos são pistas: considere nome do arquivo
 Seja proativa quando houver uma descoberta real, sem criar alertas decorativos. Recomende próximos passos; alterações importantes precisam de aprovação da usuária. Nunca modifique planilhas originais silenciosamente.
 
 ## 2. Instruções técnicas de atuação dentro do painel
-- **Arquitetura:** GitHub (código) → Netlify (site e Functions) → API DeepSeek (resposta).
+- **Arquitetura:** GitHub (código e GitHub Pages para interface) → Netlify Functions (API e segredo) → DeepSeek (resposta). A versão Netlify da interface continua funcionando.
 - **Chave:** `Netlify.env.get("POWER_BI_MICHELLE_IA")` (com suporte ao nome anterior `DEEPSEEK_API_KEY`) somente na função `netlify/functions/michelle-ai.mjs`, jamais no HTML ou JavaScript público.
 - **Endpoint interno:** `POST /api/michelle-ai`. Modos de trabalho: `chat`, `insights`, `interpret`.
 - **Modelo inicial:** `deepseek-flash`. Opcional: variável `DEEPSEEK_MODEL` para substituir.
@@ -46,3 +46,28 @@ Seja proativa quando houver uma descoberta real, sem criar alertas decorativos. 
 ## 4. Limitações conscientemente preservadas
 O painel armazena planilhas no IndexedDB por navegador e origem. A migração de GitHub Pages para domínio Netlify **não** copia esses arquivos; utilize a exportação/restauração de backup.
 A inclusão de IA não adiciona login real, banco compartilhado nem notificações push do sistema operacional. Os avisos proativos previstos são dentro da interface ao usar o app.
+
+## 5. GitHub Pages: Copiloto conectado
+
+A versão pública em **https://danielnep.github.io/michelle-preview/** chama
+`https://powerbicompleto.netlify.app/api/michelle-ai` para conversar com a IA.
+É o mesmo backend Netlify que atende o site Netlify, mas por URL absoluta
+quando a interface está no GitHub Pages.
+
+- O frontend **não contém** o segredo DeepSeek e não chama a DeepSeek diretamente.
+- A função aceita requisições CORS somente das origens dos sites aprovados,
+  incluindo a pré-verificação `OPTIONS`. Isso habilita o navegador, mas **não
+  equivale a autenticação**. A função continua com limite de taxa; para dados
+  confidenciais, exigir autenticação real antes de liberar o sistema.
+- A chave `POWER_BI_MICHELLE_IA` continua sendo configurada exclusivamente
+  no Netlify, nunca em GitHub Actions, JavaScript ou repositório público.
+- Se o Netlify Functions ou a DeepSeek estiverem fora do ar, o Copiloto
+  remoto também ficará indisponível no GitHub Pages.
+- O IndexedDB é separado por origem: arquivos importados no endereço
+  do Netlify não aparecem automaticamente no endereço do GitHub Pages.
+  Para transferir, use backup e restauração.
+
+Teste recomendado: no GitHub Pages, abra o Copiloto e faça uma pergunta em
+"Conversa geral"; em "Análises do painel", use uma planilha fictícia para
+verificar os dados enviados e a resposta. A rota `GET /api/michelle-ai`
+no Netlify é somente diagnóstico de infraestrutura.
