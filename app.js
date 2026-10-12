@@ -121,7 +121,7 @@
   const panelWelcome =
     "Olá! Posso consultar os oito setores, resumir resultados e ajudar a interpretar indicadores. Escolha uma sugestão ou pergunte livremente.";
   const generalWelcome =
-    "Bem-vinda à conversa geral! Posso ajudar com ideias, organização, textos e dúvidas simples com respostas locais. Para conversas abertas com IA generativa, será necessária a integração online.";
+    "Bem-vinda! ✨ Sou sua copilota: posso conversar, ajudar no sistema e explorar os dados quando você escolher Análises do painel.";
   function loadChats() {
     try {
       let saved = JSON.parse(
@@ -161,6 +161,8 @@
     assistantMode: "dados",
     assistantOpen: false,
     assistantBusy: false,
+    aiInsightBusy: false,
+    aiInsightText: "",
     reportSector: "geral",
     reportPeriod: "all",
     reportStart: "",
@@ -466,21 +468,22 @@
   function pageOverview() {
     const rs = recordsFor(), role = P.currentId();
     const essential = roleHome(rs);
+    const aiHome = window.MCAI?.home(rs, imports, esc) || "";
     if (role === "operacao") {
-      return essential + statCards(rs) + recentActivity(rs) +
+      return essential + aiHome + statCards(rs) + recentActivity(rs) +
         '<section class="mc-role-next card panel"><h2>Próximo passo</h2><p>Selecione um arquivo Excel ou CSV, confira a identificação automática e confirme. O painel dos demais perfis é atualizado com os mesmos dados.</p><button class="btn btn-primary" data-nav="data">Enviar dados</button></section>';
     }
     if (role === "supervisora") {
-      return essential + managerialHighlights(rs) + statCards(rs) + homeSectors(rs) +
+      return essential + aiHome + managerialHighlights(rs) + statCards(rs) + homeSectors(rs) +
         recentActivity(rs);
     }
     if (role === "direcao") {
-      return essential + managerialHighlights(rs) + statCards(rs) + graphPanels(rs) +
+      return essential + aiHome + managerialHighlights(rs) + statCards(rs) + graphPanels(rs) +
         '<section class="studio-promo"><div class="studio-promo-icon">' + icon("report",22) +
         '</div><div><strong>Apresentar resultados</strong><span>Prepare uma apresentação usando somente indicadores realmente importados.</span></div>' +
         '<button class="btn btn-primary" data-nav="present">Abrir Estúdio</button></section>';
     }
-    return essential + managerialHighlights(rs) + statCards(rs) + graphPanels(rs) +
+    return essential + aiHome + managerialHighlights(rs) + statCards(rs) + graphPanels(rs) +
       homeSectors(rs) + '<div class="mc-role-actions"><button class="btn" data-nav="dashboard">Ver dashboard completo</button>' +
       '<button class="btn" data-nav="insight">Explorar análises</button></div>';
   }
@@ -566,7 +569,7 @@
     const assessment = window.MCAnalysis?.quality(r.rows, { type: p.type });
     const qualityNotes = assessment?.issues?.length ? '<div class="mc-analysis-notes"><strong>Conferência automática de qualidade</strong><ul>' + assessment.issues.map(x => '<li>' + esc(x.text) + '</li>').join("") + '</ul></div>' : "";
     const conflictNotes = detection.conflict ? '<div class="mc-analysis-notes"><strong class="warning">Identificação conflitante</strong><p>' + esc(detection.reason) + '</p><label><input type="checkbox" data-mc-review ' + (p.manualReview ? "checked" : "") + '> Conferi o tipo e as colunas desta planilha.</label></div>' : "";
-    return `<div class="import-reading-summary"><h3>${esc(p.name)}</h3><div class="import-summary-grid"><span><small>Fonte identificada</small><b>${esc(D.types[p.type])}</b></span><span><small>Registros lidos</small><b>${fmtNum(r.rows.length)}</b></span><span><small>Datas da planilha</small><b>${dates.length ? `${fmtDate(dates[0])} a ${fmtDate(dates.at(-1))}` : "Sem data na planilha"}</b></span><span><small>Destino sugerido</small><b>${esc(idSector(p.sector)?.name || p.sector)}</b></span></div><div class="import-detection"><strong>${icon("check", 16)} Identificação: ${esc(detection.confidence || "Conferir")}</strong><p>${esc(detection.reason || "")}</p><p><b>Arquivo:</b> ${esc(p.name)} · <b>Aba:</b> ${esc(p.sheet)}</p></div>${qualityNotes}${conflictNotes}${p.savedPreferenceUsed ? '<p class="panel-sub">Mapeamento revisado anteriormente e recuperado neste navegador. Confira antes de confirmar.</p>' : ""}<div class="import-column-tags"><strong>Colunas reconhecidas</strong><div>${mapped.length ? mapped.slice(0, 8).map(x => `<span title="${esc(I?.fieldPurpose(p.type, x.name) || x.role)}"><b>${esc(x.name)}</b> → ${esc(x.role)}</span>`).join("") : "<span>Nenhuma coluna associada com segurança; use Ajustes opcionais.</span>"}</div></div><p class="panel-sub">${dates.length ? "Datas e horários originais foram preservados." : "Este arquivo pode ser importado sem definir datas. Os totais continuam disponíveis em Todo o histórico."}</p><p class="panel-sub">Aba: ${esc(p.sheet)} · ${r.errors.length} linhas inválidas · ${r.skipped.length} totais/resumos excluídos.</p><details class="import-reading"><summary>Ver a interpretação da planilha</summary><p>${esc(window.MCIntelligence?.semantics[p.type]?.meaning || "Confira as colunas reconhecidas.")}</p><p class="panel-sub">${esc(window.MCIntelligence?.semantics[p.type]?.limit || "")}</p><p class="panel-sub">Apenas esta aba será anexada. Abas de resumo não são somadas à base detalhada.</p></details><div class="table-wrap import-raw-preview"><table class="tbl"><thead><tr>${fields.map(h => `<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${r.rows.slice(0, 5).map(x => `<tr>${fields.map(h => `<td>${esc(x.raw[String(h)] ?? "")}</td>`).join("")}</tr>`).join("")}</tbody></table></div><details class="import-advanced" ${state.importAdvancedOpen ? "open" : ""}><summary>Ajustes opcionais e conferência de colunas</summary>${importAdvanced(p)}</details></div>`;
+    return `<div class="import-reading-summary"><h3>${esc(p.name)}</h3><div class="import-summary-grid"><span><small>Fonte identificada</small><b>${esc(D.types[p.type])}</b></span><span><small>Registros lidos</small><b>${fmtNum(r.rows.length)}</b></span><span><small>Datas da planilha</small><b>${dates.length ? `${fmtDate(dates[0])} a ${fmtDate(dates.at(-1))}` : "Sem data na planilha"}</b></span><span><small>Destino sugerido</small><b>${esc(idSector(p.sector)?.name || p.sector)}</b></span></div><div class="import-detection"><strong>${icon("check", 16)} Identificação: ${esc(detection.confidence || "Conferir")}</strong><p>${esc(detection.reason || "")}</p><p><b>Arquivo:</b> ${esc(p.name)} · <b>Aba:</b> ${esc(p.sheet)}</p></div>${qualityNotes}${conflictNotes}${p.savedPreferenceUsed ? '<p class="panel-sub">Mapeamento revisado anteriormente e recuperado neste navegador. Confira antes de confirmar.</p>' : ""}<div class="mc-ai-import-help"><strong>✦ Decifrar com a copilota</strong><p>Envie apenas nome do arquivo, aba, nomes e formatos das colunas para obter uma sugestão. Nenhuma linha original é enviada. Confira a identificação antes de importar.</p><button type="button" class="btn" data-ai-interpret ${p.aiInterpretBusy ? "disabled" : ""}>${p.aiInterpretBusy ? "Analisando…" : "Analisar identificação com IA"}</button>${p.aiProposal ? `<p><b>IA sugere:</b> ${esc(D.types[p.aiProposal.type]||p.aiProposal.type)} · ${esc(idSector(p.aiProposal.sector)?.name||p.aiProposal.sector)} · ${esc(p.aiProposal.confidence)}.</p><p>${esc(p.aiProposal.reason)}</p><button type="button" class="btn btn-primary" data-ai-apply-interpret>Aplicar sugestão (revisar)</button>` : ""}</div><div class="import-column-tags"><strong>Colunas reconhecidas</strong><div>${mapped.length ? mapped.slice(0, 8).map(x => `<span title="${esc(I?.fieldPurpose(p.type, x.name) || x.role)}"><b>${esc(x.name)}</b> → ${esc(x.role)}</span>`).join("") : "<span>Nenhuma coluna associada com segurança; use Ajustes opcionais.</span>"}</div></div><p class="panel-sub">${dates.length ? "Datas e horários originais foram preservados." : "Este arquivo pode ser importado sem definir datas. Os totais continuam disponíveis em Todo o histórico."}</p><p class="panel-sub">Aba: ${esc(p.sheet)} · ${r.errors.length} linhas inválidas · ${r.skipped.length} totais/resumos excluídos.</p><details class="import-reading"><summary>Ver a interpretação da planilha</summary><p>${esc(window.MCIntelligence?.semantics[p.type]?.meaning || "Confira as colunas reconhecidas.")}</p><p class="panel-sub">${esc(window.MCIntelligence?.semantics[p.type]?.limit || "")}</p><p class="panel-sub">Apenas esta aba será anexada. Abas de resumo não são somadas à base detalhada.</p></details><div class="table-wrap import-raw-preview"><table class="tbl"><thead><tr>${fields.map(h => `<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${r.rows.slice(0, 5).map(x => `<tr>${fields.map(h => `<td>${esc(x.raw[String(h)] ?? "")}</td>`).join("")}</tr>`).join("")}</tbody></table></div><details class="import-advanced" ${state.importAdvancedOpen ? "open" : ""}><summary>Ajustes opcionais e conferência de colunas</summary>${importAdvanced(p)}</details></div>`;
   }
   function previewRows(rows) {
     let cols = Object.keys(rows[0] || {}).slice(0, 6);
@@ -611,17 +614,17 @@
   }
   function assistantChat(full = false) {
     const messages = state.chatModes[state.assistantMode] || [];
-    return `<div class="assistant-modes" role="tablist" aria-label="Tipo de assistente"><button type="button" role="tab" aria-selected="${state.assistantMode === "dados"}" class="assistant-mode ${state.assistantMode === "dados" ? "is-current" : ""}" data-assistant-mode="dados">${icon("chart", 16)}<span>Análises do painel</span></button><button type="button" role="tab" aria-selected="${state.assistantMode === "geral"}" class="assistant-mode ${state.assistantMode === "geral" ? "is-current" : ""}" data-assistant-mode="geral">${icon("spark", 16)}<span>Conversa geral</span></button></div><p class="assistant-context" role="status">${state.assistantMode === "dados" ? icon("check", 14) + " Respostas baseadas nos registros do painel" : '<span class="assistant-context-dot"></span> IA externa aguardando integração'}</p><div class="assistant-messages" data-assistant-messages="1" role="log" aria-live="polite" aria-label="Conversa">${messages.map((m, i) => `<div class="assistant-line ${m.role}" style="--message-delay:${Math.min(i, 5) * 35}ms"><div class="assistant-mini-avatar">${m.role === "user" ? "M" : icon("spark", 15)}</div><div class="assistant-bubble">${esc(m.text)}</div></div>`).join("")}</div><div class="assistant-bottom"><div class="assistant-quick">${assistantSuggestions()
+    return `<div class="assistant-modes" role="tablist" aria-label="Tipo de assistente"><button type="button" role="tab" aria-selected="${state.assistantMode === "dados"}" class="assistant-mode ${state.assistantMode === "dados" ? "is-current" : ""}" data-assistant-mode="dados">${icon("chart", 16)}<span>Análises do painel</span></button><button type="button" role="tab" aria-selected="${state.assistantMode === "geral"}" class="assistant-mode ${state.assistantMode === "geral" ? "is-current" : ""}" data-assistant-mode="geral">${icon("spark", 16)}<span>Conversa geral</span></button></div><p class="assistant-context" role="status">${state.assistantMode === "dados" ? icon("check", 14) + " Respostas baseadas nos registros do painel" : '<span class="assistant-context-dot"></span> IA online via DeepSeek (conexão necessária)'}</p><div class="assistant-messages" data-assistant-messages="1" role="log" aria-live="polite" aria-label="Conversa">${messages.map((m, i) => `<div class="assistant-line ${m.role}" style="--message-delay:${Math.min(i, 5) * 35}ms"><div class="assistant-mini-avatar">${m.role === "user" ? "M" : icon("spark", 15)}</div><div class="assistant-bubble">${esc(m.text)}</div></div>`).join("")}</div><div class="assistant-bottom"><div class="assistant-quick">${assistantSuggestions()
       .map(
         (q) =>
           `<button type="button" data-assistant-suggest="${esc(q)}">${esc(q)}</button>`,
       )
       .join(
         "",
-      )}</div><form class="assistant-form" data-assistant-form="1"><label class="sr-only" for="${full ? "assistant-text-full" : "assistant-text-dock"}">Mensagem ao assistente</label><textarea id="${full ? "assistant-text-full" : "assistant-text-dock"}" data-assistant-input="1" rows="1" maxlength="1800" placeholder="${state.assistantMode === "dados" ? "Pergunte sobre seus indicadores..." : "Escreva sua mensagem..."}" aria-label="Mensagem ao assistente"></textarea><button type="submit" aria-label="Enviar mensagem">${icon("arrow", 18)}</button></form><p class="assistant-disclaimer">${state.assistantMode === "dados" ? "Respostas calculadas com os dados importados." : "Respostas gerais limitadas sem integração com IA generativa."}</p></div>`;
+      )}</div><form class="assistant-form" data-assistant-form="1"><label class="sr-only" for="${full ? "assistant-text-full" : "assistant-text-dock"}">Mensagem ao assistente</label><textarea id="${full ? "assistant-text-full" : "assistant-text-dock"}" data-assistant-input="1" rows="1" maxlength="1800" placeholder="${state.assistantMode === "dados" ? "Pergunte sobre seus indicadores..." : "Escreva sua mensagem..."}" aria-label="Mensagem ao assistente"></textarea><button type="submit" aria-label="Enviar mensagem">${icon("arrow", 18)}</button></form><p class="assistant-disclaimer">${state.assistantBusy ? "✦ Copilota analisando… " : ""}${state.assistantMode === "dados" ? "Interpretação com IA sobre cálculos e evidências locais." : "Conversa com a copilota conectada quando a API estiver disponível."}</p></div>`;
   }
   function assistantDock() {
-    return `<div class="assistant-layer ${state.assistantOpen ? "open" : ""}"><button type="button" class="assistant-dismiss" data-assistant-close="1" aria-label="Fechar assistente" tabindex="${state.assistantOpen ? "0" : "-1"}"></button><section class="assistant-window" role="dialog" aria-modal="false" aria-label="Assistente Michelle" aria-hidden="${!state.assistantOpen}"><div class="assistant-window-header"><div class="assistant-identity"><span class="assistant-emblem" aria-hidden="true">${icon("spark", 22)}</span><span><strong>Assistente Michelle</strong><small>Seu espaço para análises e conversas</small></span></div><div class="assistant-header-actions"><button type="button" data-assistant-clear="1" title="Limpar conversa deste modo" aria-label="Limpar conversa">${icon("trash", 15)}</button><button type="button" data-assistant-expand="1" title="Abrir em página inteira" aria-label="Abrir assistente em página inteira">${icon("grid", 15)}</button><button type="button" data-assistant-close="1" title="Fechar" aria-label="Fechar assistente">${icon("close", 16)}</button></div></div><div class="assistant-chat-root" data-assistant-root="dock">${assistantChat()}</div></section></div><button type="button" class="assistant-fab ${state.assistantOpen ? "active" : ""}" data-assistant-toggle="1" aria-expanded="${state.assistantOpen}" aria-label="${state.assistantOpen ? "Fechar assistente" : "Abrir assistente Michelle"}"><span class="fab-emblem">${icon(state.assistantOpen ? "close" : "spark", 20)}</span><span class="fab-label">${state.assistantOpen ? "Fechar assistente" : "Assistente"}</span><span class="fab-presence"></span></button>`;
+    return `<div class="assistant-layer ${state.assistantOpen ? "open" : ""}"><button type="button" class="assistant-dismiss" data-assistant-close="1" aria-label="Fechar assistente" tabindex="${state.assistantOpen ? "0" : "-1"}"></button><section class="assistant-window" role="dialog" aria-modal="false" aria-label="Assistente Michelle" aria-hidden="${!state.assistantOpen}"><div class="assistant-window-header"><div class="assistant-identity"><span class="assistant-emblem" aria-hidden="true">${icon("spark", 22)}</span><span><strong>Assistente Michelle</strong><small>Seu espaço para análises e conversas</small></span></div><div class="assistant-header-actions"><button type="button" class="mc-ai-sidebar-toggle" data-mc-ai-sidebar title="Alternar chat flutuante e barra lateral" aria-pressed="false">Barra lateral</button><button type="button" data-assistant-clear="1" title="Limpar conversa deste modo" aria-label="Limpar conversa">${icon("trash", 15)}</button><button type="button" data-assistant-expand="1" title="Abrir em página inteira" aria-label="Abrir assistente em página inteira">${icon("grid", 15)}</button><button type="button" data-assistant-close="1" title="Fechar" aria-label="Fechar assistente">${icon("close", 16)}</button></div></div><div class="assistant-chat-root" data-assistant-root="dock">${assistantChat()}</div></section></div><button type="button" class="assistant-fab ${state.assistantOpen ? "active" : ""}" data-assistant-toggle="1" aria-expanded="${state.assistantOpen}" aria-label="${state.assistantOpen ? "Fechar assistente" : "Abrir assistente Michelle"}"><span class="fab-emblem">${icon(state.assistantOpen ? "close" : "spark", 20)}</span><span class="fab-label">${state.assistantOpen ? "Fechar assistente" : "Assistente"}</span><span class="fab-presence"></span></button>`;
   }
   function pageInsight() {
     return (
@@ -631,7 +634,7 @@
       ) +
       managerialHighlights(recordsFor()) +
       insightsPanel(recordsFor(), null, true) +
-      `<div class="insight-actions"><button class="btn btn-primary" data-refresh-insights>Gerar Insights com Dados Atuais</button><button class="btn" data-nav="data">Importar Novos Dados</button><button class="btn" data-nav="report">Gerar Relatório</button></div><section class="card panel assistant-full-card section-space"><div class="panel-head"><div><h3>Assistente Michelle</h3><p class="panel-sub">Consultas locais ao painel. IA externa aguardando integração.</p></div><button class="btn" data-assistant-clear>Limpar conversa</button></div><div class="assistant-chat-root assistant-chat-full" data-assistant-root="full">${assistantChat(true)}</div></section>`
+      `<div class="insight-actions"><button class="btn btn-primary" data-refresh-insights>Gerar Insights com Dados Atuais</button><button class="btn" data-ai-generate-insights ${state.aiInsightBusy ? "disabled" : ""}>${state.aiInsightBusy ? "Copilota analisando…" : "✦ Interpretar com DeepSeek"}</button><button class="btn" data-nav="data">Importar Novos Dados</button><button class="btn" data-nav="report">Gerar Relatório</button></div>${state.aiInsightText ? `<section class="mc-ai-insight" aria-label="Insights produzidos pela copilota"><strong>✦ Análise da Copilota Michelle</strong><p>${esc(state.aiInsightText)}</p></section>` : ""}<section class="card panel assistant-full-card section-space"><div class="panel-head"><div><h3>Assistente Michelle</h3><p class="panel-sub">Consultas locais ao painel. IA online via DeepSeek (conexão necessária).</p></div><button class="btn" data-assistant-clear>Limpar conversa</button></div><div class="assistant-chat-root assistant-chat-full" data-assistant-root="full">${assistantChat(true)}</div></section>`
     );
   }
   function pageSettings() {
@@ -640,7 +643,7 @@
         "Configurações",
         "Personalize metas, identificação e preferências do seu painel.",
       ) +
-      `<section class="mc-install-panel"><div><strong>Instalar Painel Michelle</strong><p data-install-status>Suporte varia conforme o navegador. Seus dados permanecem neste navegador e não são sincronizados com outros dispositivos.</p><p id="mc-install-guide" hidden></p></div><button type="button" class="install-shortcut" data-mc-install>Instalar aplicativo</button></section><div class="mc-analysis-notes"><strong>Memória de interpretação de planilhas</strong><p>Correções feitas nos campos e confirmadas ficam salvas por modelo de planilha, apenas neste navegador. Você pode apagá-las sem excluir suas importações.</p><button type="button" class="btn" data-mc-reset-mappings>Apagar correções salvas</button></div><div class="page-grid"><section class="card panel"><div class="panel-head"><div><h3 class="panel-title">Identidade do painel</h3><p class="panel-sub">Informações desta operação</p></div>${icon("settings", 19)}</div><div class="field appearance-field"><label for="appearance-select">Aparência do aplicativo</label><select id="appearance-select" class="control"><option value="light" ${appearance() === "light" ? "selected" : ""}>Claro · cinza e grafite</option><option value="dark" ${appearance() === "dark" ? "selected" : ""}>Escuro · grafite</option></select><p class="panel-sub">A preferência fica salva. Os temas dos slides são configurados no Estúdio.</p></div><div class="field"><label>Nome da operação</label><input class="control" id="operation" value="${esc(settings.operation)}" /></div><button class="btn btn-primary section-space" data-save="1">Salvar configurações</button><div class="info-box section-space"><strong>Seus dados operacionais</strong><p>Exporte as planilhas do sistema de origem e importe por Enviar Dados Excel. O painel preserva os arquivos originais e o histórico de atualização.</p></div></section><section class="card panel"><div class="panel-head"><div><h3 class="panel-title">Metas por departamento</h3><p class="panel-sub">Percentual de conclusão desejado</p></div>${icon("target", 18)}</div><div class="settings-list section-space">${sectors.map((s) => `<div class="settings-item"><div><strong>${s.name}</strong><small>Meta de conclusão (percentual)</small><div class="progress"><div style="width:${settings.goals?.[s.id] ?? 0}%"></div></div></div><div class="row" style="gap:4px"><input class="control" type="number" min="0" max="100" step="1" data-goal="${s.id}" value="${settings.goals?.[s.id] ?? ""}" placeholder="Sem meta"/><span>%</span></div></div>`).join("")}</div><button class="btn btn-primary section-space" data-save="1">${icon("check", 14)} Aplicar metas</button></section></div>`
+      `<section class="mc-install-panel"><div><strong>Instalar Painel Michelle</strong><p data-install-status>Suporte varia conforme o navegador. Seus dados permanecem neste navegador e não são sincronizados com outros dispositivos.</p><p id="mc-install-guide" hidden></p></div><button type="button" class="install-shortcut" data-mc-install>Instalar aplicativo</button></section><section class="mc-ai-import-help"><strong>✦ Aprendizado da Copilota Michelle</strong><p>Os assuntos mais consultados são lembrados apenas neste navegador. As análises automáticas enviam ao DeepSeek somente totais, unidades e resumos calculados, sem as linhas originais.</p><label><input type="checkbox" data-ai-auto ${window.MCAI?.consent() ? "checked" : ""}> Sugerir insights via IA após novas importações</label> <button type="button" class="btn" data-ai-clear-memory>Limpar preferências da copilota</button></section><div class="mc-analysis-notes"><strong>Memória de interpretação de planilhas</strong><p>Correções feitas nos campos e confirmadas ficam salvas por modelo de planilha, apenas neste navegador. Você pode apagá-las sem excluir suas importações.</p><button type="button" class="btn" data-mc-reset-mappings>Apagar correções salvas</button></div><div class="page-grid"><section class="card panel"><div class="panel-head"><div><h3 class="panel-title">Identidade do painel</h3><p class="panel-sub">Informações desta operação</p></div>${icon("settings", 19)}</div><div class="field appearance-field"><label for="appearance-select">Aparência do aplicativo</label><select id="appearance-select" class="control"><option value="light" ${appearance() === "light" ? "selected" : ""}>Claro · cinza e grafite</option><option value="dark" ${appearance() === "dark" ? "selected" : ""}>Escuro · grafite</option></select><p class="panel-sub">A preferência fica salva. Os temas dos slides são configurados no Estúdio.</p></div><div class="field"><label>Nome da operação</label><input class="control" id="operation" value="${esc(settings.operation)}" /></div><button class="btn btn-primary section-space" data-save="1">Salvar configurações</button><div class="info-box section-space"><strong>Seus dados operacionais</strong><p>Exporte as planilhas do sistema de origem e importe por Enviar Dados Excel. O painel preserva os arquivos originais e o histórico de atualização.</p></div></section><section class="card panel"><div class="panel-head"><div><h3 class="panel-title">Metas por departamento</h3><p class="panel-sub">Percentual de conclusão desejado</p></div>${icon("target", 18)}</div><div class="settings-list section-space">${sectors.map((s) => `<div class="settings-item"><div><strong>${s.name}</strong><small>Meta de conclusão (percentual)</small><div class="progress"><div style="width:${settings.goals?.[s.id] ?? 0}%"></div></div></div><div class="row" style="gap:4px"><input class="control" type="number" min="0" max="100" step="1" data-goal="${s.id}" value="${settings.goals?.[s.id] ?? ""}" placeholder="Sem meta"/><span>%</span></div></div>`).join("")}</div><button class="btn btn-primary section-space" data-save="1">${icon("check", 14)} Aplicar metas</button></section></div>`
     );
   }
   function pageSectorDirectory() {
@@ -692,6 +695,7 @@
       .querySelectorAll("[data-assistant-messages]")
       .forEach((el) => (el.scrollTop = el.scrollHeight));
     wire();
+    window.MCDock?.wire();
     window.MCInstall?.bind();
     window.MichelleDashboard?.wire();
   }
@@ -862,24 +866,79 @@
       return "Podemos conversar sobre isso. Nesta prévia, minhas respostas gerais seguem algumas regras locais e são limitadas. Uma integração com IA generativa permitirá acompanhar assuntos livres com mais profundidade.";
     return "Entendi sua mensagem. Este modo geral já permite trocar mensagens, mas ainda usa respostas locais limitadas. Para conversar livremente sobre qualquer assunto, a versão final precisará da IA generativa conectada. Você também pode usar o modo Análises para consultar os dados atuais da operação.";
   }
-  function ask(q) {
-    let question = String(q || "").trim();
-    if (!question) return;
-    let mode = state.assistantMode;
-    state.chatModes[mode].push(
-      { role: "user", text: question },
-      {
-        role: "bot",
-        text: mode === "dados" ? answer(question) : generalAnswer(question),
-      },
-    );
-    state.chatModes[mode] = state.chatModes[mode].slice(-60);
-    saveChats();
+  async function generateAIInsights({ silent = false } = {}) {
+    if (!window.MCAI || state.aiInsightBusy || !getAll().length) return;
+    state.aiInsightBusy = true;
+    if (!silent) render();
+    try {
+      const result = await window.MCAI.request("insights", {
+        context: window.MCAI.context(recordsFor(), imports, sectors)
+      });
+      state.aiInsightText = result.answer || "";
+      if (silent && state.aiInsightText) notify("✦ A copilota preparou novos insights.");
+    } catch (error) {
+      if (!silent) notify(error.message, true);
+    } finally {
+      state.aiInsightBusy = false;
+      if (!state.importReviewOpen || state.page === "insight") render();
+    }
+  }
+  async function interpretImport() {
+    const p = state.pending;
+    if (!p?.grid || p.aiInterpretBusy || !window.MCAI) return;
+    p.aiInterpretBusy = true;
+    render();
+    try {
+      const cols = p.grid[p.headerRow] || [];
+      const result = await window.MCAI.request("interpret", {
+        context: window.MCAI.interpretationContext(p, cols, sectors, Object.keys(D.labels))
+      });
+      p.aiProposal = result.interpretation;
+      notify("Sugestão pronta. Confira antes de aplicar.");
+    } catch (error) {
+      notify(error.message, true);
+    } finally {
+      p.aiInterpretBusy = false;
+      render();
+    }
+  }
+  async function ask(q) {
+    const question = String(q || "").trim();
+    if (!question || state.assistantBusy) return;
+    const mode = state.assistantMode;
+    const history = state.chatModes[mode].filter(m=>m.role==="user" || m.role==="bot")
+      .slice(-8).map(m=>({role:m.role==="user"?"user":"assistant",content:m.text}));
+    state.chatModes[mode].push({role:"user",text:question});
+    // A demonstração local continua disponível se não houver cliente remoto.
+    if (!window.MCAI || typeof window.fetch !== "function") {
+      state.chatModes[mode].push({role:"bot",text:mode==="dados"?answer(question):generalAnswer(question)});
+      state.chatModes[mode] = state.chatModes[mode].slice(-60);
+      saveChats();refreshAssistantChats();return;
+    }
+    state.assistantBusy = true;
     refreshAssistantChats();
-    let focus = document.getElementById(
-      state.assistantOpen ? "assistant-text-dock" : "assistant-text-full",
-    );
-    focus?.focus({ preventScroll: true });
+    try {
+      const reply = await window.MCAI.request("chat",{
+        channel: mode, message: question, history,
+        context: mode === "dados" ? window.MCAI.context(recordsFor(),imports,sectors) : {}
+      });
+      state.chatModes[mode].push({role:"bot",text:reply.answer});
+      window.MCAI.rememberQuestion(question);
+    } catch (error) {
+      const fallback = mode === "dados" ? answer(question) : "";
+      state.chatModes[mode].push({
+        role:"bot",
+        text: "Não consegui acessar a IA online: "+error.message+
+          (fallback ? "\\n\\nConsulta local (sem IA generativa):\\n"+fallback : "")
+      });
+    } finally {
+      state.assistantBusy = false;
+      state.chatModes[mode] = state.chatModes[mode].slice(-60);
+      saveChats();
+      refreshAssistantChats();
+      const focus = document.getElementById(state.assistantOpen ? "assistant-text-dock" : "assistant-text-full");
+      focus?.focus({preventScroll:true});
+    }
   }
   function clearAssistant() {
     state.chatModes[state.assistantMode] = [
@@ -1067,6 +1126,7 @@
         `${lot.rows.length} linhas salvas. Indicadores e insights atualizados.`,
       );
       render();
+      if (window.MCAI?.consent()) void generateAIInsights({silent:true});
     } catch (e) {
       p.status = "error";
       p.error = e.message;
@@ -1298,6 +1358,38 @@
         };
         render();
       });
+    document.querySelector("[data-ai-generate-insights]")?.addEventListener("click", () => generateAIInsights());
+    document.querySelector("[data-ai-auto]")?.addEventListener("change", e => {
+      window.MCAI?.setConsent(e.target.checked);
+      notify(e.target.checked?"Análises automáticas ativadas.":"Análises automáticas desativadas.");
+    });
+    document.querySelector("[data-ai-clear-memory]")?.addEventListener("click", () => {
+      localStorage.removeItem("michelle.ai.behavior.v1");
+      render();notify("Preferências da copilota apagadas deste navegador.");
+    });
+    document.querySelectorAll("[data-ai-favorite]").forEach(el=>el.addEventListener("click",()=>{
+      state.assistantMode="dados";
+      state.assistantOpen=true;
+      render();
+      ask("Mostre o resumo e as prioridades de "+el.dataset.aiFavorite+".");
+    }));
+    document.querySelector("[data-ai-interpret]")?.addEventListener("click",interpretImport);
+    document.querySelector("[data-ai-apply-interpret]")?.addEventListener("click",()=>{
+      const p=state.pending, suggestion=p?.aiProposal;
+      if(!p?.grid||!suggestion)return;
+      if(D.types[suggestion.type])p.type=suggestion.type;
+      if(sectors.some(s=>s.id===suggestion.sector))p.sector=suggestion.sector;
+      if(Number.isInteger(suggestion.headerRow)&&suggestion.headerRow<p.grid.length)p.headerRow=suggestion.headerRow;
+      const headers=p.grid[p.headerRow]||[];
+      const valid=Object.fromEntries(Object.entries(suggestion.mapping||{}).filter(([k,v])=>
+        Object.hasOwn(D.labels,k)&&Number.isInteger(v)&&v>=0&&v<headers.length));
+      p.mapping={...D.suggest(headers),...valid};
+      p.userEdited=true;
+      p.aiProposal=null;
+      p.validationKey=null;
+      render();
+      notify("Sugestão aplicada. Revise colunas, setor e tipo antes de confirmar.");
+    });
     document
       .querySelector("[data-refresh-insights]")
       ?.addEventListener("click", () => {

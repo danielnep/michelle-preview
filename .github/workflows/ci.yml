@@ -29,3 +29,6 @@ jobs:
           node --check data-core.js
           node --check analysis/mc-analysis.js
           node --check service-worker.js
+          node --check michelle-ai-client.js
+          node --check michelle-ai-dock.js
+          node --check netlify/functions/michelle-ai.mjs

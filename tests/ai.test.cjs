@@ -1,0 +1,53 @@
+const { test } = require("node:test");
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const base=path.join(__dirname,"..");
+test("a página carrega a copilota e mantém scripts antes do app",()=>{
+ const html=fs.readFileSync(path.join(base,"index.html"),"utf8");
+ assert.ok(html.includes("michelle-ai-client.js"));
+ assert.ok(html.includes("michelle-ai-dock.js"));
+ assert.ok(html.includes("michelle-ai-dock.css"));
+ assert.ok(html.indexOf("michelle-ai-client.js") < html.indexOf("app.js"));
+ assert.ok(html.indexOf("michelle-ai-dock.js") < html.indexOf("app.js"));
+});
+test("Netlify function exige segredo e não expõe a chave",async()=>{
+ const { default: handler, config }=await import("../netlify/functions/michelle-ai.mjs");
+ assert.equal(config.path,"/api/michelle-ai");
+ const prior=process.env.DEEPSEEK_API_KEY;
+ delete process.env.DEEPSEEK_API_KEY;
+ try {
+   const req=new Request("https://example.netlify.app/api/michelle-ai",{
+     method:"POST",headers:{"Content-Type":"application/json"},
+     body:JSON.stringify({mode:"chat",channel:"geral",message:"Olá"})
+   });
+   const out=await handler(req);assert.equal(out.status,503);
+   assert.match((await out.json()).error,/DEEPSEEK_API_KEY/);
+ } finally {if(prior===undefined)delete process.env.DEEPSEEK_API_KEY;else process.env.DEEPSEEK_API_KEY=prior;}
+});
+test("função chama o DeepSeek em servidor e interpreta sem inventar campos",async()=>{
+ const { default: handler }=await import("../netlify/functions/michelle-ai.mjs");
+ const oldFetch=global.fetch,oldSecret=process.env.DEEPSEEK_API_KEY;
+ process.env.DEEPSEEK_API_KEY="test-somente-no-servidor";
+ let sent;
+ global.fetch=async(url,opts)=>{
+   sent={url,opts};
+   return new Response(JSON.stringify({choices:[{message:{content:JSON.stringify({type:"ordens",sector:"tec",headerRow:0,mapping:{date:2,unsafe:5},confidence:"Alta",reason:"Coluna indica data"})}}]}),{status:200});
+ };
+ try {
+   const req=new Request("https://example.netlify.app/api/michelle-ai",{
+     method:"POST",headers:{"Content-Type":"application/json"},
+     body:JSON.stringify({mode:"interpret",context:{headers:["ID","Setor","Data"],allowedFields:["date"]}})
+   });
+   const out=await handler(req);assert.equal(out.status,200);
+   const response=await out.json();
+   assert.deepEqual(response.interpretation.mapping,{date:2});
+   assert.equal(response.interpretation.type,"ordens");
+   assert.ok(sent.url.includes("deepseek.com"));
+   assert.equal(sent.opts.headers.Authorization,"Bearer test-somente-no-servidor");
+   assert.ok(!JSON.stringify(response).includes("test-somente-no-servidor"));
+ } finally {
+   global.fetch=oldFetch;
+   if(oldSecret===undefined)delete process.env.DEEPSEEK_API_KEY;else process.env.DEEPSEEK_API_KEY=oldSecret;
+ }
+});
