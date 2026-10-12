@@ -23,7 +23,7 @@ test("Netlify function exige segredo e não expõe a chave",async()=>{
      body:JSON.stringify({mode:"chat",channel:"geral",message:"Olá"})
    });
    const out=await handler(req);assert.equal(out.status,503);
-   assert.match((await out.json()).error,/DEEPSEEK_API_KEY/);
+   assert.match((await out.json()).error,/POWER_BI_MICHELLE_IA/);
  } finally {
    if(prior===undefined)delete process.env.DEEPSEEK_API_KEY;else process.env.DEEPSEEK_API_KEY=prior;
    if(priorMichelle===undefined)delete process.env.POWER_BI_MICHELLE_IA;else process.env.POWER_BI_MICHELLE_IA=priorMichelle;
