@@ -119,7 +119,7 @@
   let imports = [],
     settings = { operation: "Operação Michelle", goals: {} };
   const panelWelcome =
-    "Olá! Posso consultar os oito setores, resumir resultados e ajudar a interpretar indicadores. Escolha uma sugestão ou pergunte livremente.";
+    "Olá! Conheço os resumos de todos os arquivos deste navegador. Vou direto aos resultados e explico de onde vêm. Escolha uma sugestão ou pergunte livremente.";
   const generalWelcome =
     "Olá! ✨ Sou o Copiloto: posso conversar, ajudar no sistema e explorar os dados quando você escolher Análises do painel.";
   function loadChats() {
@@ -163,6 +163,7 @@
     assistantBusy: false,
     aiInsightBusy: false,
     aiInsightText: "",
+    aiInsightScope: "",
     aiCheckBusy: false,
     aiCheckStatus: "",
     reportSector: "geral",
@@ -403,11 +404,11 @@
       detailed,
     });
     if (!window.MCIntelligence) return basic;
-    const analytical = window.MCIntelligence.analyze(rs).cards.map(c => ({ ...c, text: `${c.text} Base: ${c.basis} ${c.caveat}` }));
+    const analytical = window.MCIntelligence.analyze(rs).cards.map(c => ({ ...c, text: c.text }));
     return [...analytical, ...basic.filter(c => /^Meta de|Comparação/.test(c.title))];
   }
   const insightsPanel = (rs, sector, detailed = false, range = {}) =>
-    `<section class="card panel operational-insights"><div class="panel-head"><div><h3 class="panel-title">Insights operacionais</h3><p class="panel-sub">Leitura dos dados da sua operação</p></div>${icon("insight", 18)}</div><div class="insights-grid">${insights(
+    `<section class="card panel operational-insights"><div class="panel-head"><div><h3 class="panel-title">O que os dados mostram</h3><p class="panel-sub">Números calculados localmente. O Copiloto complementa com interpretação</p></div>${icon("insight", 18)}</div><div class="insights-grid">${insights(
       rs,
       sector,
       detailed,
@@ -623,7 +624,7 @@
       )
       .join(
         "",
-      )}</div><form class="assistant-form" data-assistant-form="1"><label class="sr-only" for="${full ? "assistant-text-full" : "assistant-text-dock"}">Mensagem ao assistente</label><textarea id="${full ? "assistant-text-full" : "assistant-text-dock"}" data-assistant-input="1" rows="1" maxlength="1800" placeholder="${state.assistantMode === "dados" ? "Pergunte sobre seus indicadores..." : "Escreva sua mensagem..."}" aria-label="Mensagem ao assistente"></textarea><button type="submit" aria-label="Enviar mensagem">${icon("arrow", 18)}</button></form><p class="assistant-disclaimer">${state.assistantBusy ? "✦ Copiloto analisando… " : ""}${state.assistantMode === "dados" ? "Interpretação com IA sobre cálculos e evidências locais." : "Conversa com o Copiloto conectada quando a API estiver disponível."}</p></div>`;
+      )}</div><form class="assistant-form" data-assistant-form="1"><label class="sr-only" for="${full ? "assistant-text-full" : "assistant-text-dock"}">Mensagem ao assistente</label><textarea id="${full ? "assistant-text-full" : "assistant-text-dock"}" data-assistant-input="1" rows="1" maxlength="1800" placeholder="${state.assistantMode === "dados" ? "Pergunte sobre seus indicadores..." : "Escreva sua mensagem..."}" aria-label="Mensagem ao assistente"></textarea><button type="submit" aria-label="Enviar mensagem">${icon("arrow", 18)}</button></form><p class="assistant-disclaimer">${state.assistantBusy ? "✦ Copiloto analisando… " : ""}${state.assistantMode === "dados" ? "IA com resumos dos arquivos ativos e cálculos do painel. Dados agregados enviados ao DeepSeek." : "Conversa com o Copiloto conectada quando a API estiver disponível."}</p></div>`;
   }
   function assistantDock() {
     return `<div class="assistant-layer ${state.assistantOpen ? "open" : ""}"><button type="button" class="assistant-dismiss" data-assistant-close="1" aria-label="Fechar assistente" tabindex="${state.assistantOpen ? "0" : "-1"}"></button><section class="assistant-window" role="dialog" aria-modal="false" aria-label="Copiloto" aria-hidden="${!state.assistantOpen}"><div class="assistant-window-header"><div class="assistant-identity"><span class="assistant-emblem" aria-hidden="true">${icon("spark", 22)}</span><span><strong>Copiloto</strong><small>Seu espaço para análises e conversas</small></span></div><div class="assistant-header-actions"><button type="button" class="mc-ai-sidebar-toggle" data-mc-ai-sidebar title="Alternar chat flutuante e barra lateral" aria-pressed="false">Barra lateral</button><button type="button" data-assistant-clear="1" title="Limpar conversa deste modo" aria-label="Limpar conversa">${icon("trash", 15)}</button><button type="button" data-assistant-expand="1" title="Abrir em página inteira" aria-label="Abrir assistente em página inteira">${icon("grid", 15)}</button><button type="button" data-assistant-close="1" title="Fechar" aria-label="Fechar assistente">${icon("close", 16)}</button></div></div><div class="assistant-chat-root" data-assistant-root="dock">${assistantChat()}</div></section></div><button type="button" class="assistant-fab ${state.assistantOpen ? "active" : ""}" data-assistant-toggle="1" aria-expanded="${state.assistantOpen}" aria-label="${state.assistantOpen ? "Fechar assistente" : "Abrir Copiloto"}"><span class="fab-emblem">${icon(state.assistantOpen ? "close" : "spark", 20)}</span><span class="fab-label">${state.assistantOpen ? "Fechar assistente" : "Assistente"}</span><span class="fab-presence"></span></button>`;
@@ -636,7 +637,7 @@
       ) +
       managerialHighlights(recordsFor()) +
       insightsPanel(recordsFor(), null, true) +
-      `<div class="insight-actions"><button class="btn btn-primary" data-refresh-insights>Gerar Insights com Dados Atuais</button><button class="btn" data-ai-generate-insights ${state.aiInsightBusy ? "disabled" : ""}>${state.aiInsightBusy ? "Copiloto analisando…" : "✦ Interpretar com DeepSeek"}</button><button class="btn" data-nav="data">Importar Novos Dados</button><button class="btn" data-nav="report">Gerar Relatório</button></div>${state.aiInsightText ? `<section class="mc-ai-insight" aria-label="Insights produzidos pelo Copiloto"><strong>✦ Análise do Copiloto</strong><p>${esc(state.aiInsightText)}</p></section>` : ""}<section class="card panel assistant-full-card section-space"><div class="panel-head"><div><h3>Copiloto</h3><p class="panel-sub">Consultas locais ao painel. IA online via DeepSeek (conexão necessária).</p></div><button class="btn" data-assistant-clear>Limpar conversa</button></div><div class="assistant-chat-root assistant-chat-full" data-assistant-root="full">${assistantChat(true)}</div></section>`
+      `<div class="insight-actions"><button class="btn btn-primary" data-refresh-insights>Atualizar cálculos</button><button class="btn btn-primary" data-ai-generate-insights ${state.aiInsightBusy ? "disabled" : ""}>${state.aiInsightBusy ? "Copiloto analisando…" : "✦ Gerar análise inteligente"}</button><button class="btn" data-nav="data">Importar Novos Dados</button><button class="btn" data-nav="report">Gerar Relatório</button></div>${state.aiInsightText ? `<section class="mc-ai-insight" aria-label="Insights produzidos pelo Copiloto"><strong>✦ Descobertas do Copiloto · ${esc(state.aiInsightScope || "Recorte atual")}</strong><p>${esc(state.aiInsightText).replace(/\n/g,"<br>")}</p></section>` : ""}<section class="card panel assistant-full-card section-space"><div class="panel-head"><div><h3>Copiloto</h3><p class="panel-sub">Consultas locais ao painel. IA online via DeepSeek (conexão necessária).</p></div><button class="btn" data-assistant-clear>Limpar conversa</button></div><div class="assistant-chat-root assistant-chat-full" data-assistant-root="full">${assistantChat(true)}</div></section>`
     );
   }
   function pageSettings() {
@@ -645,7 +646,7 @@
         "Configurações",
         "Personalize metas, identificação e preferências do seu painel.",
       ) +
-      `<section class="mc-install-panel"><div><strong>Instalar Painel Michelle</strong><p data-install-status>Suporte varia conforme o navegador. Seus dados permanecem neste navegador e não são sincronizados com outros dispositivos.</p><p id="mc-install-guide" hidden></p></div><button type="button" class="install-shortcut" data-mc-install>Instalar aplicativo</button></section><section class="mc-ai-import-help"><strong>✦ Aprendizado do Copiloto</strong><p>Os assuntos mais consultados são lembrados apenas neste navegador. As análises automáticas enviam ao DeepSeek somente totais, unidades e resumos calculados, sem as linhas originais.</p><label><input type="checkbox" data-ai-auto ${window.MCAI?.consent() ? "checked" : ""}> Sugerir insights via IA após novas importações</label> <button type="button" class="btn" data-ai-clear-memory>Limpar preferências do Copiloto</button> <button type="button" class="btn btn-primary" data-ai-check ${state.aiCheckBusy ? "disabled" : ""}>${state.aiCheckBusy ? "Verificando…" : "✦ Testar conexão DeepSeek"}</button>${state.aiCheckStatus ? `<p role="status" class="mc-ai-status">${esc(state.aiCheckStatus)}</p>` : ""}</section><div class="mc-analysis-notes"><strong>Memória de interpretação de planilhas</strong><p>Correções feitas nos campos e confirmadas ficam salvas por modelo de planilha, apenas neste navegador. Você pode apagá-las sem excluir suas importações.</p><button type="button" class="btn" data-mc-reset-mappings>Apagar correções salvas</button></div><div class="page-grid"><section class="card panel"><div class="panel-head"><div><h3 class="panel-title">Identidade do painel</h3><p class="panel-sub">Informações desta operação</p></div>${icon("settings", 19)}</div><div class="field appearance-field"><label for="appearance-select">Aparência do aplicativo</label><select id="appearance-select" class="control"><option value="light" ${appearance() === "light" ? "selected" : ""}>Claro · cinza e grafite</option><option value="dark" ${appearance() === "dark" ? "selected" : ""}>Escuro · grafite</option></select><p class="panel-sub">A preferência fica salva. Os temas dos slides são configurados no Estúdio.</p></div><div class="field"><label>Nome da operação</label><input class="control" id="operation" value="${esc(settings.operation)}" /></div><button class="btn btn-primary section-space" data-save="1">Salvar configurações</button><div class="info-box section-space"><strong>Seus dados operacionais</strong><p>Exporte as planilhas do sistema de origem e importe por Enviar Dados Excel. O painel preserva os arquivos originais e o histórico de atualização.</p></div></section><section class="card panel"><div class="panel-head"><div><h3 class="panel-title">Metas por departamento</h3><p class="panel-sub">Percentual de conclusão desejado</p></div>${icon("target", 18)}</div><div class="settings-list section-space">${sectors.map((s) => `<div class="settings-item"><div><strong>${s.name}</strong><small>Meta de conclusão (percentual)</small><div class="progress"><div style="width:${settings.goals?.[s.id] ?? 0}%"></div></div></div><div class="row" style="gap:4px"><input class="control" type="number" min="0" max="100" step="1" data-goal="${s.id}" value="${settings.goals?.[s.id] ?? ""}" placeholder="Sem meta"/><span>%</span></div></div>`).join("")}</div><button class="btn btn-primary section-space" data-save="1">${icon("check", 14)} Aplicar metas</button></section></div>`
+      `<section class="mc-install-panel"><div><strong>Instalar Painel Michelle</strong><p data-install-status>Suporte varia conforme o navegador. Seus dados permanecem neste navegador e não são sincronizados com outros dispositivos.</p><p id="mc-install-guide" hidden></p></div><button type="button" class="install-shortcut" data-mc-install>Instalar aplicativo</button></section><section class="mc-ai-import-help"><strong>✦ Aprendizado do Copiloto</strong><p>Os assuntos mais consultados são lembrados apenas neste navegador. As análises automáticas enviam ao DeepSeek totais, períodos, nomes de arquivos/abas, cabeçalhos e categorias agregadas. Linhas originais não são enviadas.</p><label><input type="checkbox" data-ai-auto ${window.MCAI?.consent() ? "checked" : ""}> Sugerir insights via IA após novas importações</label> <button type="button" class="btn" data-ai-clear-memory>Limpar preferências do Copiloto</button> <button type="button" class="btn btn-primary" data-ai-check ${state.aiCheckBusy ? "disabled" : ""}>${state.aiCheckBusy ? "Verificando…" : "✦ Testar conexão DeepSeek"}</button>${state.aiCheckStatus ? `<p role="status" class="mc-ai-status">${esc(state.aiCheckStatus)}</p>` : ""}</section><div class="mc-analysis-notes"><strong>Memória de interpretação de planilhas</strong><p>Correções feitas nos campos e confirmadas ficam salvas por modelo de planilha, apenas neste navegador. Você pode apagá-las sem excluir suas importações.</p><button type="button" class="btn" data-mc-reset-mappings>Apagar correções salvas</button></div><div class="page-grid"><section class="card panel"><div class="panel-head"><div><h3 class="panel-title">Identidade do painel</h3><p class="panel-sub">Informações desta operação</p></div>${icon("settings", 19)}</div><div class="field appearance-field"><label for="appearance-select">Aparência do aplicativo</label><select id="appearance-select" class="control"><option value="light" ${appearance() === "light" ? "selected" : ""}>Claro · cinza e grafite</option><option value="dark" ${appearance() === "dark" ? "selected" : ""}>Escuro · grafite</option></select><p class="panel-sub">A preferência fica salva. Os temas dos slides são configurados no Estúdio.</p></div><div class="field"><label>Nome da operação</label><input class="control" id="operation" value="${esc(settings.operation)}" /></div><button class="btn btn-primary section-space" data-save="1">Salvar configurações</button><div class="info-box section-space"><strong>Seus dados operacionais</strong><p>Exporte as planilhas do sistema de origem e importe por Enviar Dados Excel. O painel preserva os arquivos originais e o histórico de atualização.</p></div></section><section class="card panel"><div class="panel-head"><div><h3 class="panel-title">Metas por departamento</h3><p class="panel-sub">Percentual de conclusão desejado</p></div>${icon("target", 18)}</div><div class="settings-list section-space">${sectors.map((s) => `<div class="settings-item"><div><strong>${s.name}</strong><small>Meta de conclusão (percentual)</small><div class="progress"><div style="width:${settings.goals?.[s.id] ?? 0}%"></div></div></div><div class="row" style="gap:4px"><input class="control" type="number" min="0" max="100" step="1" data-goal="${s.id}" value="${settings.goals?.[s.id] ?? ""}" placeholder="Sem meta"/><span>%</span></div></div>`).join("")}</div><button class="btn btn-primary section-space" data-save="1">${icon("check", 14)} Aplicar metas</button></section></div>`
     );
   }
   function pageSectorDirectory() {
@@ -868,15 +869,17 @@
       return "Podemos conversar sobre isso. Nesta prévia, minhas respostas gerais seguem algumas regras locais e são limitadas. Uma integração com IA generativa permitirá acompanhar assuntos livres com mais profundidade.";
     return "Entendi sua mensagem. Este modo geral já permite trocar mensagens, mas ainda usa respostas locais limitadas. Para conversar livremente sobre qualquer assunto, a versão final precisará da IA generativa conectada. Você também pode usar o modo Análises para consultar os dados atuais da operação.";
   }
-  async function generateAIInsights({ silent = false } = {}) {
+  async function generateAIInsights({ silent = false, viewRows = null } = {}) {
     if (!window.MCAI || state.aiInsightBusy || !getAll().length) return;
     state.aiInsightBusy = true;
     if (!silent) render();
     try {
+      const active = viewRows || (state.page === "dashboard" && window.MichelleDashboard?.model ? window.MichelleDashboard.model().rows : recordsFor());
       const result = await window.MCAI.request("insights", {
-        context: window.MCAI.context(recordsFor(), imports, sectors)
+        context: window.MCAI.context(active, imports, sectors, {allRows:getAll()})
       });
       state.aiInsightText = result.answer || "";
+      state.aiInsightScope = state.page === "dashboard" ? "Filtros do dashboard" : "Recorte atual";
       if (silent && state.aiInsightText) notify("✦ O Copiloto preparou novos insights.");
     } catch (error) {
       if (!silent) notify(error.message, true);
@@ -922,7 +925,7 @@
     try {
       const reply = await window.MCAI.request("chat",{
         channel: mode, message: question, history,
-        context: mode === "dados" ? window.MCAI.context(recordsFor(),imports,sectors) : {}
+        context: mode === "dados" ? window.MCAI.context(state.page === "dashboard" && window.MichelleDashboard?.model ? window.MichelleDashboard.model().rows : recordsFor(),imports,sectors,{allRows:getAll(),question}) : {}
       });
       state.chatModes[mode].push({role:"bot",text:reply.answer});
       window.MCAI.rememberQuestion(question);
@@ -1115,6 +1118,7 @@
         { store: "files", value: { id: p.hash, name: p.name, bytes: p.bytes } },
       ]);
       imports = next.lots;
+      state.aiInsightText = "";
       if (p.userEdited || p.manualReview) window.MCPreferences?.confirm(p);
       p.status = "saved";
       p.lotId = lot.id;
@@ -1609,6 +1613,7 @@
   }
 
   function invalidate() {
+    state.aiInsightText = "";
     state.report = null;
     state.tablePage = 0;
   }
@@ -1883,6 +1888,9 @@
     getRecords: (sector, days, range) => recordsFor(sector, days, range),
     getSectors: () => sectors,
     getSettings: () => settings,
+    getAIInsight: () => ({ text: state.aiInsightText, scope: state.aiInsightScope, busy: state.aiInsightBusy }),
+    clearAIInsight: () => { state.aiInsightText = ""; },
+    generateAIInsights,
     render,
     navigate,
     icon,
