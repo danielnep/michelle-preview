@@ -8,7 +8,7 @@
   const mobile=()=>root.matchMedia ? root.matchMedia("(max-width: 700px)").matches : root.innerWidth<=700;
   const clamp=(n,min,max)=>Math.max(min,Math.min(n,Math.max(min,max)));
   function bubblePosition() {
-    const size=mobile()?50:56,margin=mobile()?12:20;
+    const size=mobile()?65:73,margin=mobile()?12:20;
     const maxX=Math.max(margin,root.innerWidth-size-margin);
     const maxY=Math.max(margin,root.innerHeight-size-margin);
     let x=Number.isFinite(cfg.x)?cfg.x:root.innerWidth-size-margin;
@@ -53,7 +53,7 @@
     } else {
       const w=mobile()?Math.min(root.innerWidth-24,430):Math.min(430,root.innerWidth-28);
       const h=Math.min(610,Math.max(200,root.innerHeight-120));
-      const x=cfg.windowX!=null&&!mobile()?cfg.windowX:(p.x>root.innerWidth/2?p.x-w+54:p.x);
+      const x=cfg.windowX!=null&&!mobile()?cfg.windowX:(p.x>root.innerWidth/2?p.x-w+p.size:p.x);
       const y=cfg.windowY!=null&&!mobile()?cfg.windowY:p.y-h-15;
       win.style.left=clamp(x,12,root.innerWidth-w-12)+"px";
       win.style.top=clamp(y,12,root.innerHeight-Math.min(h,root.innerHeight-30)-12)+"px";
@@ -70,8 +70,8 @@
     const limX=Math.max(edge,root.innerWidth-size-edge);
     const limY=Math.max(edge,root.innerHeight-size-edge);
     x=clamp(x,edge,limX);y=clamp(y,edge,limY);
-    if(x<70)x=edge;
-    if(x>root.innerWidth-size-70)x=limX;
+    if(x<size+24)x=edge;
+    if(x>root.innerWidth-size-(size+24))x=limX;
     if(y<70)y=edge;
     if(y>root.innerHeight-size-115)y=limY;
     return {x,y};
@@ -106,6 +106,7 @@
         dragging=false;
         if(!didMove)return;
         fab.dataset.mcSuppressClick="1";
+        setTimeout(()=>{fab.dataset.mcSuppressClick="0";},350);
         if(mobile()&&py>root.innerHeight-origin.size-96) {
           cfg.hidden=true;
           // A janela já aberta é fechada usando o botão público do assistente.
@@ -115,6 +116,12 @@
           cfg.windowX=null;cfg.windowY=null;
         }
         save(cfg);sync();
+        if(!cfg.hidden) {
+          fab.classList.remove("mc-ai-snapped");
+          void fab.offsetWidth;
+          fab.classList.add("mc-ai-snapped");
+          setTimeout(()=>fab.classList.remove("mc-ai-snapped"),450);
+        }
       };
       root.addEventListener("pointermove",move);root.addEventListener("pointerup",end);
       root.addEventListener("pointercancel",end);
