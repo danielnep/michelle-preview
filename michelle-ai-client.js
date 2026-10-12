@@ -8,11 +8,18 @@
   const save = data => { try { localStorage.setItem(SETTINGS, JSON.stringify(data)); } catch (_) {} };
   const consent = () => !!memory().automaticInsights;
   function setConsent(yes) { const m=memory();m.automaticInsights=!!yes;save(m); }
+  // O GitHub Pages hospeda apenas arquivos estáticos. A API permanece no
+  // backend seguro do Netlify, com a chave fora do repositório público.
+  const NETLIFY_API="https://powerbicompleto.netlify.app/api/michelle-ai";
+  function apiUrl() {
+    return root.location?.hostname==="danielnep.github.io"
+      ? NETLIFY_API : "/api/michelle-ai";
+  }
   async function request(mode, data={}) {
     const ctrl=new AbortController();
     const timer=setTimeout(()=>ctrl.abort(),27000);
     try {
-      const response=await fetch("/api/michelle-ai",{
+      const response=await fetch(apiUrl(),{
         method:"POST",signal:ctrl.signal,
         headers:{"Content-Type":"application/json"},
         body:JSON.stringify({mode,...data})
