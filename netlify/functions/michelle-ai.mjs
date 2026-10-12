@@ -16,6 +16,11 @@ function json(body, status=200) {
     headers: {"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store","X-Content-Type-Options":"nosniff"}
   });
 }
+function env(name) {
+  // Netlify disponibiliza os segredos no runtime, somente se o escopo incluir Functions.
+  const runtime = typeof Netlify === "undefined" ? null : Netlify;
+  return runtime?.env?.get?.(name) || process.env[name];
+}
 function safeText(v, n=1000) { return String(v ?? "").slice(0,n); }
 function cleanContext(c) {
   if (!c || typeof c !== "object" || Array.isArray(c)) return {};
@@ -24,18 +29,42 @@ function cleanContext(c) {
   return JSON.parse(raw);
 }
 export default async function handler(request) {
+  const key = env("DEEPSEEK_API_KEY");
+  // Esta rota não revela o segredo, apenas informa se a função pode encontrá-lo.
+  if (request.method === "GET") return json({
+    service:"Copiloto",
+    backend:"online",
+    keyConfigured:!!key,
+    note:key ? "Chave encontrada no ambiente da função." :
+      "Variável DEEPSEEK_API_KEY ausente no runtime. Confirme nome, escopo Functions e republicação."
+  });
   if (request.method !== "POST") return json({error:"Método não permitido."},405);
   const type = request.headers.get("content-type") || "";
   if (!type.includes("application/json")) return json({error:"Envie JSON."},415);
   if (Number(request.headers.get("content-length") || 0) > 48000) return json({error:"Solicitação muito grande."},413);
-  const key = process.env.DEEPSEEK_API_KEY;
-  if (!key) return json({error:"Configure DEEPSEEK_API_KEY nas variáveis do Netlify e publique novamente."},503);
+  if (!key) return json({error:"O Netlify não entregou a variável DEEPSEEK_API_KEY à função. Confira o nome exato e o escopo Functions, salve e republique."},503);
   // Autenticação opcional para ambiente privado. Recomendado em produção, especialmente com arquivos de clientes.
-  const access = process.env.MICHELLE_AI_ACCESS_TOKEN;
+  const access = env("MICHELLE_AI_ACCESS_TOKEN");
   if (access && request.headers.get("x-michelle-ai-token") !== access)
     return json({error:"Acesso à IA não autorizado."},401);
   try {
     const input = await request.json();
+    if (input?.mode === "diagnostic") {
+      // Verifica a autenticação da chave, sem enviar planilhas nem gerar tokens de conversa.
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 10000);
+      try {
+        const remote = await fetch("https://api.deepseek.com/models", {
+          method:"GET",
+          headers:{Authorization:"Bearer "+key},
+          signal:ctrl.signal
+        });
+        if (remote.status === 401) return json({error:"O DeepSeek recusou a chave (401). Confira se o valor da variável é a chave da API."},502);
+        if (remote.status === 403) return json({error:"A chave não tem permissão para consultar o DeepSeek (403)."},502);
+        if (!remote.ok) return json({error:"A função encontrou a chave, mas o DeepSeek retornou "+remote.status+"."},502);
+        return json({ok:true,message:"Chave encontrada e autenticação DeepSeek confirmada. Faça uma pergunta para verificar saldo e geração de respostas."});
+      } finally {clearTimeout(timer);}
+    }
     const mode = ["chat","insights","interpret"].includes(input?.mode) ? input.mode : "chat";
     const question = safeText(input?.message,1800).trim();
     if (mode === "chat" && !question) return json({error:"Mensagem vazia."},400);
@@ -64,11 +93,14 @@ export default async function handler(request) {
       response = await fetch("https://api.deepseek.com/chat/completions",{
         method:"POST",signal:ctrl.signal,
         headers:{"Authorization":"Bearer "+key,"Content-Type":"application/json"},
-        body:JSON.stringify({model:process.env.DEEPSEEK_MODEL || "deepseek-flash",thinking:{type:"disabled"},messages,temperature:0.35,max_tokens:mode==="interpret"?650:900,...(mode==="interpret"?{response_format:{type:"json_object"}}:{})})
+        body:JSON.stringify({model:env("DEEPSEEK_MODEL") || "deepseek-flash",thinking:{type:"disabled"},messages,temperature:0.35,max_tokens:mode==="interpret"?650:900,...(mode==="interpret"?{response_format:{type:"json_object"}}:{})})
       });
     } finally { clearTimeout(timeout); }
     if (!response.ok) {
       // Não repassar corpo remoto, que pode conter informações internas.
+      if (response.status === 400) return json({error:"O DeepSeek rejeitou a solicitação (400). Verifique o formato do pedido e as opções do modelo."},502);
+      if (response.status === 401) return json({error:"O DeepSeek recusou a chave (401). Confira DEEPSEEK_API_KEY no Netlify."},502);
+      if (response.status === 403) return json({error:"A API DeepSeek negou acesso à chave (403)."},502);
       if (response.status === 402) return json({error:"Saldo da API DeepSeek insuficiente."},502);
       if (response.status === 429) return json({error:"DeepSeek temporariamente limitado. Tente mais tarde."},429);
       return json({error:"O DeepSeek não respondeu corretamente ("+response.status+")."},502);
@@ -105,5 +137,5 @@ export default async function handler(request) {
 }
 export const config = {
   path:"/api/michelle-ai",
-  rateLimit:{windowLimit:6,windowSize:60,aggregateBy:["ip","domain"]}
+  rateLimit:{action:"rate_limit",windowLimit:6,windowSize:60,aggregateBy:["ip","domain"]}
 };
