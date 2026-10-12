@@ -115,8 +115,9 @@ test("função lê POWER_BI_MICHELLE_IA antes da variável antiga, sem expor val
    assert.equal((await answer.json()).ok,true);
    assert.equal(auth,"Bearer chave-michelle-teste");
    const check=await handler(new Request("https://example.netlify.app/api/michelle-ai"));
-   assert.equal((await check.json()).keyConfigured,true);
-   assert.ok(!(await check.text()).includes("chave-michelle-teste"));
+   const checkBody=await check.text();
+   assert.equal(JSON.parse(checkBody).keyConfigured,true);
+   assert.ok(!checkBody.includes("chave-michelle-teste"));
  } finally {
    global.fetch=previousFetch;
    if(previous===undefined)delete process.env.POWER_BI_MICHELLE_IA;else process.env.POWER_BI_MICHELLE_IA=previous;
