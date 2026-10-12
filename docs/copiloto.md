@@ -18,7 +18,7 @@ Seja proativa quando houver uma descoberta real, sem criar alertas decorativos. 
 
 ## 2. Instruções técnicas de atuação dentro do painel
 - **Arquitetura:** GitHub (código) → Netlify (site e Functions) → API DeepSeek (resposta).
-- **Chave:** `process.env.DEEPSEEK_API_KEY` somente na função `netlify/functions/michelle-ai.mjs`, jamais no HTML ou JavaScript público.
+- **Chave:** `Netlify.env.get("POWER_BI_MICHELLE_IA")` (com suporte ao nome anterior `DEEPSEEK_API_KEY`) somente na função `netlify/functions/michelle-ai.mjs`, jamais no HTML ou JavaScript público.
 - **Endpoint interno:** `POST /api/michelle-ai`. Modos de trabalho: `chat`, `insights`, `interpret`.
 - **Modelo inicial:** `deepseek-flash`. Opcional: variável `DEEPSEEK_MODEL` para substituir.
 - **Entrada analítica:** `MCAI.context()` manda totais, unidades, recortes, lista de fontes e evidências do motor local, não o arquivo bruto.
@@ -34,14 +34,14 @@ Seja proativa quando houver uma descoberta real, sem criar alertas decorativos. 
 
 ## 3. Instalação no Netlify (sem servidor separado)
 1. Conectar repositório `danielnep/michelle-preview` à plataforma Netlify.
-2. Criar variável de ambiente com **nome exato** `DEEPSEEK_API_KEY`, valor igual à chave da DeepSeek (não compartilhar nem commitar).
+2. Criar variável de ambiente com **nome exato** `POWER_BI_MICHELLE_IA`, valor igual à chave da DeepSeek (não compartilhar nem commitar).
 3. Publicar nova implantação do commit da versão principal. O Netlify faz deploy da função automaticamente em `netlify/functions`.
 4. Abrir site do Netlify e testar o modo "Conversa geral" com a pergunta "Olá, quem é você?". Abrir "Análises do painel" com dados de teste.
 5. Abrir importação de planilha sintética e clicar "Analisar identificação com IA" para obter e conferir uma proposta de mapeamento.
 6. Testar botões, histórico, arraste e barra lateral em desktop, bolinha e reativação em celular.
 7. Conferir logs da função no Netlify em caso de resposta 503 (chave ausente), 429 (limite) ou 502 (erro do serviço).
 
-**Atenção à configuração atual:** se a variável no seu Netlify se chama algo como `POWERBI_MICHELLE_IA` ou outro nome, o código **não** a encontrará automaticamente. Renomeie ou cadastre adicionalmente `DEEPSEEK_API_KEY` e faça novo deploy.
+**Configuração confirmada:** o código procura primeiro `POWER_BI_MICHELLE_IA`, nome já cadastrado no Netlify. `DEEPSEEK_API_KEY` permanece apenas como alternativa de compatibilidade. Não é necessário duplicar a chave. Confirme que o escopo inclui Functions e republique após alterações.
 
 ## 4. Limitações conscientemente preservadas
 O painel armazena planilhas no IndexedDB por navegador e origem. A migração de GitHub Pages para domínio Netlify **não** copia esses arquivos; utilize a exportação/restauração de backup.
