@@ -220,7 +220,7 @@
   function insights(m) {
     const ai=b.getAIInsight?.()||{};
     const smart='<section class="mc-ai-insight" aria-label="Análise complementar de inteligência artificial"><strong>✦ Copiloto · interpretação dos dados</strong>'+
-      (ai.text?'<p>'+esc(ai.text).replace(/\\n/g,"<br>")+'</p>':'<p>O painel já calculou os indicadores. Ative o Copiloto para destacar oportunidades e pontos de atenção além dos totais.</p>')+
+      (ai.text?'<p>'+esc(ai.text).replace(/\n/g,"<br>")+'</p>':'<p>O painel já calculou os indicadores. Ative o Copiloto para destacar oportunidades e pontos de atenção além dos totais.</p>')+
       '<button type="button" class="btn btn-primary" data-dash-ai-insights '+(ai.busy||!m.rows.length?"disabled":"")+'>'+(ai.busy?"Analisando…":ai.text?"Atualizar análise da IA":"✦ Analisar com IA")+'</button></section>';
     const cards = m.intelligence.cards, types = new Set(), featured = cards.filter(c => { if (types.has(c.type)) return false; types.add(c.type); return true; });
     const extra = cards.filter(c => !featured.includes(c));
