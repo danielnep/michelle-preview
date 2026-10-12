@@ -1,4 +1,4 @@
-/* Copilota Michelle: cliente sem segredo, agrega evidências calculadas localmente. */
+/* Copiloto: cliente sem segredo, agrega evidências calculadas localmente. */
 (function(root) {
   "use strict";
   const SETTINGS = "michelle.ai.behavior.v1";
@@ -105,7 +105,7 @@
     const latest=(root.MCAnalysis?.analyze(rows,imports)||[]).find(x=>["attention","comparison","concentration"].includes(x.kind));
     const top=Object.entries(memory().topics||{}).sort((a,b)=>b[1]-a[1])[0];
     if(!latest && !(top&&top[1]>=2))return "";
-    return '<section class="mc-ai-home" aria-label="Copilota Michelle"><div class="mc-ai-home-title"><span aria-hidden="true">✦</span><strong>Copilota Michelle</strong><span>Prioridades do painel</span></div>'+
+    return '<section class="mc-ai-home" aria-label="Copiloto"><div class="mc-ai-home-title"><span aria-hidden="true">✦</span><strong>Copiloto</strong><span>Prioridades do painel</span></div>'+
       (latest?'<p><b>'+esc(latest.title)+'</b> · '+esc(latest.text)+'</p><small>Conclusão calculada localmente; confira a fonte e os limites em Análises.</small>':"")+
       (top&&top[1]>=2?'<p>Você costuma acompanhar <b>'+esc(top[0])+'</b>. <button type="button" class="btn" data-ai-favorite="'+esc(top[0])+'">Abrir esse assunto</button></p>':"")+
       '</section>';
