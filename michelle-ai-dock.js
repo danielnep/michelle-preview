@@ -1,4 +1,4 @@
-/* Dock adaptativo da Copiloto. Sem alterações aos dados da operação. */
+/* Dock adaptativo do Copiloto. Sem alterações aos dados da operação. */
 (function(root) {
   "use strict";
   const KEY="michelle.ai.dock.v1";
@@ -20,8 +20,8 @@
     if(!el) {
       el=document.createElement("button");
       el.id="mc-ai-return";el.type="button";el.className="mc-ai-return";
-      el.textContent="✦";el.title="Reativar a Copiloto";
-      el.setAttribute("aria-label","Reativar o chat da Copiloto");
+      el.textContent="✦";el.title="Reativar o Copiloto";
+      el.setAttribute("aria-label","Reativar o chat do Copiloto");
       el.onclick=()=>{cfg.hidden=false;save(cfg);sync();};
       document.body.appendChild(el);
     }
