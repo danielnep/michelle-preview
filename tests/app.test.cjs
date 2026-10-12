@@ -506,7 +506,7 @@ test("fluxo integrado: Excel → relatório/exportação → slides → edição
   const content = w.document.querySelector(".content");
   assert.match(
     content.querySelector(".overview-head").nextElementSibling.textContent,
-    /Insights operacionais/,
+    /O que os dados mostram/,
   );
   let saved;
   w.XLSX.writeFile = (wb) => {
