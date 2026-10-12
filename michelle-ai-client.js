@@ -47,9 +47,9 @@
         v.rows++;v.quantity+=weighted?(Number.isFinite(Number(r.value))?Number(r.value):0):1;
         if(r.date){v.dated++;if(/^\d{4}-\d{2}-\d{2}$/.test(r.date))add(byMonth,type+" · "+r.date.slice(0,7),weighted?(Number(r.value)||0):1);}
         if(Number.isFinite(r.duration)){v.timed++;v.totalMinutes+=r.duration;}
-        if(r.status==="Concluído"){v.done++;v.knownStatus++;}
+        if(r.status==="Concluído")v.done++;
         if(["Pendente","Em andamento"].includes(r.status))v.pending++;
-        if(["Cancelado","Não atendido"].includes(r.status))v.knownStatus++;
+        if(["Concluído","Pendente","Em andamento","Cancelado","Não atendido"].includes(r.status))v.knownStatus++;
         add(bySector,names.get(r.sector)||r.sector||"Não identificado");
         add(byStatus,r.status||"Não informado");
         for(const [field,map] of Object.entries(dimensions)){
