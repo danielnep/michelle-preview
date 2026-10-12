@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const base=path.join(__dirname,"..");
-test("a página carrega a copilota e mantém scripts antes do app",()=>{
+test("a página carrega o Copiloto e mantém scripts antes do app",()=>{
  const html=fs.readFileSync(path.join(base,"index.html"),"utf8");
  assert.ok(html.includes("michelle-ai-client.js"));
  assert.ok(html.includes("michelle-ai-dock.js"));
@@ -50,4 +50,41 @@ test("função chama o DeepSeek em servidor e interpreta sem inventar campos",as
    global.fetch=oldFetch;
    if(oldSecret===undefined)delete process.env.DEEPSEEK_API_KEY;else process.env.DEEPSEEK_API_KEY=oldSecret;
  }
+});
+
+test("diagnóstico informa variável disponível e autentica com o DeepSeek sem vazar chave", async()=>{
+ const {default:handler}=await import("../netlify/functions/michelle-ai.mjs");
+ const prior=process.env.DEEPSEEK_API_KEY, fetch0=global.fetch;
+ process.env.DEEPSEEK_API_KEY="chave-teste-nao-publicar";
+ let calls=0;
+ global.fetch=async (url,options)=>{
+   assert.equal(url,"https://api.deepseek.com/models");
+   assert.equal(options.headers.Authorization,"Bearer chave-teste-nao-publicar");
+   calls++;
+   return new Response(JSON.stringify({data:[{id:"deepseek-flash"}]}),{status:200});
+ };
+ try{
+   const publicStatus=await handler(new Request("https://example.test/api/michelle-ai",{method:"GET"}));
+   assert.equal(publicStatus.status,200);
+   const status=await publicStatus.json();
+   assert.equal(status.keyConfigured,true);
+   assert.ok(!JSON.stringify(status).includes("chave-teste-nao-publicar"));
+   const diag=await handler(new Request("https://example.test/api/michelle-ai",{
+     method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({mode:"diagnostic"})
+   }));
+   assert.equal(diag.status,200);
+   assert.equal((await diag.json()).ok,true);
+   assert.equal(calls,1);
+ } finally {
+   global.fetch=fetch0;
+   if(prior===undefined)delete process.env.DEEPSEEK_API_KEY; else process.env.DEEPSEEK_API_KEY=prior;
+ }
+});
+test("os tamanhos da bolinha do Copiloto cresceram 30%",()=>{
+ const css=fs.readFileSync(path.join(base,"michelle-ai-dock.css"),"utf8");
+ const js=fs.readFileSync(path.join(base,"michelle-ai-dock.js"),"utf8");
+ assert.match(css,/width:73px;height:73px;min-height:73px/);
+ assert.match(css,/width:65px!important;height:65px!important;min-height:65px!important/);
+ assert.match(css,/width:26px!important;height:26px!important/);
+ assert.match(js,/const size=mobile\(\)\?65:73/);
 });
