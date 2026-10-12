@@ -13,10 +13,13 @@ MATEMÁTICA: faça as contas internamente e mostre O RESULTADO pronto, com unida
 DADOS SINCRONIZADOS: o contexto é produzido pelo mesmo motor de cálculos do dashboard e pelo mesmo catálogo de arquivos ativos. Use selectedData para o recorte atual, allData para o histórico completo e files para localizar a origem exata (arquivo, aba, colunas). calculatedFindings e calculatedInsights são evidências locais, NÃO são a sua resposta final. Acrescente interpretação gerencial: destaque o fato relevante, sua dimensão, limite e uma ação prática quando cabível. Não repita os textos calculados como um bloco engessado. Se o contexto contém apenas agregações e não a informação exata pedida, esclareça o limite; jamais finja ter lido uma linha não enviada.
 RASTREABILIDADE: associe números a tipo, período e unidade. Quando houver múltiplas fontes, identifique o arquivo e a aba pertinentes sem confundir proveniência de planilha com explicação de como o número foi calculado. Cite fonte brevemente quando ajudar; não encha de fórmulas. Não exiba dados pessoais desnecessários.`;
 
-function json(body, status=200) {
+// O frontend no GitHub Pages usa esta função de outra origem.
+const ALLOWED_ORIGINS=new Set(["https://danielnep.github.io","https://powerbicompleto.netlify.app"]);
+function json(body, status=200, extraHeaders={}) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: {"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store","X-Content-Type-Options":"nosniff"}
+    headers: {"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store",
+      "X-Content-Type-Options":"nosniff",...extraHeaders}
   });
 }
 function env(name) {
@@ -32,25 +35,38 @@ function cleanContext(c) {
   return JSON.parse(raw);
 }
 export default async function handler(request) {
+  const origin=request.headers.get("origin");
+  const allowed=!origin||ALLOWED_ORIGINS.has(origin);
+  const headers={"Vary":"Origin",...(origin&&allowed?{
+    "Access-Control-Allow-Origin":origin,
+    "Access-Control-Allow-Methods":"GET, POST, OPTIONS",
+    "Access-Control-Allow-Headers":"Content-Type"
+  }:{})};
+  const reply=(body,status=200)=>json(body,status,headers);
+  // CORS habilita o GitHub Pages sem tornar a chave pública.
+  // CORS não é autenticação: limites de taxa e eventual login continuam no servidor.
+  if(!allowed)return reply({error:"Origem não autorizada."},403);
+  if(request.method==="OPTIONS")return new Response(null,{status:204,headers:{
+    ...headers,"Access-Control-Max-Age":"600"}});
   // Mantém o nome já cadastrado pelo usuário no Netlify. O nome antigo segue aceito.
   const key = env("POWER_BI_MICHELLE_IA") || env("DEEPSEEK_API_KEY");
   // Esta rota não revela o segredo, apenas informa se a função pode encontrá-lo.
-  if (request.method === "GET") return json({
+  if (request.method === "GET") return reply({
     service:"Copiloto",
     backend:"online",
     keyConfigured:!!key,
     note:key ? "Chave encontrada no ambiente da função." :
       "Variável POWER_BI_MICHELLE_IA ausente no runtime. Confira nome, escopo Functions e republicação."
   });
-  if (request.method !== "POST") return json({error:"Método não permitido."},405);
+  if (request.method !== "POST") return reply({error:"Método não permitido."},405);
   const type = request.headers.get("content-type") || "";
-  if (!type.includes("application/json")) return json({error:"Envie JSON."},415);
-  if (Number(request.headers.get("content-length") || 0) > 48000) return json({error:"Solicitação muito grande."},413);
-  if (!key) return json({error:"O Netlify não entregou POWER_BI_MICHELLE_IA à função. Confira escopo Functions e publique novamente."},503);
+  if (!type.includes("application/json")) return reply({error:"Envie JSON."},415);
+  if (Number(request.headers.get("content-length") || 0) > 48000) return reply({error:"Solicitação muito grande."},413);
+  if (!key) return reply({error:"O Netlify não entregou POWER_BI_MICHELLE_IA à função. Confira escopo Functions e publique novamente."},503);
   // Autenticação opcional para ambiente privado. Recomendado em produção, especialmente com arquivos de clientes.
   const access = env("MICHELLE_AI_ACCESS_TOKEN");
   if (access && request.headers.get("x-michelle-ai-token") !== access)
-    return json({error:"Acesso à IA não autorizado."},401);
+    return reply({error:"Acesso à IA não autorizado."},401);
   try {
     const input = await request.json();
     if (input?.mode === "diagnostic") {
@@ -63,15 +79,15 @@ export default async function handler(request) {
           headers:{Authorization:"Bearer "+key},
           signal:ctrl.signal
         });
-        if (remote.status === 401) return json({error:"O DeepSeek recusou a chave (401). Confira se o valor da variável é a chave da API."},502);
-        if (remote.status === 403) return json({error:"A chave não tem permissão para consultar o DeepSeek (403)."},502);
-        if (!remote.ok) return json({error:"A função encontrou a chave, mas o DeepSeek retornou "+remote.status+"."},502);
-        return json({ok:true,message:"Chave encontrada e autenticação DeepSeek confirmada. Faça uma pergunta para verificar saldo e geração de respostas."});
+        if (remote.status === 401) return reply({error:"O DeepSeek recusou a chave (401). Confira se o valor da variável é a chave da API."},502);
+        if (remote.status === 403) return reply({error:"A chave não tem permissão para consultar o DeepSeek (403)."},502);
+        if (!remote.ok) return reply({error:"A função encontrou a chave, mas o DeepSeek retornou "+remote.status+"."},502);
+        return reply({ok:true,message:"Chave encontrada e autenticação DeepSeek confirmada. Faça uma pergunta para verificar saldo e geração de respostas."});
       } finally {clearTimeout(timer);}
     }
     const mode = ["chat","insights","interpret"].includes(input?.mode) ? input.mode : "chat";
     const question = safeText(input?.message,1800).trim();
-    if (mode === "chat" && !question) return json({error:"Mensagem vazia."},400);
+    if (mode === "chat" && !question) return reply({error:"Mensagem vazia."},400);
     const context = cleanContext(input?.context);
     const isGeneral = input?.channel === "geral";
     let task = "";
@@ -102,19 +118,19 @@ export default async function handler(request) {
     } finally { clearTimeout(timeout); }
     if (!response.ok) {
       // Não repassar corpo remoto, que pode conter informações internas.
-      if (response.status === 400) return json({error:"O DeepSeek rejeitou a solicitação (400). Verifique o formato do pedido e as opções do modelo."},502);
-      if (response.status === 401) return json({error:"O DeepSeek recusou a chave (401). Confira POWER_BI_MICHELLE_IA no Netlify."},502);
-      if (response.status === 403) return json({error:"A API DeepSeek negou acesso à chave (403)."},502);
-      if (response.status === 402) return json({error:"Saldo da API DeepSeek insuficiente."},502);
-      if (response.status === 429) return json({error:"DeepSeek temporariamente limitado. Tente mais tarde."},429);
-      return json({error:"O DeepSeek não respondeu corretamente ("+response.status+")."},502);
+      if (response.status === 400) return reply({error:"O DeepSeek rejeitou a solicitação (400). Verifique o formato do pedido e as opções do modelo."},502);
+      if (response.status === 401) return reply({error:"O DeepSeek recusou a chave (401). Confira POWER_BI_MICHELLE_IA no Netlify."},502);
+      if (response.status === 403) return reply({error:"A API DeepSeek negou acesso à chave (403)."},502);
+      if (response.status === 402) return reply({error:"Saldo da API DeepSeek insuficiente."},502);
+      if (response.status === 429) return reply({error:"DeepSeek temporariamente limitado. Tente mais tarde."},429);
+      return reply({error:"O DeepSeek não respondeu corretamente ("+response.status+")."},502);
     }
     const out = await response.json();
     const answer = safeText(out?.choices?.[0]?.message?.content,8500).trim();
-    if (!answer) return json({error:"A IA retornou uma resposta vazia."},502);
+    if (!answer) return reply({error:"A IA retornou uma resposta vazia."},502);
     if (mode === "interpret") {
       let parsed;
-      try { parsed = JSON.parse(answer); } catch (_) { return json({error:"A IA não retornou uma interpretação válida."},502); }
+      try { parsed = JSON.parse(answer); } catch (_) { return reply({error:"A IA não retornou uma interpretação válida."},502); }
       const allowedTypes = ["geral","ligacoes","ordens","deslocamentos","cuc","indicadores"];
       const allowedSectors = ["coi","fac","rh","com","tec","imp","qua","port"];
       const cols = Array.isArray(context.headers)?context.headers.length:0;
@@ -124,7 +140,7 @@ export default async function handler(request) {
         for(const [k,v] of Object.entries(parsed.mapping))
           if(allowedFields.includes(k) && Number.isInteger(v) && v>=0 && v<cols) mapping[k]=v;
       }
-      return json({mode,interpretation:{
+      return reply({mode,interpretation:{
         type:allowedTypes.includes(parsed.type)?parsed.type:"geral",
         sector:allowedSectors.includes(parsed.sector)?parsed.sector:"coi",
         headerRow:Number.isInteger(parsed.headerRow)&&parsed.headerRow>=0&&parsed.headerRow<30?parsed.headerRow:0,
@@ -132,11 +148,11 @@ export default async function handler(request) {
         reason:safeText(parsed.reason,900),warnings:Array.isArray(parsed.warnings)?parsed.warnings.slice(0,5).map(x=>safeText(x,200)):[]
       }});
     }
-    return json({mode,answer,usage:out?.usage?{total_tokens:out.usage.total_tokens}:null});
+    return reply({mode,answer,usage:out?.usage?{total_tokens:out.usage.total_tokens}:null});
   } catch (e) {
-    if (e?.name==="AbortError") return json({error:"Tempo limite da IA atingido. Tente novamente."},504);
-    if (e instanceof SyntaxError) return json({error:"Dados inválidos."},400);
-    return json({error:e?.message==="Contexto muito extenso para a análise."?e.message:"Falha ao consultar a IA. Tente novamente."},500);
+    if (e?.name==="AbortError") return reply({error:"Tempo limite da IA atingido. Tente novamente."},504);
+    if (e instanceof SyntaxError) return reply({error:"Dados inválidos."},400);
+    return reply({error:e?.message==="Contexto muito extenso para a análise."?e.message:"Falha ao consultar a IA. Tente novamente."},500);
   }
 }
 export const config = {
