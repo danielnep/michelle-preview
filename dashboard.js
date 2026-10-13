@@ -233,7 +233,8 @@
   }
   function reading(m) {
     if (!m.rows.length) return empty("Sem planilhas neste recorte", "Importe uma fonte para ver seu significado e a cobertura das colunas.");
-    return `<p class="dash-note">O setor é o destino escolhido na importação. Não é deduzido como departamento de origem da planilha. Campos vazios são preservados.</p><div class="dash-readings">${m.intelligence.profiles.map(p => `<details><summary>${esc(p.label)} · ${num(p.total)} ${esc(p.unit)}</summary><p>${esc(p.meaning)}</p><p><b>Arquivos neste grupo:</b> ${esc([...new Set(m.rows.filter(r => r.type === p.type).map(r => r.source).filter(Boolean))].join("; ") || "Fonte não informada")}</p><p>${num(p.rows)} linhas · ${num(p.dated)} com data individual · ${num(p.timed)} com duração.</p><p class="dash-note">${esc(p.limit)}</p>${p.fields.length ? `<div class="dash-table-scroll"><table><thead><tr><th>Coluna original</th><th>Preenchimento no recorte</th><th>Uso no painel</th></tr></thead><tbody>${p.fields.map(f => `<tr><td>${esc(f.name)}</td><td>${num(f.populated)} / ${num(p.rows)}</td><td class="dash-purpose">${esc(f.purpose)}</td></tr>`).join("")}</tbody></table></div>` : '<p class="dash-note">Esta importação não possui colunas originais para detalhar.</p>'}</details>`).join("")}</div>`;
+    const individual = window.MCSourceAgent?.render(m.rows,b.getImports(),esc) || "";
+    return individual+`<p class="dash-note">O setor é o destino escolhido na importação. Não é deduzido como departamento de origem da planilha. Campos vazios são preservados.</p><div class="dash-readings">${m.intelligence.profiles.map(p => `<details><summary>${esc(p.label)} · ${num(p.total)} ${esc(p.unit)}</summary><p>${esc(p.meaning)}</p><p><b>Arquivos neste grupo:</b> ${esc([...new Set(m.rows.filter(r => r.type === p.type).map(r => r.source).filter(Boolean))].join("; ") || "Fonte não informada")}</p><p>${num(p.rows)} linhas · ${num(p.dated)} com data individual · ${num(p.timed)} com duração.</p><p class="dash-note">${esc(p.limit)}</p>${p.fields.length ? `<div class="dash-table-scroll"><table><thead><tr><th>Coluna original</th><th>Preenchimento no recorte</th><th>Uso no painel</th></tr></thead><tbody>${p.fields.map(f => `<tr><td>${esc(f.name)}</td><td>${num(f.populated)} / ${num(p.rows)}</td><td class="dash-purpose">${esc(f.purpose)}</td></tr>`).join("")}</tbody></table></div>` : '<p class="dash-note">Esta importação não possui colunas originais para detalhar.</p>'}</details>`).join("")}</div>`;
   }
   function crossings(m) {
     const c = m.intelligence.cross;
@@ -403,6 +404,14 @@
     else if (state.editor) { state.editor = false; b.render(); }
   });
   document.addEventListener("fullscreenchange", () => { if (state.native && !document.fullscreenElement) collapse(); });
+  window.addEventListener("mc:source-plan-apply", event => {
+    const allowed=new Set(Object.keys(blocks));
+    const chosen=Array.isArray(event.detail?.order)?event.detail.order.filter(id=>allowed.has(id)):[];
+    if(!chosen.length)return;
+    const order=[...new Set([...chosen,...config.order.filter(id=>allowed.has(id))])];
+    update({order});
+    b.notify("Organização do dashboard atualizada. Dados e cálculos não foram alterados.");
+  });
   window.MichelleDashboard = { page, wire, model, expand, collapse, openSector(sector) { config = { ...config, sector, type: "all", status: "all", period: "all", start: "", end: "", query: "", member: null, accountKey: null, reportView: "local" }; b.getState().query = ""; persist(); b.navigate("dashboard"); }, getConfig: () => structuredClone(config), getState: () => ({ ...state }) };
   b.render();
 })();
