@@ -521,12 +521,13 @@
   function uploadBox() {
     const visibleImports = imports.filter(l => !l.deleted);
     const queued = state.uploadQueue.filter((p) => !p.lotId);
+    const chosen = queued.filter(p => p.grid && p.selected !== false);
     const statuses = {
       reading: "Lendo arquivo",
       ready: "Pronto para importar",
       error: "Precisa de atenção",
     };
-    return `<div class="dropzone" id="dropzone"><div class="upload-prompt"><div class="drop-symbol">${icon("up", 25)}</div><h3>Suas planilhas, em um só lugar</h3><p>Arraste arquivos aqui ou selecione no seu dispositivo.</p><p class="upload-formats">XLSX, XLS ou CSV · até 50 MB por arquivo</p><label for="file-upload" class="btn btn-primary">${icon("plus", 18)} Selecionar arquivos</label><input class="file-input" type="file" id="file-upload" accept=".csv,.xlsx,.xls" multiple ${state.ready && !state.readingFiles && !state.importBusy ? "" : "disabled"}></div><div class="upload-file-list" aria-live="polite"><div class="upload-list-heading"><strong>Arquivos selecionados e importados</strong><span>${queued.length + visibleImports.length}</span></div>${queued.map((p) => `<article class="upload-file ${p.status === "error" ? "has-error" : ""} ${state.pending === p ? "is-selected" : ""}"><span class="upload-file-icon">${icon("files", 20)}</span><div class="upload-file-info"><strong>${esc(p.name)}</strong><small>${esc(statuses[p.status] || p.status)}${p.grid ? ` · ${esc(idSector(p.sector)?.name)} · ${esc(D.types[p.type])}` : ""}</small>${p.error ? `<p class="upload-file-error">${esc(p.error)}</p>` : ""}<div class="upload-file-actions">${p.grid ? `<button class="btn" data-configure-file="${p.queueId}">Conferir dados</button>` : ""}${p.status !== "reading" ? `<button class="btn btn-quiet" data-remove-queued="${p.queueId}">Remover da seleção</button>` : ""}</div></div></article>`).join("")}${[
+    return `<div class="dropzone" id="dropzone"><div class="upload-prompt"><div class="drop-symbol">${icon("up", 25)}</div><h3>Suas planilhas, em um só lugar</h3><p>Arraste arquivos aqui ou selecione no seu dispositivo.</p><p class="upload-formats">XLSX, XLS ou CSV · até 50 MB por arquivo</p><label for="file-upload" class="btn btn-primary">${icon("plus", 18)} Selecionar arquivos</label><input class="file-input" type="file" id="file-upload" accept=".csv,.xlsx,.xls" multiple ${state.ready && !state.readingFiles && !state.importBusy ? "" : "disabled"}></div><div class="upload-file-list" aria-live="polite"><div class="upload-list-heading"><strong>Arquivos selecionados e importados</strong><span>${queued.length + visibleImports.length}</span></div>${queued.map((p) => `<article class="upload-file ${p.status === "error" ? "has-error" : ""} ${state.pending === p ? "is-selected" : ""}"><span class="upload-file-icon">${icon("files", 20)}</span><div class="upload-file-info"><strong>${esc(p.name)}</strong><small>${esc(statuses[p.status] || p.status)}${p.grid ? ` · aba ${esc(p.sheet)} · ${esc(idSector(p.sector)?.name)} · ${esc(D.types[p.type])}` : ""}</small>${p.error ? `<p class="upload-file-error">${esc(p.error)}</p>` : ""}${p.grid && p.autoSheet ? `<label class="mc-sheet-choice"><input type="checkbox" data-include-sheet="${esc(p.queueId)}" ${p.selected !== false ? "checked" : ""} ${state.importBusy ? "disabled" : ""}> Incluir aba ${esc(p.sheet)}${p.summarySheet ? " · possível resumo, revisar duplicidade" : ""}</label>` : ""}<div class="upload-file-actions">${p.grid ? `<button class="btn" data-configure-file="${p.queueId}">Conferir dados</button>` : ""}${p.status !== "reading" ? `<button class="btn btn-quiet" data-remove-queued="${p.queueId}">Remover da seleção</button>` : ""}</div></div></article>`).join("")}${[
       ...visibleImports,
     ]
       .reverse()
@@ -536,7 +537,7 @@
       )
       .join(
         "",
-      )}${queued.length || visibleImports.length ? "" : '<p class="upload-empty">Os arquivos aparecerão aqui e continuarão disponíveis depois da importação.</p>'}</div>${queued.length ? `<button class="btn btn-primary upload-confirm" data-open-import ${state.importBusy || state.readingFiles || !queued.some((p) => p.grid) ? "disabled" : ""}>${icon("up", 18)} ${state.readingFiles ? "Lendo arquivos…" : state.importBusy ? "Importando…" : `Conferir e confirmar (${queued.filter((p) => p.grid).length})`}</button><p class="upload-hint">O sistema identifica arquivo, aba e colunas automaticamente. Confira a interpretação na janela antes de confirmar.</p>` : ""}</div>`;
+      )}${queued.length || visibleImports.length ? "" : '<p class="upload-empty">Os arquivos aparecerão aqui e continuarão disponíveis depois da importação.</p>'}</div>${queued.length ? `<button class="btn btn-primary upload-confirm" data-open-import ${state.importBusy || state.readingFiles || !chosen.length ? "disabled" : ""}>${icon("up", 18)} ${state.readingFiles ? "Lendo arquivos…" : state.importBusy ? "Importando…" : `Conferir e confirmar (${chosen.length} abas)`}</button><p class="upload-hint">Cada aba é uma fonte independente. Abas de resumo ficam desmarcadas quando há detalhamento; confira antes de incluir.</p>` : ""}</div>`;
   }
   function deletedFiles() {
     const deleted = imports.filter(l => l.deleted);
@@ -556,8 +557,9 @@
   function importReview() {
     if (!state.importReviewOpen) return "";
     const files = state.uploadQueue.filter(p => !p.lotId), p = state.pending;
+    const activeFiles = files.filter(f => f.grid && f.selected !== false);
     if (!files.length) return "";
-    return `<dialog id="import-review" class="import-review" aria-labelledby="import-review-title"><header><div><span class="eyebrow">PLANILHAS</span><h2 id="import-review-title">Importar e ler</h2><p>Leitura automática. Confira e confirme para anexar os arquivos.</p></div><button class="btn" data-close-import>Fechar</button></header><div class="import-review-body"><div class="import-review-files">${files.map(f => `<button class="btn ${p === f ? "active" : ""}" data-configure-file="${f.queueId}" ${f.grid ? "" : "disabled"}>${esc(f.name)} · ${f.status === "reading" ? "Lendo…" : f.status === "error" ? "Conferir" : "Lido"}</button>`).join("")}</div>${p?.grid ? importWizard(p) : '<p>Lendo os arquivos selecionados…</p>'}${files.filter(f => f.error).map(f => `<p class="import-file-error">${esc(f.name)}: ${esc(f.error)}</p>`).join("")}</div><footer><button class="btn" data-close-import>Voltar</button>${files.filter(f => f.grid).length > 1 ? `<button class="btn btn-primary" data-import-queue ${state.importBusy ? "disabled" : ""}>Confirmar ${files.filter(f => f.grid).length} arquivos lidos</button>` : `<button class="btn btn-primary" data-confirm-import ${p?.grid && validatePending(p).rows.length && (!p.detectInfo?.conflict || p.manualReview) && !state.importBusy ? "" : "disabled"}>Confirmar importação</button>`}</footer></dialog>`;
+    return `<dialog id="import-review" class="import-review" aria-labelledby="import-review-title"><header><div><span class="eyebrow">PLANILHAS</span><h2 id="import-review-title">Importar e ler</h2><p>Leitura automática. Confira e confirme para anexar os arquivos.</p></div><button class="btn" data-close-import>Fechar</button></header><div class="import-review-body"><div class="import-review-files">${files.map(f => `<button class="btn ${p === f ? "active" : ""}" data-configure-file="${f.queueId}" ${f.grid ? "" : "disabled"}>${esc(f.name)} · ${esc(f.sheet || "Arquivo")} · ${f.selected === false ? "Fora da importação" : f.status === "reading" ? "Lendo…" : f.status === "error" ? "Conferir" : "Lido"}</button>`).join("")}</div>${p?.grid ? importWizard(p) : '<p>Lendo os arquivos selecionados…</p>'}${files.filter(f => f.error).map(f => `<p class="import-file-error">${esc(f.name)}: ${esc(f.error)}</p>`).join("")}</div><footer><button class="btn" data-close-import>Voltar</button>${activeFiles.length > 1 ? `<button class="btn btn-primary" data-import-queue ${state.importBusy ? "disabled" : ""}>Confirmar ${activeFiles.length} abas selecionadas</button>` : `<button class="btn btn-primary" data-confirm-import ${p?.grid && p.selected !== false && validatePending(p).rows.length && (!p.detectInfo?.conflict || p.manualReview) && !state.importBusy ? "" : "disabled"}>Confirmar importação</button>`}</footer></dialog>`;
   }
   function importWizard(p) {
     const r = validatePending(p), dates = r.rows.map(x => x.date).filter(Boolean).sort();
@@ -572,7 +574,7 @@
     const assessment = window.MCAnalysis?.quality(r.rows, { type: p.type });
     const qualityNotes = assessment?.issues?.length ? '<div class="mc-analysis-notes"><strong>Conferência automática de qualidade</strong><ul>' + assessment.issues.map(x => '<li>' + esc(x.text) + '</li>').join("") + '</ul></div>' : "";
     const conflictNotes = detection.conflict ? '<div class="mc-analysis-notes"><strong class="warning">Identificação conflitante</strong><p>' + esc(detection.reason) + '</p><label><input type="checkbox" data-mc-review ' + (p.manualReview ? "checked" : "") + '> Conferi o tipo e as colunas desta planilha.</label></div>' : "";
-    return `<div class="import-reading-summary"><h3>${esc(p.name)}</h3><div class="import-summary-grid"><span><small>Fonte identificada</small><b>${esc(D.types[p.type])}</b></span><span><small>Registros lidos</small><b>${fmtNum(r.rows.length)}</b></span><span><small>Datas da planilha</small><b>${dates.length ? `${fmtDate(dates[0])} a ${fmtDate(dates.at(-1))}` : "Sem data na planilha"}</b></span><span><small>Destino sugerido</small><b>${esc(idSector(p.sector)?.name || p.sector)}</b></span></div><div class="import-detection"><strong>${icon("check", 16)} Identificação: ${esc(detection.confidence || "Conferir")}</strong><p>${esc(detection.reason || "")}</p><p><b>Arquivo:</b> ${esc(p.name)} · <b>Aba:</b> ${esc(p.sheet)}</p></div>${qualityNotes}${conflictNotes}${p.savedPreferenceUsed ? '<p class="panel-sub">Mapeamento revisado anteriormente e recuperado neste navegador. Confira antes de confirmar.</p>' : ""}<div class="mc-ai-import-help"><strong>✦ Decifrar com o Copiloto</strong><p>Envie apenas nome do arquivo, aba, nomes e formatos das colunas para obter uma sugestão. Nenhuma linha original é enviada. Confira a identificação antes de importar.</p><button type="button" class="btn" data-ai-interpret ${p.aiInterpretBusy ? "disabled" : ""}>${p.aiInterpretBusy ? "Analisando…" : "Analisar identificação com IA"}</button>${p.aiProposal ? `<p><b>IA sugere:</b> ${esc(D.types[p.aiProposal.type]||p.aiProposal.type)} · ${esc(idSector(p.aiProposal.sector)?.name||p.aiProposal.sector)} · ${esc(p.aiProposal.confidence)}.</p><p>${esc(p.aiProposal.reason)}</p><button type="button" class="btn btn-primary" data-ai-apply-interpret>Aplicar sugestão (revisar)</button>` : ""}</div><div class="import-column-tags"><strong>Colunas reconhecidas</strong><div>${mapped.length ? mapped.slice(0, 8).map(x => `<span title="${esc(I?.fieldPurpose(p.type, x.name) || x.role)}"><b>${esc(x.name)}</b> → ${esc(x.role)}</span>`).join("") : "<span>Nenhuma coluna associada com segurança; use Ajustes opcionais.</span>"}</div></div><p class="panel-sub">${dates.length ? "Datas e horários originais foram preservados." : "Este arquivo pode ser importado sem definir datas. Os totais continuam disponíveis em Todo o histórico."}</p><p class="panel-sub">Aba: ${esc(p.sheet)} · ${r.errors.length} linhas inválidas · ${r.skipped.length} totais/resumos excluídos.</p><details class="import-reading"><summary>Ver a interpretação da planilha</summary><p>${esc(window.MCIntelligence?.semantics[p.type]?.meaning || "Confira as colunas reconhecidas.")}</p><p class="panel-sub">${esc(window.MCIntelligence?.semantics[p.type]?.limit || "")}</p><p class="panel-sub">Apenas esta aba será anexada. Abas de resumo não são somadas à base detalhada.</p></details><div class="table-wrap import-raw-preview"><table class="tbl"><thead><tr>${fields.map(h => `<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${r.rows.slice(0, 5).map(x => `<tr>${fields.map(h => `<td>${esc(x.raw[String(h)] ?? "")}</td>`).join("")}</tr>`).join("")}</tbody></table></div><details class="import-advanced" ${state.importAdvancedOpen ? "open" : ""}><summary>Ajustes opcionais e conferência de colunas</summary>${importAdvanced(p)}</details></div>`;
+    return `<div class="import-reading-summary"><h3>${esc(p.name)}</h3><div class="import-summary-grid"><span><small>Fonte identificada</small><b>${esc(D.types[p.type])}</b></span><span><small>Registros lidos</small><b>${fmtNum(r.rows.length)}</b></span><span><small>Datas da planilha</small><b>${dates.length ? `${fmtDate(dates[0])} a ${fmtDate(dates.at(-1))}` : "Sem data na planilha"}</b></span><span><small>Destino sugerido</small><b>${esc(idSector(p.sector)?.name || p.sector)}</b></span></div><div class="import-detection"><strong>${icon("check", 16)} Identificação: ${esc(detection.confidence || "Conferir")}</strong><p>${esc(detection.reason || "")}</p><p><b>Arquivo:</b> ${esc(p.name)} · <b>Aba:</b> ${esc(p.sheet)}</p>${p.autoSheet ? `<p class="mc-sheet-warning">Cada aba será salva como fonte independente. Confira se não é um resumo de outra aba, evitando contagens repetidas.</p>` : ""}</div>${qualityNotes}${conflictNotes}${p.savedPreferenceUsed ? '<p class="panel-sub">Mapeamento revisado anteriormente e recuperado neste navegador. Confira antes de confirmar.</p>' : ""}<div class="mc-ai-import-help"><strong>✦ Decifrar com o Copiloto</strong><p>Envie apenas nome do arquivo, aba, nomes e formatos das colunas para obter uma sugestão. Nenhuma linha original é enviada. Confira a identificação antes de importar.</p><button type="button" class="btn" data-ai-interpret ${p.aiInterpretBusy ? "disabled" : ""}>${p.aiInterpretBusy ? "Analisando…" : "Analisar identificação com IA"}</button>${p.aiProposal ? `<p><b>IA sugere:</b> ${esc(D.types[p.aiProposal.type]||p.aiProposal.type)} · ${esc(idSector(p.aiProposal.sector)?.name||p.aiProposal.sector)} · ${esc(p.aiProposal.confidence)}.</p><p>${esc(p.aiProposal.reason)}</p><button type="button" class="btn btn-primary" data-ai-apply-interpret>Aplicar sugestão (revisar)</button>` : ""}</div><div class="import-column-tags"><strong>Colunas reconhecidas</strong><div>${mapped.length ? mapped.slice(0, 8).map(x => `<span title="${esc(I?.fieldPurpose(p.type, x.name) || x.role)}"><b>${esc(x.name)}</b> → ${esc(x.role)}</span>`).join("") : "<span>Nenhuma coluna associada com segurança; use Ajustes opcionais.</span>"}</div></div><p class="panel-sub">${dates.length ? "Datas e horários originais foram preservados." : "Este arquivo pode ser importado sem definir datas. Os totais continuam disponíveis em Todo o histórico."}</p><p class="panel-sub">Aba: ${esc(p.sheet)} · ${r.errors.length} linhas inválidas · ${r.skipped.length} totais/resumos excluídos.</p><details class="import-reading"><summary>Ver a interpretação da planilha</summary><p>${esc(window.MCIntelligence?.semantics[p.type]?.meaning || "Confira as colunas reconhecidas.")}</p><p class="panel-sub">${esc(window.MCIntelligence?.semantics[p.type]?.limit || "")}</p><p class="panel-sub">Apenas esta aba será anexada. Abas de resumo não são somadas à base detalhada.</p></details><div class="table-wrap import-raw-preview"><table class="tbl"><thead><tr>${fields.map(h => `<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${r.rows.slice(0, 5).map(x => `<tr>${fields.map(h => `<td>${esc(x.raw[String(h)] ?? "")}</td>`).join("")}</tr>`).join("")}</tbody></table></div><details class="import-advanced" ${state.importAdvancedOpen ? "open" : ""}><summary>Ajustes opcionais e conferência de colunas</summary>${importAdvanced(p)}</details></div>`;
   }
   function previewRows(rows) {
     let cols = Object.keys(rows[0] || {}).slice(0, 6);
@@ -617,7 +619,7 @@
   }
   function assistantChat(full = false) {
     const messages = state.chatModes[state.assistantMode] || [];
-    return `<div class="assistant-modes" role="tablist" aria-label="Tipo de assistente"><button type="button" role="tab" aria-selected="${state.assistantMode === "dados"}" class="assistant-mode ${state.assistantMode === "dados" ? "is-current" : ""}" data-assistant-mode="dados">${icon("chart", 16)}<span>Análises do painel</span></button><button type="button" role="tab" aria-selected="${state.assistantMode === "geral"}" class="assistant-mode ${state.assistantMode === "geral" ? "is-current" : ""}" data-assistant-mode="geral">${icon("spark", 16)}<span>Conversa geral</span></button></div><p class="assistant-context" role="status">${state.assistantMode === "dados" ? icon("check", 14) + " Respostas baseadas nos registros do painel" : '<span class="assistant-context-dot"></span> IA online via DeepSeek (conexão necessária)'}</p><div class="assistant-messages" data-assistant-messages="1" role="log" aria-live="polite" aria-label="Conversa">${messages.map((m, i) => `<div class="assistant-line ${m.role}" style="--message-delay:${Math.min(i, 5) * 35}ms"><div class="assistant-mini-avatar">${m.role === "user" ? "M" : icon("spark", 15)}</div><div class="assistant-bubble">${esc(m.text)}</div></div>`).join("")}</div><div class="assistant-bottom"><div class="assistant-quick">${assistantSuggestions()
+    return `<div class="assistant-modes" role="tablist" aria-label="Tipo de assistente"><button type="button" role="tab" aria-selected="${state.assistantMode === "dados"}" class="assistant-mode ${state.assistantMode === "dados" ? "is-current" : ""}" data-assistant-mode="dados">${icon("chart", 16)}<span>Análises do painel</span></button><button type="button" role="tab" aria-selected="${state.assistantMode === "geral"}" class="assistant-mode ${state.assistantMode === "geral" ? "is-current" : ""}" data-assistant-mode="geral">${icon("spark", 16)}<span>Conversa geral</span></button></div><p class="assistant-context" role="status">${state.assistantMode === "dados" ? icon("check", 14) + " Respostas baseadas nos registros do painel" : '<span class="assistant-context-dot"></span> IA online via DeepSeek (conexão necessária)'}</p>${state.aiInsightText && !full ? `<aside class="mc-ai-insight-callout" role="status"><span><strong>✦ Insight novo</strong><br>Uma análise está pronta para revisão.</span><button type="button" data-assistant-expand="1">Ver análise</button></aside>` : ""}<div class="assistant-messages" data-assistant-messages="1" role="log" aria-live="polite" aria-label="Conversa">${messages.map((m, i) => `<div class="assistant-line ${m.role}" style="--message-delay:${Math.min(i, 5) * 35}ms"><div class="assistant-mini-avatar">${m.role === "user" ? "M" : icon("spark", 15)}</div><div class="assistant-bubble">${esc(m.text)}</div></div>`).join("")}</div><div class="assistant-bottom"><div class="assistant-quick">${assistantSuggestions()
       .map(
         (q) =>
           `<button type="button" data-assistant-suggest="${esc(q)}">${esc(q)}</button>`,
@@ -627,7 +629,7 @@
       )}</div><form class="assistant-form" data-assistant-form="1"><label class="sr-only" for="${full ? "assistant-text-full" : "assistant-text-dock"}">Mensagem ao assistente</label><textarea id="${full ? "assistant-text-full" : "assistant-text-dock"}" data-assistant-input="1" rows="1" maxlength="1800" placeholder="${state.assistantMode === "dados" ? "Pergunte sobre seus indicadores..." : "Escreva sua mensagem..."}" aria-label="Mensagem ao assistente"></textarea><button type="submit" aria-label="Enviar mensagem">${icon("arrow", 18)}</button></form><p class="assistant-disclaimer">${state.assistantBusy ? "✦ Copiloto analisando… " : ""}${state.assistantMode === "dados" ? "IA com resumos dos arquivos ativos e cálculos do painel. Dados agregados enviados ao DeepSeek." : "Conversa com o Copiloto conectada quando a API estiver disponível."}</p></div>`;
   }
   function assistantDock() {
-    return `<div class="assistant-layer ${state.assistantOpen ? "open" : ""}"><button type="button" class="assistant-dismiss" data-assistant-close="1" aria-label="Fechar assistente" tabindex="${state.assistantOpen ? "0" : "-1"}"></button><section class="assistant-window" role="dialog" aria-modal="false" aria-label="Copiloto" aria-hidden="${!state.assistantOpen}"><div class="assistant-window-header"><div class="assistant-identity"><span class="assistant-emblem" aria-hidden="true">${icon("spark", 22)}</span><span><strong>Copiloto</strong><small>Seu espaço para análises e conversas</small></span></div><div class="assistant-header-actions"><button type="button" class="mc-ai-sidebar-toggle" data-mc-ai-sidebar title="Alternar chat flutuante e barra lateral" aria-pressed="false">Barra lateral</button><button type="button" data-assistant-clear="1" title="Limpar conversa deste modo" aria-label="Limpar conversa">${icon("trash", 15)}</button><button type="button" data-assistant-expand="1" title="Abrir em página inteira" aria-label="Abrir assistente em página inteira">${icon("grid", 15)}</button><button type="button" data-assistant-close="1" title="Fechar" aria-label="Fechar assistente">${icon("close", 16)}</button></div></div><div class="assistant-chat-root" data-assistant-root="dock">${assistantChat()}</div></section></div><button type="button" class="assistant-fab ${state.assistantOpen ? "active" : ""}" data-assistant-toggle="1" aria-expanded="${state.assistantOpen}" aria-label="${state.assistantOpen ? "Fechar assistente" : "Abrir Copiloto"}"><span class="fab-emblem">${icon(state.assistantOpen ? "close" : "spark", 20)}</span><span class="fab-label">${state.assistantOpen ? "Fechar assistente" : "Assistente"}</span><span class="fab-presence"></span></button>`;
+    return `<div class="assistant-layer ${state.assistantOpen ? "open" : ""}"><button type="button" class="assistant-dismiss" data-assistant-close="1" aria-label="Fechar assistente" tabindex="${state.assistantOpen ? "0" : "-1"}"></button><section class="assistant-window" role="dialog" aria-modal="false" aria-label="Copiloto" aria-hidden="${!state.assistantOpen}"><div class="assistant-window-header"><div class="assistant-identity"><span class="assistant-emblem" aria-hidden="true">${icon("spark", 22)}</span><span><strong>Copiloto</strong><small>Seu espaço para análises e conversas</small></span></div><div class="assistant-header-actions"><button type="button" class="mc-ai-sidebar-toggle" data-mc-ai-sidebar title="Alternar chat flutuante e barra lateral" aria-pressed="false">Barra lateral</button><button type="button" data-assistant-clear="1" title="Limpar conversa deste modo" aria-label="Limpar conversa">${icon("trash", 15)}</button><button type="button" data-assistant-expand="1" title="Abrir em página inteira" aria-label="Abrir assistente em página inteira">${icon("grid", 15)}</button><button type="button" data-assistant-close="1" title="Fechar" aria-label="Fechar assistente">${icon("close", 16)}</button></div></div><div class="assistant-chat-root" data-assistant-root="dock">${assistantChat()}</div><button type="button" class="mc-ai-resize-handle" data-mc-ai-resize title="Arraste para ajustar largura e altura" aria-label="Redimensionar Copiloto: arraste ou use as setas"></button></section></div><button type="button" class="assistant-fab ${state.assistantOpen ? "active" : ""} ${state.aiInsightText ? "mc-ai-insight-ready" : ""}" data-assistant-toggle="1" aria-expanded="${state.assistantOpen}" aria-label="${state.aiInsightText ? "Insight pronto. Abrir Copiloto" : state.assistantOpen ? "Fechar assistente" : "Abrir Copiloto"}"><span class="fab-emblem">${icon(state.assistantOpen ? "close" : "spark", 20)}</span><span class="fab-label">${state.assistantOpen ? "Fechar assistente" : "Assistente"}</span><span class="fab-presence"></span></button>`;
   }
   function pageInsight() {
     return (
@@ -989,65 +991,48 @@
     if (state.readingFiles || state.importBusy) return;
     state.readingFiles = true;
     for (const file of Array.from(files || [])) {
-      const item = {
-        queueId: crypto.randomUUID(),
-        name: file.name,
-        size: file.size,
-        status: "reading",
-      };
-      state.uploadQueue.push(item);
+      const placeholder={queueId:crypto.randomUUID(),name:file.name,size:file.size,status:"reading"};
+      state.uploadQueue.push(placeholder);
       render();
       try {
-        if (!/\.(xlsx|xls|csv)$/i.test(file.name))
-          throw Error("Selecione um arquivo XLSX, XLS ou CSV.");
-        if (file.size > 50 * 1024 * 1024)
-          throw Error("Limite de 50 MB por arquivo.");
-        const bytes = await file.arrayBuffer(),
-          digest = await crypto.subtle.digest("SHA-256", bytes),
-          hash = Array.from(new Uint8Array(digest))
-            .map((n) => n.toString(16).padStart(2, "0"))
-            .join(""),
-          wb = XLSX.read(bytes, { type: "array", cellDates: false });
-        const detectedSheets = wb.SheetNames.map((name) => {
-          const ref = wb.Sheets[name]["!ref"];
-          if (!ref) return { name, score: 0 };
-          const bounds = XLSX.utils.decode_range(ref);
-          const sample = XLSX.utils.sheet_to_json(wb.Sheets[name], {
-            header: 1,
-            raw: false,
-            defval: "",
-            range: {
-              s: { r: 0, c: 0 },
-              e: { r: Math.min(49, bounds.e.r), c: bounds.e.c },
-            },
-          });
-          return { name, score: D.detect(sample, { filename: file.name, sheet: name }).score };
-        }).sort((a, b) => b.score - a.score);
-        Object.assign(item, {
-          name: file.name,
-          hash,
-          bytes,
-          wb,
-          sheet: detectedSheets[0]?.name,
-          sector: "coi",
-          type: "geral",
-          periodStart: "",
-          periodEnd: "",
-          policy: "reject",
-          status: "ready",
-        });
-        const previous = state.pending;
-        state.pending = item;
-        selectImportSheet();
-        if (previous) state.pending = previous;
-      } catch (e) {
-        item.status = "error";
-        item.error = "Não foi possível ler a planilha: " + e.message;
+        if(!/\.(xlsx|xls|csv)$/i.test(file.name))throw Error("Selecione um arquivo XLSX, XLS ou CSV.");
+        if(file.size>50*1024*1024)throw Error("Limite de 50 MB por arquivo.");
+        const bytes=await file.arrayBuffer();
+        const digest=await crypto.subtle.digest("SHA-256",bytes);
+        const hash=Array.from(new Uint8Array(digest)).map(n=>n.toString(16).padStart(2,"0")).join("");
+        const wb=XLSX.read(bytes,{type:"array",cellDates:false});
+        const inspected=window.MCWorkbookSheets?.inspect(wb,XLSX,D.detect,file.name) ||
+          wb.SheetNames.map(name=>{
+            const sheet=wb.Sheets[name],ref=sheet?.["!ref"];
+            if(!ref)return null;
+            const bounds=XLSX.utils.decode_range(ref);
+            const sample=XLSX.utils.sheet_to_json(sheet,{header:1,raw:false,defval:"",
+              range:{s:{r:0,c:0},e:{r:Math.min(49,bounds.e.r),c:bounds.e.c}}});
+            return {name,score:D.detect(sample,{filename:file.name,sheet:name}).score,summary:false,selected:true};
+          }).filter(Boolean).sort((a,b)=>b.score-a.score).slice(0,1);
+        if(!inspected.length)throw Error("Nenhuma aba com cabeçalhos e linhas de dados foi encontrada.");
+        state.uploadQueue=state.uploadQueue.filter(p=>p!==placeholder);
+        let first=true;
+        for(const info of inspected) {
+          const item={
+            queueId:first?placeholder.queueId:crypto.randomUUID(),name:file.name,size:file.size,
+            hash,bytes,wb,sheet:info.name,autoSheet:inspected.length>1,
+            summarySheet:info.summary,selected:info.selected,estimatedRows:info.estimatedRows,
+            sector:"coi",type:"geral",periodStart:"",periodEnd:"",policy:"reject",status:"ready"
+          };
+          state.uploadQueue.push(item);
+          const old=state.pending;
+          state.pending=item;
+          try { selectImportSheet(); } finally { state.pending=old; }
+          if(first)first=false;
+        }
+      }catch(e){
+        placeholder.status="error";placeholder.error="Não foi possível ler a planilha: "+e.message;
       }
     }
     state.readingFiles = false;
     state.importReviewOpen = true;
-    state.pending ||= state.uploadQueue.find((p) => p.grid && !p.lotId) || null;
+    state.pending ||= state.uploadQueue.find((p) => p.grid && !p.lotId && p.selected !== false) || null;
     render();
   }
   async function saveImports() {
@@ -1055,7 +1040,7 @@
   }
   async function confirmImport(p = state.pending) {
     if (p instanceof Event) p = state.pending;
-    if (!p || state.importBusy) return;
+    if (!p || state.importBusy || p.selected === false) return;
     state.importBusy = true;
     try {
       const result = validatePending(p);
@@ -1109,7 +1094,7 @@
         p.error =
           "Este arquivo e destino já estão no histórico. Nenhuma linha foi duplicada.";
         state.pending =
-          state.uploadQueue.find((x) => x.grid && !x.lotId && x !== p) || null;
+          state.uploadQueue.find((x) => x.grid && !x.lotId && x.selected !== false && x !== p) || null;
         state.importReviewOpen = !!state.pending;
         return;
       }
@@ -1124,7 +1109,7 @@
       p.lotId = lot.id;
       p.error = "";
       state.pending =
-        state.uploadQueue.find((x) => x.grid && !x.lotId && x !== p) || null;
+        state.uploadQueue.find((x) => x.grid && !x.lotId && x.selected !== false && x !== p) || null;
       state.importReviewOpen = !!state.pending;
       state.report = null;
       state.tablePage = 0;
@@ -1144,7 +1129,7 @@
   }
   async function importQueue() {
     if (state.importBusy || state.readingFiles) return;
-    const pending = state.uploadQueue.filter((p) => p.grid && !p.lotId);
+    const pending = state.uploadQueue.filter((p) => p.grid && !p.lotId && p.selected !== false);
     for (const p of pending) await confirmImport(p);
     const remaining = pending.filter((p) => !p.lotId);
     notify(
@@ -1472,6 +1457,16 @@
       ?.addEventListener("change", (e) => {
         state.pending.acceptInvalid = e.target.checked;
       });
+    document.querySelectorAll("[data-include-sheet]").forEach(el=>{
+      el.addEventListener("change",()=>{
+        const item=state.uploadQueue.find(p=>p.queueId===el.dataset.includeSheet);
+        if(!item)return;
+        item.selected=el.checked;
+        if(item.selected&&(!state.pending||state.pending.selected===false))state.pending=item;
+        if(!item.selected&&state.pending===item)state.pending=state.uploadQueue.find(p=>p.grid&&!p.lotId&&p.selected!==false)||null;
+        render();
+      });
+    });
     document.querySelectorAll("[data-configure-file]").forEach(
       (el) =>
         (el.onclick = () => {
@@ -1493,7 +1488,7 @@
           );
           if (state.pending?.queueId === el.dataset.removeQueued)
             state.pending =
-              state.uploadQueue.find((p) => p.grid && !p.lotId) || null;
+              state.uploadQueue.find((p) => p.grid && !p.lotId && p.selected !== false) || null;
           render();
         }),
     );
@@ -1681,7 +1676,7 @@
   function importAdvanced(p) {
     const h = p.grid[p.headerRow] || [],
       r = validatePending();
-    return `<p class="import-filename">${esc(p.name)}</p><div class="import-fields"><label>Aba<select id="imp-sheet" class="control">${p.wb.SheetNames.map((n) => `<option ${p.sheet === n ? "selected" : ""}>${esc(n)}</option>`).join("")}</select></label><label>Linha dos cabeçalhos<input id="imp-header" class="control" type="number" min="1" max="${p.grid.length}" value="${p.headerRow + 1}"></label><label>Setor<select id="imp-sector" class="control">${sectors.map((s) => `<option value="${s.id}" ${s.id === p.sector ? "selected" : ""}>${s.name}</option>`).join("")}</select></label><label>Tipo<select id="imp-type" class="control">${Object.entries(
+    return `<p class="import-filename">${esc(p.name)}</p><div class="import-fields"><label>Aba<select id="imp-sheet" class="control" ${p.autoSheet ? "disabled" : ""}>${p.wb.SheetNames.map((n) => `<option ${p.sheet === n ? "selected" : ""}>${esc(n)}</option>`).join("")}</select></label><label>Linha dos cabeçalhos<input id="imp-header" class="control" type="number" min="1" max="${p.grid.length}" value="${p.headerRow + 1}"></label><label>Setor<select id="imp-sector" class="control">${sectors.map((s) => `<option value="${s.id}" ${s.id === p.sector ? "selected" : ""}>${s.name}</option>`).join("")}</select></label><label>Tipo<select id="imp-type" class="control">${Object.entries(
       D.types,
     )
       .map(

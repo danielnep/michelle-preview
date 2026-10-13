@@ -71,3 +71,24 @@ Teste recomendado: no GitHub Pages, abra o Copiloto e faça uma pergunta em
 "Conversa geral"; em "Análises do painel", use uma planilha fictícia para
 verificar os dados enviados e a resposta. A rota `GET /api/michelle-ai`
 no Netlify é somente diagnóstico de infraestrutura.
+
+
+## Agente de planejamento por fontes independentes
+
+- Arquivos XLSX/XLS/CSV e abas são inventariados separadamente a partir das importações confirmadas.
+- Cada fonte tem identificador, arquivo, aba, contagem, tipo e esquema de campos. Não pressupor que toda fonte trata do mesmo assunto.
+- O modo \`plan\` usa \`netlify/functions/planilha-agent-prompt.mjs\` e responde com JSON estruturado: fontes, métricas sugeridas, grupos com ressalvas, ordem de blocos e perguntas pendentes.
+- O servidor valida os identificadores e campos citados, limita respostas e nunca habilita automaticamente cruzamentos.
+- O clique de envio é explícito; só metadados agregados (sem células ou amostras de linhas) seguem à IA. Revisar LGPD e autorização para títulos/cabeçalhos sensíveis.
+- O botão de aplicar reorganiza blocos existentes e ativa indicadores adicionais calculados por arquivo no navegador. Os totais e gráficos centrais permanecem sob o motor local; cruzamentos não são criados automaticamente.
+- Limite da prévia: 12 fontes, 18 colunas por fonte; acima disso, analisar em lotes. Não é um motor universal de gráficos. XLSX/XLS agora oferece todas as abas com dados como entradas individuais na revisão. Abas potencialmente resumidas são desmarcadas quando coexistem com detalhe, para evitar duplicidade. A importação continua sob confirmação humana.
+- Engenharia de prompt utiliza decomposição em etapas, contrato JSON, exemplos contrastivos, checagem de evidências e abstinência quando faltam dados. Isso é orientação por prompt, **não treinamento de pesos do modelo**.
+
+
+### Interface do Estúdio de fontes
+
+- Navegação de dashboard: **Visão geral** e **Explorar fontes**. Cada fonte retém identificação por arquivo e aba.
+- Gráficos SVG locais de barras (contagem por categoria) e evolução (contagem por data individual), com tabela de valores. Campos sensíveis comuns são excluídos das categorias automáticas.
+- Layout adaptativo: seletor lateral no desktop, seletor horizontal no celular; indicação de origem, quantidade de linhas e cobertura.
+- Visualizações locais não dependem do retorno da IA; o modo `plan` acrescenta hipóteses documentadas e indicadores calculáveis, sem mesclar fontes.
+- Padrões de UI informados por documentação oficial do Power BI, Metabase e Tableau; a composição visual é própria.

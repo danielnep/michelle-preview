@@ -1,0 +1,252 @@
+/* Agente de fontes: inventario independente por arquivo/aba, sem combinar dados. */
+(function(root,factory) {
+  const api=factory(root);
+  if(typeof module==="object"&&module.exports) module.exports=api;
+  else root.MCSourceAgent=api;
+})(typeof window!=="undefined"?window:globalThis,function(root) {
+  "use strict";
+  const MAX_SOURCES=12, MAX_COLUMNS=18;
+  const state={busy:false,plan:null,applied:false,error:"",fingerprint:"",catalog:[],activeSource:"",view:"auto"};
+  const text=(v,max=110)=>String(v??"").trim().slice(0,max);
+  const norm=v=>text(v,150).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/\s+/g," ");
+  const shape=v=>{
+    const s=String(v??"").trim();
+    if(!s)return "vazio";
+    if(/^\d{4}-\d\d-\d\d/.test(s)||/^\d\d?\/\d\d?\/\d{4}/.test(s))return "data";
+    if(/^-?[\d.,]+\s*%$/.test(s))return "percentual";
+    if(/^-?[\d.,]+$/.test(s))return "numero";
+    if(/^\d\d?:\d\d(:\d\d)?$/.test(s))return "horario";
+    return "texto";
+  };
+  function fingerprint(lots) {
+    return lots.filter(l=>!l.deleted&&!l.archived&&!l.supersededBy).map(l=>String(l.id)+":"+(l.rows?.length||0)+":"+text(l.sheet,80)).sort().join("|");
+  }
+  function catalog(rows=[],lots=[]) {
+    const activeIds=new Set((rows||[]).map(r=>r.lotId).filter(Boolean));
+    return (lots||[]).filter(l=>!l.deleted&&!l.archived&&!l.supersededBy&&activeIds.has(l.id))
+      .slice(0,MAX_SOURCES).map(l=>{
+        const records=(rows||[]).filter(r=>r.lotId===l.id);
+        const keys=new Map();
+        for(const record of records.slice(0,300)) {
+          for(const [name,value] of Object.entries(record.raw||{})) {
+            const k=text(name,95);if(!k)continue;
+            if(!keys.has(k))keys.set(k,{name:k,filled:0,kinds:new Map()});
+            const field=keys.get(k);
+            if(value!==null&&value!==undefined&&String(value).trim())field.filled++;
+            const kind=shape(value);field.kinds.set(kind,(field.kinds.get(kind)||0)+1);
+          }
+        }
+        const columns=[...keys.values()].slice(0,MAX_COLUMNS).map(field=>({
+          name:field.name,filledSample:field.filled,
+          sampleSize:Math.min(records.length,300),
+          inferredShape:[...field.kinds].sort((a,b)=>b[1]-a[1])[0]?.[0]||"desconhecido"
+        }));
+        const byType={};
+        for(const record of records)byType[record.type||"geral"]=(byType[record.type||"geral"]||0)+1;
+        return {
+          id:text(l.id,96),file:text(l.name||l.filename||"Planilha",160),
+          sheet:text(l.sheet||"Aba não informada",100),
+          rowCount:records.length,registeredType:text(l.type||"geral",40),
+          destination:text(l.sector||"",40),types:byType,columns,
+          hasIndividualDates:records.some(r=>!!r.date),
+          hasPeriod:records.some(r=>!!r.periodStart&&!!r.periodEnd),
+          originalPreserved:records.some(r=>r.raw&&Object.keys(r.raw).length>0)
+        };
+      });
+  }
+  function localGroups(profiles) {
+    const groups=new Map();
+    for(const p of profiles) {
+      const sig=p.registeredType+"|"+p.columns.map(c=>norm(c.name)).sort().join("|");
+      if(!groups.has(sig))groups.set(sig,[]);
+      groups.get(sig).push(p.id);
+    }
+    return [...groups.values()].filter(ids=>ids.length>1).map(ids=>({
+      sourceIds:ids,kind:"sobreposicao_possivel",
+      reason:"Esquema e tipo semelhantes. Verificar periodo e duplicidade antes de acumular; não implica vinculo entre linhas."
+    }));
+  }
+  function validatePlan(plan,profiles) {
+    const ids=new Set(profiles.map(p=>p.id));
+    const permittedBlocks=new Set(["insights","metrics","crossings","reading","trend","status","sectors","ranking","records"]);
+    const short=(v,n)=>text(v,n);
+    const proposedSources=Array.isArray(plan?.sources)?plan.sources:[];
+    const sources=proposedSources.filter(s=>ids.has(s?.id)).map(s=>({
+      id:s.id,subject:short(s.subject,140),grain:short(s.grain,170),
+      purpose:short(s.purpose,260),
+      metrics:(Array.isArray(s.metrics)?s.metrics:[]).slice(0,5).map(m=>({
+        name:short(m?.name,90),operation:["count","sum","average","distinct","none"].includes(m?.operation)?m.operation:"none",
+        column:profiles.find(p=>p.id===s.id)?.columns.some(c=>c.name===m?.column)?m.column:"",
+        unit:short(m?.unit,55),reason:short(m?.reason,180)
+      })),
+      chart:short(s.chart,140),warnings:(Array.isArray(s.warnings)?s.warnings:[]).slice(0,4).map(v=>short(v,180))
+    }));
+    const groups=(Array.isArray(plan?.groups)?plan.groups:[]).slice(0,12).map(g=>({
+      sourceIds:[...new Set((Array.isArray(g?.sourceIds)?g.sourceIds:[]).filter(id=>ids.has(id)))],
+      classification:["mesmo_assunto","complementares","independentes","sobreposicao_possivel"].includes(g?.classification)?g.classification:"independentes",
+      reason:short(g?.reason,300),
+      confidence:["Alta","Moderada","Baixa"].includes(g?.confidence)?g.confidence:"Baixa",
+      // Sugestao nunca autoriza mescla nem altera calculos.
+      requiresReview:true
+    })).filter(g=>g.sourceIds.length>=2);
+    const order=[...new Set((Array.isArray(plan?.dashboard?.order)?plan.dashboard.order:[]).filter(id=>permittedBlocks.has(id)))];
+    return {
+      summary:short(plan?.summary,600),sources,groups,
+      dashboard:{order,rationale:short(plan?.dashboard?.rationale,360)},
+      questions:(Array.isArray(plan?.questions)?plan.questions:[]).slice(0,5).map(q=>short(q,170))
+    };
+  }
+  function readNumber(value) {
+    if(typeof value==="number")return Number.isFinite(value)?value:null;
+    let s=String(value??"").trim().replace(/\s+/g,"").replace(/^R\$/i,"").replace(/%$/,"");
+    if(!s||!/^[+-]?[\d.,]+$/.test(s))return null;
+    if(s.includes(","))s=s.replace(/\./g,"").replace(",",".");
+    else if(/^[+-]?\d{1,3}(?:\.\d{3})+$/.test(s))s=s.replace(/\./g,"");
+    const n=Number(s);return Number.isFinite(n)?n:null;
+  }
+  function computeMetrics(plan,rows=[]) {
+    const result=[];
+    for(const source of plan?.sources||[]) {
+      const values=rows.filter(r=>r.lotId===source.id);
+      const calculated=[];
+      for(const metric of source.metrics||[]) {
+        const field=metric.column,kind=metric.operation,items=field?values.map(r=>r.raw?.[field]).filter(v=>v!==undefined&&v!==null&&String(v).trim()):[];
+        let value=null,warning="";
+        if(kind==="count") value=field?items.length:values.length;
+        else if(kind==="distinct"&&field) value=new Set(items.map(v=>String(v).trim())).size;
+        else if(["sum","average"].includes(kind)&&field&&metric.unit&&!/incert|desconhec|a definir/i.test(metric.unit)) {
+          const nums=items.map(readNumber).filter(v=>v!==null);
+          if(nums.length&&nums.length===items.length) {
+            value=kind==="sum"?nums.reduce((a,b)=>a+b,0):nums.reduce((a,b)=>a+b,0)/nums.length;
+            if(items.length!==values.length)warning="Existem "+(values.length-items.length)+" linhas sem valor nessa coluna.";
+          } else warning="Há valores incompatíveis com uma medida numérica; cálculo não autorizado.";
+        } else warning="A medida exige definição ou confirmação de coluna e unidade.";
+        calculated.push({name:metric.name,operation:kind,column:field,unit:metric.unit,value,
+          rows:values.length,coverage:field?items.length:values.length,warning});
+      }
+      result.push({id:source.id,metrics:calculated});
+    }
+    return result;
+  }
+  function render(rows=[],lots=[],esc=x=>String(x??"")) {
+    const fp=fingerprint(lots)+"#"+(rows||[]).length+"#"+[...new Set((rows||[]).map(r=>r.lotId).filter(Boolean))].sort().join("|");
+    if(fp!==state.fingerprint){state.fingerprint=fp;state.plan=null;state.applied=false;state.error="";state.busy=false;state.view="auto";}
+    state.catalog=catalog(rows,lots);
+    if(!state.catalog.length)return "";
+    const profiles=state.catalog;
+    if(!profiles.some(p=>p.id===state.activeSource))state.activeSource=profiles[0].id;
+    const selected=profiles.find(p=>p.id===state.activeSource);
+    const V=root.MCSourceVisuals;
+    const visual=V?.seriesFor(rows,selected);
+    const currentView=state.view==="auto"?(visual?.bars?.length?"bar":visual?.hasTrend?"line":"table"):state.view;
+    const allowedView=currentView==="line"&&!visual?.hasTrend?"table":currentView==="bar"&&!visual?.bars?.length?"table":currentView;
+    const sourceNav=profiles.map(p=>
+      '<button type="button" class="mc-source-tab '+(p.id===selected.id?"is-active":"")+'" data-mc-pick-source="'+esc(p.id)+
+      '" aria-pressed="'+(p.id===selected.id?"true":"false")+'">'+
+      '<span class="mc-source-tab-icon" aria-hidden="true">▦</span><span><b>'+esc(p.file)+'</b><small>'+esc(p.sheet)+
+      ' · '+new Intl.NumberFormat("pt-BR").format(p.rowCount)+' linhas</small></span></button>'
+    ).join("");
+    const viewControls=visual?[
+      ["bar","Barras",!!visual.bars.length],["line","Evolução",!!visual.hasTrend],["table","Tabela",true]
+    ].map(([mode,label,enabled])=>'<button type="button" class="mc-source-view-choice '+(allowedView===mode?"is-active":"")+
+      '" data-mc-source-view="'+mode+'" aria-pressed="'+(allowedView===mode?"true":"false")+'" '+(enabled?"":"disabled")+'>'+label+'</button>').join(""):"";
+    const localMetrics=state.applied&&state.plan?
+      computeMetrics(state.plan,rows).find(g=>g.id===selected.id)?.metrics||[]:[];
+    const suggestions=state.plan?.sources.find(p=>p.id===selected.id);
+    const metricTiles='<div class="mc-source-facts" aria-label="Informações da fonte">'+
+      '<div><span>Linhas no recorte</span><strong>'+new Intl.NumberFormat("pt-BR").format(visual?.sourceRows||0)+'</strong></div>'+
+      '<div><span>Com data</span><strong>'+new Intl.NumberFormat("pt-BR").format(visual?.dated||0)+'</strong></div>'+
+      '<div><span>Campos originais</span><strong>'+selected.columns.length+'</strong></div>'+
+      '</div>';
+    const metricDetail=localMetrics.length?
+      '<div class="mc-source-metrics">'+localMetrics.map(m=>
+        '<div><small>'+esc(m.name)+'</small><strong>'+(m.value==null?"A confirmar":esc(new Intl.NumberFormat("pt-BR",{maximumFractionDigits:2}).format(m.value)))+
+        '</strong><small>'+esc(m.value===null?m.warning:m.unit||"linhas")+'</small></div>'
+      ).join("")+'</div>':"";
+    const workspace='<div class="mc-source-workspace">'+
+      '<nav class="mc-source-sidebar" aria-label="Planilhas independentes"><div class="mc-source-sidebar-head">'+
+      '<strong>Fontes analisadas</strong><small>'+profiles.length+' aba(s)</small></div>'+sourceNav+'</nav>'+
+      '<div class="mc-source-canvas"><header class="mc-source-canvas-head">'+
+      '<div><span class="mc-source-kicker">EXPLORAR FONTE</span><h4>'+esc(selected.file)+'</h4><p>Aba '+esc(selected.sheet)+
+      ' · '+esc(selected.registeredType)+' · sem cruzar outras fontes</p></div>'+
+      '<div class="mc-source-view-switch" role="group" aria-label="Formato da visualização">'+viewControls+'</div></header>'+
+      metricTiles+'<div class="mc-source-visual">'+(V&&visual?V.chart(visual,allowedView,esc):
+      '<p>Visualização indisponível. Consulte a lista de colunas abaixo.</p>')+'</div>'+metricDetail+
+      (suggestions?'<details class="mc-source-recommendation"><summary>✦ Recomendações da IA para esta fonte</summary>'+
+        '<p>'+esc(suggestions.purpose)+'</p><p><b>Unidade de análise:</b> '+esc(suggestions.grain)+'</p>'+
+        '<p><b>Gráfico sugerido:</b> '+esc(suggestions.chart||"A conferir")+'</p>'+
+        (suggestions.warnings.length?'<p>'+esc(suggestions.warnings.join(" · "))+'</p>':"")+
+        '</details>':"")+
+      '<details class="mc-source-columns"><summary>Estrutura e formatos das colunas</summary><div class="mc-source-scroll">'+
+      '<table><thead><tr><th>Coluna original</th><th>Tipo inferido</th><th>Preenchimento na amostra</th></tr></thead><tbody>'+
+      selected.columns.map(c=>'<tr><th>'+esc(c.name)+'</th><td>'+esc(c.inferredShape)+'</td><td>'+c.filledSample+'/'+c.sampleSize+'</td></tr>').join("")+
+      '</tbody></table></div></details></div></div>';
+    const matches=localGroups(profiles);
+    const overlap=matches.length?'<p class="dash-note">Esquemas parecidos encontrados em '+matches.length+' grupo(s). Isso não autoriza somar nem cruzar os arquivos.</p>':"";
+    let result="";
+    if(state.plan) {
+      const p=state.plan;
+      result='<div class="dash-readings" aria-label="Plano sugerido pela IA">'+
+        '<p><strong>Proposta do agente:</strong> '+esc(p.summary||"Fontes lidas independentemente.")+'</p>'+
+        p.sources.map(s=>'<details><summary>'+esc(profiles.find(x=>x.id===s.id)?.file||s.id)+' · '+esc(s.subject)+'</summary>'+
+          '<p>'+esc(s.purpose)+'</p><p>Unidade por registro: '+esc(s.grain)+'</p>'+
+          '<p>Indicadores sugeridos: '+esc(s.metrics.map(m=>m.name+(m.unit?" ("+m.unit+")":"")).join("; ")||"A confirmar")+'</p>'+
+          '<p>Visualização: '+esc(s.chart||"A definir")+'</p>'+
+          (s.warnings.length?'<p class="dash-note">'+esc(s.warnings.join("; "))+'</p>':"")+'</details>').join("")+
+        p.groups.map(g=>'<p><b>'+esc(g.classification)+'</b>: '+esc(g.sourceIds.map(id=>profiles.find(x=>x.id===id)?.file||id).join(" + "))+
+          '. '+esc(g.reason)+' <small>Proposta para revisão; nenhum cruzamento aplicado.</small></p>').join("")+
+        (p.questions.length?'<p><b>Conferir:</b> '+esc(p.questions.join(" · "))+'</p>':"")+
+        (state.applied ? '<section class="mc-source-agent-calculated" aria-label="Indicadores calculados por fonte"><h4>Indicadores por planilha</h4>'+
+          computeMetrics(p,rows).map(group=>'<div><strong>'+esc(profiles.find(x=>x.id===group.id)?.file||group.id)+'</strong>'+
+            '<ul>'+group.metrics.map(metric=>'<li>'+esc(metric.name)+': <b>'+
+              (metric.value===null?'Não calculável':esc(new Intl.NumberFormat("pt-BR",{maximumFractionDigits:2}).format(metric.value)))+
+              '</b> '+esc(metric.value===null?'':metric.unit||"registros")+
+              ' <small>('+metric.coverage+'/'+metric.rows+' linhas'+(metric.warning?' · '+esc(metric.warning):'')+')</small></li>').join("")+'</ul></div>').join("")+
+          '<p class="dash-note">Resultados calculados no navegador, sempre por fonte, sem fusão automática.</p></section>' : "")+
+        '<p class="dash-note">Os números continuam calculados localmente. O plano apenas orienta a apresentação dos blocos.</p>'+
+        (p.dashboard.order.length?'<button type="button" class="btn btn-primary" data-mc-source-apply>Aplicar organização sugerida</button>':"")+
+        '</div>';
+    }
+    return '<section class="mc-source-agent" aria-label="Agente de planilhas"><h3>Leitura independente por planilha</h3>'+
+      '<p class="dash-note">Cada arquivo e aba é analisado por si. A comparação entre eles é opcional, auditável e nunca cria vínculos automaticamente.</p>'+
+      workspace+overlap+
+      '<button type="button" class="btn" data-mc-source-plan '+(state.busy?"disabled":"")+'>'+
+        (state.busy?"Planejando dashboard…":"✦ Planejar dashboard com IA")+'</button>'+
+      '<small>Ao tocar, apenas nomes, cabeçalhos e formatos agregados serão enviados à IA. Nenhuma célula original será transmitida.'+(lots.filter(l=>!l.deleted&&!l.archived&&!l.supersededBy).length>MAX_SOURCES?" Limite desta análise: as primeiras "+MAX_SOURCES+" fontes ativas; demais devem ser avaliadas em lotes.":"")+'</small>'+
+      (state.error?'<p role="alert">'+esc(state.error)+'</p>':"")+result+'</section>';
+  }
+  async function onPlan() {
+    if(state.busy||!root.MCAI?.request)return;
+    state.busy=true;state.error="";state.applied=false;root.MichelleBridge?.render();
+    try {
+      const sources=state.catalog.slice(0,MAX_SOURCES).map(p=>({
+        id:p.id,file:p.file,sheet:p.sheet,rowCount:p.rowCount,
+        registeredType:p.registeredType,destination:p.destination,types:p.types,
+        hasIndividualDates:p.hasIndividualDates,hasPeriod:p.hasPeriod,
+        columns:p.columns.map(c=>({name:c.name,inferredShape:c.inferredShape}))
+      }));
+      const r=await root.MCAI.request("plan",{context:{sources}});
+      if(!r.plan || !Array.isArray(r.plan.sources))throw Error("Esta versão da API ainda não suporta o agente de planilhas. É necessário publicar a função atualizada no Netlify.");
+      state.plan=validatePlan(r.plan,state.catalog);
+    }catch(e){state.error=e?.message||"Não foi possível consultar a IA.";}
+    finally{state.busy=false;root.MichelleBridge?.render();}
+  }
+  if(root.document) root.document.addEventListener("click",event=>{
+    const target=event.target.closest?.("button");
+    if(!target)return;
+    if(target.matches("[data-mc-source-plan]")){event.preventDefault();onPlan();}
+    if(target.matches("[data-mc-pick-source]")){
+      state.activeSource=target.dataset.mcPickSource;state.view="auto";
+      root.MichelleBridge?.render();
+    }
+    if(target.matches("[data-mc-source-view]")){
+      state.view=target.dataset.mcSourceView;
+      root.MichelleBridge?.render();
+    }
+    if(target.matches("[data-mc-source-apply]")&&state.plan?.dashboard.order.length) {
+      state.applied=true;
+      root.dispatchEvent(new CustomEvent("mc:source-plan-apply",{detail:{order:state.plan.dashboard.order}}));
+    }
+  });
+  return {catalog,localGroups,validatePlan,render,fingerprint,computeMetrics,readNumber};
+});
