@@ -757,3 +757,44 @@ test("dashboard possui alças de arrastar funcionais e fallback por setas", asyn
   assert.equal(t.errors.length,0);
   t.w.close();
 });
+
+
+test("importação multiaba mantém fontes separadas e não seleciona resumos por padrão", async()=>{
+  const t=await boot(),w=t.w,b=w.MichelleBridge;
+  w.eval(fs.readFileSync(path.join(root,"analysis/workbook-sheets.js"),"utf8"));
+  b.navigate("data");
+  await b.handleFile(file(w,"ordens.xlsx",workbook()));
+  const queued=b.getState().uploadQueue.filter(p=>p.grid&&!p.lotId);
+  assert.equal(queued.length,2);
+  assert.equal(queued.find(p=>p.sheet==="Resumo").selected,false);
+  assert.equal(queued.find(p=>p.sheet==="Registros").selected,true);
+  assert.equal(b.getState().pending.sheet,"Registros");
+  assert.equal(w.document.querySelectorAll("[data-include-sheet]").length,2);
+  await b.confirmImport();
+  assert.equal(b.getImports().length,1);
+  assert.equal(b.getImports()[0].sheet,"Registros");
+  assert.equal(b.getAll().length,3);
+  assert.equal(t.errors.length,0);
+  t.w.close();
+});
+test("duas abas de dados do mesmo arquivo podem ser importadas em lotes independentes", async()=>{
+  const t=await boot(),w=t.w,b=w.MichelleBridge;
+  w.eval(fs.readFileSync(path.join(root,"analysis/workbook-sheets.js"),"utf8"));
+  b.navigate("data");
+  const wb=X.utils.book_new();
+  X.utils.book_append_sheet(wb,X.utils.aoa_to_sheet([["Tipo","Categoria"],["A","Risco"],["B","Plano"]]),"Dados A");
+  X.utils.book_append_sheet(wb,X.utils.aoa_to_sheet([["Tipo","Categoria"],["C","Risco"],["D","Plano"]]),"Dados B");
+  await b.handleFile(file(w,"fontes.xlsx",X.write(wb,{type:"buffer",bookType:"xlsx"})));
+  const queued=b.getState().uploadQueue.filter(p=>p.grid&&!p.lotId);
+  assert.equal(queued.length,2);
+  assert.deepEqual(queued.map(x=>x.selected),[true,true]);
+  t.click("[data-import-queue]");
+  await wait(()=>b.getImports().length===2&&!b.getState().importBusy);
+  assert.deepEqual(b.getImports().map(l=>l.sheet),["Dados A","Dados B"]);
+  assert.equal(b.getImports()[0].hash,b.getImports()[1].hash);
+  assert.notEqual(b.getImports()[0].id,b.getImports()[1].id);
+  assert.equal(b.getImports()[0].rows.length,2);
+  assert.equal(b.getImports()[1].rows.length,2);
+  assert.equal(t.errors.length,0);
+  t.w.close();
+});
