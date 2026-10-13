@@ -10,7 +10,7 @@ input{background:#080f1b;color:white;border:1px solid #4b5b71}button{margin-top:
 <form id="login"><label for="email">E-mail</label><input id="email" type="email" autocomplete="username" required>
 <label for="password">Senha</label><input id="password" type="password" autocomplete="current-password" required minlength="12">
 <button id="submit">Entrar no painel</button><div id="error" role="alert"></div></form>
-<small>O acesso é individual. Solicite suas credenciais ao administrador.</small></main>
+<small>O acesso é individual. Solicite suas credenciais à administradora.</small><p><a style="color:#80d4ff" href="/recuperar-senha.html">Esqueci minha senha</a></p></main>
 <script>document.querySelector("#login").addEventListener("submit",async e=>{
 e.preventDefault();const button=document.querySelector("#submit"),err=document.querySelector("#error");button.disabled=true;err.textContent="";
 try{const res=await fetch("/api/auth/sign-in/email",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({email:document.querySelector("#email").value.trim(),password:document.querySelector("#password").value})});
