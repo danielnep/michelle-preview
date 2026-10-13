@@ -1,0 +1,20 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Redefinir senha | PowerBI CompletoMC</title><style>
+:root{font-family:Inter,system-ui,sans-serif;color-scheme:dark;background:#070b13;color:#f3f8ff}*{box-sizing:border-box}body{display:grid;place-items:center;min-height:100dvh;margin:0;padding:20px}
+main{max-width:430px;width:100%;background:#121c2c;border:1px solid #33485e;border-radius:17px;padding:25px}h1{font-size:26px}
+p{color:#b5c5d7;line-height:1.6}label{display:block;margin:20px 0 7px}input,button{font:inherit;width:100%;border-radius:10px;padding:13px}input{background:#0a1220;color:white;border:1px solid #5a7088}
+button{background:#4bc3ff;color:#081928;font-weight:800;border:0;cursor:pointer;margin:17px 0}a{color:#88d6ff}
+</style></head><body><main><h1>Definir nova senha</h1><p>Use uma senha exclusiva com pelo menos 12 caracteres.</p><form id="form">
+<label for="password">Nova senha</label><input id="password" type="password" minlength="12" autocomplete="new-password" required>
+<label for="confirm">Confirmar senha</label><input id="confirm" type="password" minlength="12" autocomplete="new-password" required>
+<button type="submit">Salvar nova senha</button><p id="result" role="status"></p></form><a href="/login.html">Voltar ao login</a></main>
+<script>const params=new URLSearchParams(location.search),token=params.get("token");if(!token)document.querySelector("#result").textContent="Link inválido ou expirado. Solicite outro pelo Esqueci minha senha.";
+document.querySelector("#form").onsubmit=async e=>{
+e.preventDefault();const status=document.querySelector("#result"),button=e.currentTarget.querySelector("button"),first=document.querySelector("#password").value,second=document.querySelector("#confirm").value;
+if(!token){status.textContent="Solicite um novo link de redefinição.";return}
+if(first!==second){status.textContent="As senhas não coincidem.";return}
+button.disabled=true;status.textContent="Salvando...";
+try{const res=await fetch("/api/auth/reset-password",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({token,newPassword:first})});
+if(!res.ok){status.textContent="O link pode ter expirado. Solicite outro.";return}
+status.textContent="Senha atualizada. Agora você pode entrar.";document.querySelector("#form").reset();history.replaceState({},document.title,location.pathname);}
+catch(_){status.textContent="Não foi possível salvar a senha. Tente novamente."}finally{button.disabled=false}};
+</script></body></html>
