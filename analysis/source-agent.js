@@ -5,7 +5,7 @@
   else root.MCSourceAgent=api;
 })(typeof window!=="undefined"?window:globalThis,function(root) {
   "use strict";
-  const MAX_SOURCES=24, MAX_COLUMNS=48;
+  const MAX_SOURCES=12, MAX_COLUMNS=18;
   const state={busy:false,plan:null,error:"",fingerprint:"",catalog:[]};
   const text=(v,max=110)=>String(v??"").trim().slice(0,max);
   const norm=v=>text(v,150).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/\s+/g," ");
@@ -97,7 +97,7 @@
     };
   }
   function render(rows=[],lots=[],esc=x=>String(x??"")) {
-    const fp=fingerprint(lots);
+    const fp=fingerprint(lots)+"#"+(rows||[]).length+"#"+[...new Set((rows||[]).map(r=>r.lotId).filter(Boolean))].sort().join("|");
     if(fp!==state.fingerprint){state.fingerprint=fp;state.plan=null;state.error="";state.busy=false;}
     state.catalog=catalog(rows,lots);
     if(!state.catalog.length)return "";
@@ -130,7 +130,7 @@
       '<div class="dash-readings">'+profileHtml+'</div>'+overlap+
       '<button type="button" class="btn" data-mc-source-plan '+(state.busy?"disabled":"")+'>'+
         (state.busy?"Planejando dashboard…":"✦ Planejar dashboard com IA")+'</button>'+
-      '<small>Ao tocar, apenas nomes, cabeçalhos e formatos agregados serão enviados à IA. Nenhuma célula original será transmitida.</small>'+
+      '<small>Ao tocar, apenas nomes, cabeçalhos e formatos agregados serão enviados à IA. Nenhuma célula original será transmitida.'+(lots.filter(l=>!l.deleted&&!l.archived&&!l.supersededBy).length>MAX_SOURCES?" Limite desta análise: as primeiras "+MAX_SOURCES+" fontes ativas; demais devem ser avaliadas em lotes.":"")+'</small>'+
       (state.error?'<p role="alert">'+esc(state.error)+'</p>':"")+result+'</section>';
   }
   async function onPlan() {
@@ -138,6 +138,7 @@
     state.busy=true;state.error="";root.MichelleBridge?.render();
     try {
       const r=await root.MCAI.request("plan",{context:{sources:state.catalog.slice(0,MAX_SOURCES)}});
+      if(!r.plan || !Array.isArray(r.plan.sources))throw Error("Esta versão da API ainda não suporta o agente de planilhas. É necessário publicar a função atualizada no Netlify.");
       state.plan=validatePlan(r.plan,state.catalog);
     }catch(e){state.error=e?.message||"Não foi possível consultar a IA.";}
     finally{state.busy=false;root.MichelleBridge?.render();}
