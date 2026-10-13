@@ -33,7 +33,7 @@ O título do aplicativo é **PowerBI Completo MC** e símbolo de indicadores pr�
 
 ## Armazenamento — versão Railway
 
-Esta branch usa autenticação individual no servidor, PostgreSQL para registros e um bucket privado para os arquivos originais. O catálogo, as abas importadas e os indicadores são compartilhados conforme as permissões e os setores de cada conta.
+Esta branch usa autenticação individual no servidor, PostgreSQL para registros e um bucket privado para os arquivos originais. O catálogo, as abas importadas e os indicadores são compartilhados conforme as permissões e os setores de cada conta. Os arquivos enviados são mantidos na nuvem até serem excluídos. Os novos originais ficam no bucket privado do projeto, na pasta `power-bi-mc/arquivos-enviados/originais/`. A chave completa fica no catálogo; originais anteriores continuam sendo lidos e excluídos pelas suas chaves existentes. Não há prazo automático de expiração de arquivos ativos no aplicativo.
 
 ### Biblioteca de arquivos (v5.1)
 
@@ -61,7 +61,7 @@ O quadro aceita vários arquivos por seleção ou arrastar e soltar. A confirma�
 
 A identificação no cabeçalho, menu e rodapé é “PowerBI Completo MC”, sem logotipos ou créditos de desenvolvimento. O favicon, os ícones de atalho e a imagem de compartilhamento usam um símbolo neutro de indicadores. A paleta escura usa preto e cinza neutro, branco e azul celeste nas ações. O modo escuro é o padrão para novos acessos; preferências já salvas são preservadas. O modo claro/escuro é persistido, a navegação móvel respeita a área segura e o menu pode ser fechado por botão ou Esc. Os resumos de insights usam três colunas no computador e uma no celular, com tipografia e foco de teclado consistentes. A aparência do aplicativo não modifica os temas das apresentações. A busca de registros fica no menu e está disponível também no celular, com indicação do filtro ativo e ação para limpar.
 
-O manifesto, o service worker e os ícones próprios oferecem instalação e cache do shell em navegadores compatíveis. Os dados operacionais continuam locais no IndexedDB; o modo offline não garante acesso a recursos remotos. As referências de design usadas são as diretrizes oficiais de [modo escuro da Apple](https://developer.apple.com/design/human-interface-guidelines/dark-mode), [layouts adaptáveis do Android](https://developer.android.com/develop/adaptive-apps/guides/use-window-size-classes), [papéis de cores do Material Design](https://m3.material.io/styles/color/roles) e [WCAG 2.2](https://www.w3.org/TR/WCAG22/).
+O manifesto e os ícones próprios oferecem instalação em navegadores compatíveis. Nesta versão Railway, arquivos e dados operacionais são armazenados na nuvem; o service worker não guarda páginas autenticadas, respostas de API nem arquivos privados em cache offline. Instalar o aplicativo não altera o armazenamento dos arquivos. As referências de design usadas são as diretrizes oficiais de [modo escuro da Apple](https://developer.apple.com/design/human-interface-guidelines/dark-mode), [layouts adaptáveis do Android](https://developer.android.com/develop/adaptive-apps/guides/use-window-size-classes), [papéis de cores do Material Design](https://m3.material.io/styles/color/roles) e [WCAG 2.2](https://www.w3.org/TR/WCAG22/).
 
 ## Contextos e acesso
 

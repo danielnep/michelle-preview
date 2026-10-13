@@ -1,5 +1,6 @@
 import { DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { can } from "./acl.mjs";
+import { storedOriginalKey } from "./file-storage.mjs";
 
 const fail = (message, status) => Object.assign(new Error(message), { status });
 export function deletionIds(value) {
@@ -18,7 +19,7 @@ export async function deleteFiles(pool, access, userId, requestedIds) {
   try {
     await client.query("BEGIN");
     const { rows } = await client.query(
-      "SELECT id,uploaded_by,COALESCE(object_key,'originais/'||id) AS object_key FROM mc_files WHERE id=ANY($1::text[]) ORDER BY id FOR UPDATE", [ids]);
+      "SELECT id,uploaded_by,object_key FROM mc_files WHERE id=ANY($1::text[]) ORDER BY id FOR UPDATE", [ids]);
     if (!access.owner) {
       const links = await client.query("SELECT content->>'fileId' AS file_id,content->>'sector' AS sector FROM mc_records WHERE namespace='lots' AND content->>'fileId'=ANY($1::text[])", [ids]);
       for (const file of rows) {
@@ -31,7 +32,7 @@ export async function deleteFiles(pool, access, userId, requestedIds) {
     const deletedIds = rows.map(file => file.id);
     const lots = await client.query("DELETE FROM mc_records WHERE namespace='lots' AND content->>'fileId'=ANY($1::text[])", [deletedIds]);
     for (const file of rows)
-      await client.query("INSERT INTO mc_file_cleanup(object_key) VALUES($1) ON CONFLICT DO NOTHING", [file.object_key]);
+      await client.query("INSERT INTO mc_file_cleanup(object_key) VALUES($1) ON CONFLICT DO NOTHING", [storedOriginalKey(file)]);
     await client.query("DELETE FROM mc_files WHERE id=ANY($1::text[])", [deletedIds]);
     await client.query("COMMIT");
     return { deletedIds: ids, removedFiles: deletedIds.length, removedLots: lots.rowCount };

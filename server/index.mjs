@@ -4,12 +4,13 @@ import { Pool } from "pg";
 import { betterAuth } from "better-auth";
 import { fromNodeHeaders, toNodeHandler } from "better-auth/node";
 import { getMigrations } from "better-auth/db/migration";
-import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { Readable } from "node:stream";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { randomBytes, randomUUID } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import { deleteFiles, cleanDeletedObjects } from "./file-library.mjs";
+import { uploadOriginal, downloadOriginal } from "./file-storage.mjs";
 import { mailConfigured, sendTransactionalEmail } from "./mail.mjs";
 import { SECTORS, CAPABILITIES, allRights, normalizeRights, normalizeSectors, can, anyRights } from "./acl.mjs";
 
@@ -231,7 +232,6 @@ app.post("/api/collaborators/:id/reinvite",protectedRoute,administrator,async(re
 });
 
 const fileIdOk=id=>/^[a-f0-9]{64}$/.test(id);
-const fileKey=id=>"originais/"+id;
 async function accessibleFile(req,id){
  if(req.access.owner)return true;
  const result=await pool.query("SELECT 1 FROM mc_records WHERE namespace='lots' AND content->>'fileId'=$1 AND content->>'sector'=ANY($2::text[]) LIMIT 1",[id,req.access.sectors]);
@@ -272,8 +272,7 @@ app.put("/api/files/:id",protectedRoute,requireRight("filesUpload"),express.raw(
   if(createHash("sha256").update(req.body).digest("hex")!==id)return res.status(422).json({error:"Verificação de integridade falhou."});
   const previous=await pool.query("SELECT id FROM mc_files WHERE id=$1",[id]);
   if(previous.rows.length)return res.json({id,name,size:req.body.length});
-  const objectKey=fileKey(id)+"-"+randomUUID();
-  await s3.send(new PutObjectCommand({Bucket:bucket,Key:objectKey,Body:req.body,ContentType:"application/octet-stream"}));
+  const objectKey=await uploadOriginal(s3,bucket,id,req.body);
   let inserted;
   try{
    inserted=await pool.query("INSERT INTO mc_files(id,name,mime_type,byte_size,uploaded_by,object_key) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(id) DO NOTHING RETURNING id",[id,name,"application/octet-stream",req.body.length,req.auth.user.id,objectKey]);
@@ -293,7 +292,7 @@ app.get("/api/files/:id",protectedRoute,requireRight("filesDownload"),async(req,
   if(!await accessibleFile(req,req.params.id))return res.status(403).json({error:"Arquivo não autorizado."});
   const {rows}=await pool.query("SELECT name,object_key FROM mc_files WHERE id=$1",[req.params.id]);
   if(!rows.length)return res.status(404).json({error:"Arquivo não encontrado."});
-  const result=await s3.send(new GetObjectCommand({Bucket:bucket,Key:rows[0].object_key||fileKey(req.params.id)}));
+  const result=await downloadOriginal(s3,bucket,{...rows[0],id:req.params.id});
   const disposition=req.query.mode==="download"?"attachment":"inline";
   res.setHeader("Content-Type","application/octet-stream");
   res.setHeader("Content-Disposition",disposition+"; filename*=UTF-8''"+encodeURIComponent(rows[0].name));

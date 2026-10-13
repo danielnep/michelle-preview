@@ -110,7 +110,7 @@
       title:n.title,conclusion:n.text,basis:n.basis,limit:n.caveat
     }));
     const result={
-      scope:"Catálogo: todos os arquivos ativos deste navegador. Resumo selecionado: filtros atuais. Rankings parciais, não linhas individuais.",
+      scope:"Catálogo: todos os arquivos ativos da nuvem do Power BI MC autorizados para esta conta. Resumo selecionado: filtros atuais. Rankings parciais, não linhas individuais.",
       totalImportedFiles:activeFiles.length,allData:summarize(all,false),
       selectedData:summarize(selected,true),files:fileCatalog,
       calculatedFindings:findings,calculatedInsights:localInsights,
