@@ -1911,7 +1911,7 @@
   });
   document.addEventListener("click",(event)=>{
     const trigger=event.target.closest("[data-export],[data-dash-export],[data-cloud-export]");
-    if(trigger && !window.MCAccess?.owner && !window.MCAccess?.rights?.reportsExport){
+    if(trigger && window.MCAccess && !window.MCAccess.owner && !window.MCAccess.rights?.reportsExport){
       event.preventDefault();event.stopImmediatePropagation();
       notify("Seu perfil não permite exportar relatórios.",true);
     }
