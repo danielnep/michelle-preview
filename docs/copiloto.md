@@ -71,3 +71,15 @@ Teste recomendado: no GitHub Pages, abra o Copiloto e faça uma pergunta em
 "Conversa geral"; em "Análises do painel", use uma planilha fictícia para
 verificar os dados enviados e a resposta. A rota `GET /api/michelle-ai`
 no Netlify é somente diagnóstico de infraestrutura.
+
+
+## Agente de planejamento por fontes independentes
+
+- Arquivos XLSX/XLS/CSV e abas são inventariados separadamente a partir das importações confirmadas.
+- Cada fonte tem identificador, arquivo, aba, contagem, tipo e esquema de campos. Não pressupor que toda fonte trata do mesmo assunto.
+- O modo \`plan\` usa \`netlify/functions/planilha-agent-prompt.mjs\` e responde com JSON estruturado: fontes, métricas sugeridas, grupos com ressalvas, ordem de blocos e perguntas pendentes.
+- O servidor valida os identificadores e campos citados, limita respostas e nunca habilita automaticamente cruzamentos.
+- O clique de envio é explícito; só metadados agregados (sem células ou amostras de linhas) seguem à IA. Revisar LGPD e autorização para títulos/cabeçalhos sensíveis.
+- O botão de aplicar altera só a ordem dos blocos existentes. Gráficos, indicadores e cruzamentos permanecem calculados pelo motor local.
+- Limite da prévia: 12 fontes, 18 colunas por fonte; acima disso, analisar em lotes. **Ainda não** é um motor universal de criação de gráficos nem importa automaticamente todas as abas.
+- Engenharia de prompt utiliza decomposição em etapas, contrato JSON, exemplos contrastivos, checagem de evidências e abstinência quando faltam dados. Isso é orientação por prompt, **não treinamento de pesos do modelo**.
