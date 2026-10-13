@@ -116,7 +116,7 @@ export default async function handler(request) {
       response = await fetch("https://api.deepseek.com/chat/completions",{
         method:"POST",signal:ctrl.signal,
         headers:{"Authorization":"Bearer "+key,"Content-Type":"application/json"},
-        body:JSON.stringify({model:env("DEEPSEEK_MODEL") || "deepseek-flash",thinking:{type:"disabled"},messages,temperature:mode==="chat"?0.6:mode==="plan"?0.2:0.35,max_tokens:mode==="plan"?1900:mode==="interpret"?650:mode==="insights"?540:340,...(["interpret","plan"].includes(mode)?{response_format:{type:"json_object"}}:{})})
+        body:JSON.stringify({model:env("DEEPSEEK_MODEL") || "deepseek-flash",thinking:{type:"disabled"},messages,temperature:mode==="chat"?0.6:mode==="plan"?0.2:0.35,max_tokens:mode==="plan"?3600:mode==="interpret"?650:mode==="insights"?540:340,...(["interpret","plan"].includes(mode)?{response_format:{type:"json_object"}}:{})})
       });
     } finally { clearTimeout(timeout); }
     if (!response.ok) {
@@ -140,11 +140,12 @@ export default async function handler(request) {
       const short=(v,max=170)=>safeText(v,max);
       const sources=(Array.isArray(parsed.sources)?parsed.sources:[]).filter(s=>ids.has(s?.id)).slice(0,24).map(s=>{
         const original=ids.get(s.id);
-        const columns=new Set((Array.isArray(original.columns)?original.columns:[]).map(c=>c?.name));
+        const columns=new Map((Array.isArray(original.columns)?original.columns:[]).filter(c=>typeof c?.name==="string").map(c=>[c.name,c.inferredShape]));
         return {id:s.id,subject:short(s.subject,140),grain:short(s.grain,170),purpose:short(s.purpose,260),
           metrics:(Array.isArray(s.metrics)?s.metrics:[]).slice(0,5).map(m=>({
             name:short(m?.name,90),
-            operation:["count","sum","average","distinct","none"].includes(m?.operation)?m.operation:"none",
+            operation:["sum","average"].includes(m?.operation)&&columns.get(m?.column)!=="numero"?"none":
+              ["count","sum","average","distinct","none"].includes(m?.operation)?m.operation:"none",
             column:columns.has(m?.column)?m.column:"",
             unit:short(m?.unit,55),reason:short(m?.reason,180)
           })),chart:short(s.chart,140),
