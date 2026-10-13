@@ -272,6 +272,8 @@ async function boot(db = new IDBFactory(), dashboardPreference) {
     "analysis/workbook-sheets.js",
     "analysis/source-visuals.js",
     "analysis/source-agent.js",
+    "michelle-ai-dock.js",
+    "analysis/compact-dock.js",
     "app.js",
     "studio.js",
     "dashboard.js",
@@ -848,6 +850,30 @@ test("fontes gerais distintas com mesmo período não bloqueiam importação",as
   await wait(()=>b.getImports().length===2&&!b.getState().importBusy);
   assert.equal(b.getImports().length,2);
   assert.deepEqual(Array.from(b.getImports(),p=>p.sheet),["Ocorrencias","Inventario"]);
+  assert.equal(t.errors.length,0);
+  t.w.close();
+});
+
+test("Copiloto permanece enviável, compacto e redimensionável, com insight sinalizado",async()=>{
+  const t=await boot(),w=t.w,b=w.MichelleBridge;
+  assert.ok(w.MCCompactDock);
+  const old=w.MCCompactDock.dimensions().width;
+  const win=w.document.querySelector(".assistant-window");
+  assert.ok(win);
+  assert.ok(Number.parseInt(win.style.width)>0);
+  t.click("[data-assistant-toggle]");
+  assert.ok(w.document.querySelector(".assistant-layer.open .assistant-form button[type=submit]"));
+  const handle=w.document.querySelector("[data-mc-ai-resize]");
+  assert.ok(handle);
+  handle.dispatchEvent(new w.KeyboardEvent("keydown",{key:"ArrowLeft",bubbles:true,cancelable:true}));
+  assert.equal(w.MCCompactDock.dimensions().width,old-16);
+  assert.ok(w.localStorage.getItem("michelle.ai.compact-dock.v1"));
+  b.getState().aiInsightText="Registros relevantes analisados";
+  b.render();
+  assert.ok(w.document.querySelector(".assistant-fab.mc-ai-insight-ready"));
+  assert.ok(w.document.querySelector(".assistant-layer .mc-ai-insight-callout"));
+  t.click(".assistant-layer [data-assistant-expand]");
+  assert.equal(b.getState().page,"insight");
   assert.equal(t.errors.length,0);
   t.w.close();
 });
