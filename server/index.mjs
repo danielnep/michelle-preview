@@ -34,7 +34,7 @@ const auth = betterAuth({
       });
     },
     onPasswordReset: async ({user}) => {
-      await pool.query("UPDATE mc_collaborators SET active=true,updated_at=now() WHERE user_id=$1",[user.id]);
+      await pool.query("UPDATE mc_collaborators SET active=true,onboarding_pending=false,updated_at=now() WHERE user_id=$1 AND onboarding_pending=true",[user.id]);
     }
   },
   trustedOrigins: [process.env.BETTER_AUTH_URL || "http://localhost:" + port],
@@ -181,14 +181,14 @@ app.post("/api/collaborators",protectedRoute,administrator,async(req,res,next)=>
   if(email===process.env.MICHELLE_INITIAL_EMAIL?.trim().toLowerCase())return res.status(409).json({error:"Este e-mail é da administradora."});
   if(!sectors.length)return res.status(400).json({error:"Selecione pelo menos um setor."});
   if(!Object.values(rights).some(Boolean))return res.status(400).json({error:"Selecione pelo menos uma permissão."});
-  if(!mailConfigured())return res.status(503).json({error:"Configure SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD e SMTP_FROM no Railway para enviar convites."});
+  if(!mailConfigured())return res.status(503).json({error:"Configure RESEND_API_KEY e RESEND_FROM_EMAIL no Railway para enviar convites."});
   const present=await pool.query('SELECT 1 FROM "user" WHERE lower(email)=$1',[email]);
   if(present.rows.length)return res.status(409).json({error:"Este e-mail já tem cadastro no aplicativo."});
   const temporaryPassword=randomBytes(36).toString("base64url");
   const account=await auth.api.signUpEmail({body:{name,email,password:temporaryPassword}});
   const userId=account?.user?.id;
   if(!userId)throw Error("A autenticação não confirmou a criação do usuário.");
-  await pool.query("INSERT INTO mc_collaborators(user_id,name,email,active,rights,sectors) VALUES($1,$2,$3,false,$4::jsonb,$5::jsonb)",
+  await pool.query("INSERT INTO mc_collaborators(user_id,name,email,active,onboarding_pending,rights,sectors) VALUES($1,$2,$3,false,true,$4::jsonb,$5::jsonb)",
    [userId,name,email,JSON.stringify(rights),JSON.stringify(sectors)]);
   let invited=false;
   try {
@@ -207,7 +207,7 @@ app.patch("/api/collaborators/:id",protectedRoute,administrator,async(req,res,ne
   const active=req.body?.active===true;
   const exists=await pool.query("SELECT 1 FROM mc_collaborators WHERE user_id=$1",[id]);
   if(!exists.rows.length)return res.status(404).json({error:"Colaborador não encontrado."});
-  await pool.query("UPDATE mc_collaborators SET rights=$2::jsonb,sectors=$3::jsonb,active=$4,updated_at=now() WHERE user_id=$1",
+  await pool.query("UPDATE mc_collaborators SET rights=$2::jsonb,sectors=$3::jsonb,active=$4,onboarding_pending=CASE WHEN $4 THEN false ELSE onboarding_pending END,updated_at=now() WHERE user_id=$1",
    [id,JSON.stringify(rights),JSON.stringify(sectors),active]);
   if(!active)await pool.query('DELETE FROM "session" WHERE "userId"=$1',[id]);
   res.json({saved:true});
@@ -321,6 +321,7 @@ async function boot() {
  await pool.query("CREATE TABLE IF NOT EXISTS mc_files(id text PRIMARY KEY,name text NOT NULL,mime_type text NOT NULL,byte_size bigint NOT NULL,uploaded_by text,created_at timestamptz NOT NULL DEFAULT now())");
  await pool.query("ALTER TABLE mc_files ADD COLUMN IF NOT EXISTS uploaded_by text");
  await pool.query("CREATE TABLE IF NOT EXISTS mc_collaborators(user_id text PRIMARY KEY,email text UNIQUE NOT NULL,name text NOT NULL,active boolean NOT NULL DEFAULT false,rights jsonb NOT NULL DEFAULT '{}'::jsonb,sectors jsonb NOT NULL DEFAULT '[]'::jsonb,created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now())");
+ await pool.query("ALTER TABLE mc_collaborators ADD COLUMN IF NOT EXISTS onboarding_pending boolean NOT NULL DEFAULT false");
  const initialEmail=process.env.MICHELLE_INITIAL_EMAIL?.trim().toLowerCase();
  const initialPassword=process.env.MICHELLE_INITIAL_PASSWORD;
  if(initialEmail&&initialPassword) {
