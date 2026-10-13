@@ -37,7 +37,7 @@ app.use((req,res,next)=>{
   res.setHeader("X-Frame-Options", "SAMEORIGIN");
   next();
 });
-app.get("/health", (_req,res) => res.json({ok:true, service:"Power BI Michelle"}));
+app.get("/health", (_req,res) => res.json({ok:true, service:"PowerBI CompletoMC"}));
 app.get("/api/status", (_req,res) => res.json({ready:true, login:"email", registration:"restricted"}));
 
 // Registration is server-side only. Do not expose public email sign-up.
@@ -171,10 +171,10 @@ async function boot() {
  if(initialEmail&&initialPassword) {
   const {rows}=await pool.query('SELECT COUNT(*)::integer AS count FROM "user"');
   if(rows[0].count===0) {
-   await auth.api.signUpEmail({body:{name:"Michelle Cândido",email:initialEmail,password:initialPassword}});
+   await auth.api.signUpEmail({body:{name:"PowerBI CompletoMC",email:initialEmail,password:initialPassword}});
    console.log("Primeira conta de acesso criada. Defina uma rotina segura de troca de senha.");
   }
  }
- app.listen(port,"0.0.0.0",()=>console.log("Power BI Michelle ouvindo na porta "+port));
+ app.listen(port,"0.0.0.0",()=>console.log("PowerBI CompletoMC ouvindo na porta "+port));
 }
 boot().catch(error=>{console.error("Falha ao iniciar:",error?.message||error);process.exit(1)});
