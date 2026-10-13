@@ -97,7 +97,7 @@ async function load(){
 document.querySelector("#create").onsubmit=async e=>{
  e.preventDefault();const form=e.currentTarget,button=form.querySelector("button[type=submit]");button.disabled=true;message.textContent="";
  try{
-  const data={name:form.name.value.trim(),email:form.email.value.trim(),rights:take(document.querySelector("#new-rights"),"rights",true),sectors:take(document.querySelector("#new-sectors"),"sectors")};
+  const data={name:document.querySelector("#new-name").value.trim(),email:document.querySelector("#new-email").value.trim(),rights:take(document.querySelector("#new-rights"),"rights",true),sectors:take(document.querySelector("#new-sectors"),"sectors")};
   const response=await api("/api/collaborators",payload(data));
   message.textContent=response.message||"Conta criada.";form.reset();await load();
  }catch(err){message.textContent=err.message}finally{button.disabled=false}
