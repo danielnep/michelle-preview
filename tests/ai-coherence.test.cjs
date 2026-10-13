@@ -65,9 +65,9 @@ test("títulos e explicações de origem são contextuais, sem exibir fórmula c
   assert.match(dashboard,/b\.generateAIInsights/);
 });
 
-test("Copiloto usa a função remota segura quando aberto no GitHub Pages",async()=>{
+test("Copiloto usa somente a API própria do Railway na mesma origem",async()=>{
   for(const [hostname,expected] of [
-    ["danielnep.github.io","https://powerbicompleto.netlify.app/api/michelle-ai"],
+    ["danielnep.github.io","/api/michelle-ai"],
     ["powerbicompleto.netlify.app","/api/michelle-ai"]
   ]){
     let called="";
