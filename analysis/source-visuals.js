@@ -7,7 +7,7 @@
   "use strict";
   const normalize=s=>String(s??"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
   const clean=s=>String(s??"").trim();
-  const safeField=name=>!/(^|[\s_-])(cpf|cnpj|e-?mail|telefone|celular|senha|token|chave|endereco|endereço|cep|rg|matricula|matrícula|nome completo)([\s_-]|$)/i.test(name);
+  // Somente dimensões categóricas reconhecidas. Nomes, contatos e identificadores não viram barras.\n  const safeField=name=>/(^|\b)(status|situac[aã]o|categoria|tipo|motivo|etapa|setor|grupo|origem|destino|canal|prioridade|produto|unidade|regi[aã]o)(\b|$)/i.test(normalize(name)) &&\n    !/(cpf|cnpj|email|telefone|celular|senha|token|chave|endereco|cep|matricula|cliente|pessoa|usuario|identificador|contato|numero|numero de telefone)/i.test(normalize(name));
   function dateValue(value){
     const text=String(value??"").trim();
     const d=/^(\d{4})-(\d{2})-(\d{2})/.exec(text)||/^(\d{2})\/(\d{2})\/(\d{4})/.exec(text);
