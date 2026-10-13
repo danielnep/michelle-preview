@@ -1,4 +1,4 @@
-/* Quatro experiências em um único Painel Michelle.
+/* Três contextos de leitura em um único Painel Michelle.
    Esta camada organiza a interface, NÃO implementa controle de acesso seguro.
    Autorização por usuário necessita backend autenticado.
 */
@@ -12,7 +12,7 @@
   const profiles = Object.freeze({
     operacao: Object.freeze({
       id: "operacao",
-      title: "Operação",
+      title: "Ronda / Vigia",
       description: "Importação, conferência dos arquivos e acompanhamento dos registros.",
       heading: "Central operacional",
       subheading: "Confira os dados recebidos e atualize a base para os outros setores.",
@@ -27,7 +27,7 @@
     }),
     supervisora: Object.freeze({
       id: "supervisora",
-      title: "Supervisora",
+      title: "Supervisão",
       description: "Acompanhamento dos setores, situação das demandas e exceções.",
       heading: "Acompanhamento da supervisão",
       subheading: "Veja situações em aberto, setores e registros que precisam ser conferidos.",
@@ -42,7 +42,7 @@
     }),
     gerente: Object.freeze({
       id: "gerente",
-      title: "Gerente",
+      title: "Gestão",
       description: "Indicadores, comparativos, prioridades e relatórios gerenciais.",
       heading: "Visão gerencial",
       subheading: "Analise resultados, identifique prioridades e aprofunde os indicadores.",
@@ -55,21 +55,7 @@
       widgets: Object.freeze(["metrics", "insights", "crossings", "trend", "status", "sectors", "ranking", "reading", "records"]),
       focus: Object.freeze(["quality", "open", "insights"]),
     }),
-    direcao: Object.freeze({
-      id: "direcao",
-      title: "Direção",
-      description: "Síntese executiva, evolução dos indicadores e apresentação de resultados.",
-      heading: "Resumo estratégico",
-      subheading: "Consulte o panorama das fontes e prepare a apresentação de resultados.",
-      icon: "report",
-      quick: Object.freeze([
-        ["dashboard", "Painel executivo", "chart"],
-        ["report", "Relatório consolidado", "report"],
-        ["present", "Apresentar resultados", "files"],
-      ]),
-      widgets: Object.freeze(["metrics", "trend", "insights", "sectors", "crossings", "ranking", "status", "reading", "records"]),
-      focus: Object.freeze(["insights", "quality", "presentation"]),
-    }),
+
   });
   const ids = Object.freeze(Object.keys(profiles));
   function valid(id) { return Object.hasOwn(profiles, id); }

@@ -4,7 +4,7 @@ main{max-width:430px;width:100%;background:#121c2c;border:1px solid #33485e;bord
 p{color:#b5c5d7;line-height:1.6}label{display:block;margin:20px 0 7px}
 input,button{font:inherit;width:100%;border-radius:10px;padding:13px}input{background:#0a1220;color:white;border:1px solid #5a7088}
 button{background:#4bc3ff;color:#081928;font-weight:800;border:0;cursor:pointer;margin:17px 0}a{color:#88d6ff}
-</style></head><body><main><h1>Esqueci minha senha</h1><p>Informe o e-mail cadastrado para receber um link de redefinição.</p><form id="form"><label for="email">E-mail</label><input id="email" type="email" autocomplete="email" required>
+</style><link rel="icon" type="image/png" href="/assets/brand/mc-logo-transparent.png?v=5.1.0"></head><body><main><img class="mc-auth-logo" src="/assets/brand/mc-logo-transparent.png?v=5.1.0" width="150" height="76" alt="Michelle Cândido — MC" style="object-fit:contain;display:block;margin-bottom:16px"><h1>Esqueci minha senha</h1><p>Informe o e-mail cadastrado para receber um link de redefinição.</p><form id="form"><label for="email">E-mail</label><input id="email" type="email" autocomplete="email" required>
 <button type="submit">Enviar link de redefinição</button><p id="result" role="status"></p></form><a href="/login.html">← Voltar ao login</a></main>
 <script>document.querySelector("#form").onsubmit=async e=>{
 e.preventDefault();const btn=e.currentTarget.querySelector("button"),status=document.querySelector("#result");btn.disabled=true;status.textContent="Solicitando...";

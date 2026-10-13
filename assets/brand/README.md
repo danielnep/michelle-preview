@@ -1,3 +1,12 @@
+# Logo MC — Michelle Cândido
+
+## Arte fornecida atual
+
+- `mc-logo-dark.jpg`: versão original com fundo escuro, sem redesenho.
+- `mc-logo-transparent.png`: recorte de fundo do monograma fornecido, com alpha real, preparado para uso sobre as superfícies do app.
+
+A versão dita transparente foi fornecida como JPG com quadriculado gravado. O recorte remove esse fundo; a versão original com fundo escuro também é utilizada em compartilhamento e instalação. Os vetores antigos permanecem como histórico, sem serem usados como logo principal na versão 5.1.
+
 # Monograma MC · Michelle Cândido
 Arte-mestra vetorial: \`mc-symbol.svg\`. Letras geométricas M e C, contraste tecnológico azul-celeste, prata e um toque malva discreto sobre azul-noite. Arte desenhada para o projeto da Michelle; inspiração estética da Horizon sem qualquer assinatura da Horizon na interface do cliente.
 

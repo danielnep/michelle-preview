@@ -1,7 +1,7 @@
 {
   "name": "michelle-powerbi-panel",
   "private": true,
-  "version": "5.0.0",
+  "version": "5.1.0",
   "scripts": {
     "start": "node server/index.mjs",
     "dev": "node scripts/dev.mjs",

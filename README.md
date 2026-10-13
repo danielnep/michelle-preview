@@ -31,11 +31,19 @@ O título do aplicativo é **PowerBI Completo MC** e símbolo de indicadores pr�
 - PowerPoint PPTX: leitura real de OOXML, textos, formas, imagens comuns, tabelas e gráficos com valores armazenados; reprodução como slides SVG. O arquivo original é preservado e pode ser baixado.
 - TV: apenas slides, proporção preservada, transições, Fullscreen API quando permitida e navegação por teclado. Direita/Espaço/Enter avançam; esquerda/Backspace retornam; Esc sai.
 
-## Armazenamento
+## Armazenamento — versão Railway
 
-Não existe backend de armazenamento compartilhado neste projeto. A IA usa uma função segura Netlify; dados, apresentações e originais ficam no IndexedDB do navegador, no dispositivo e no endereço utilizados. Atualizar a página conserva o conteúdo. Para transferir entre dispositivos ou guardar uma cópia externa, use **Exportar backup completo** e **Restaurar backup** em Enviar Dados Excel. Limpar os dados do navegador remove esse armazenamento.
+Esta branch usa autenticação individual no servidor, PostgreSQL para registros e um bucket privado para os arquivos originais. O catálogo, as abas importadas e os indicadores são compartilhados conforme as permissões e os setores de cada conta.
 
-Importações e apresentações antigas do localStorage são migradas sem apagar a cópia anterior. Importações antigas precisam ser reconferidas quando sua normalização original perdeu informações.
+### Biblioteca de arquivos (v5.1)
+
+- **Enviar arquivo**, **Biblioteca de arquivos**, **Exportar análises**, **Colaboradores**, aparência, instalação e Copiloto ficam na barra lateral. O cabeçalho contém a identificação do aplicativo e o controle do menu móvel.
+- A tela inicial também possui um botão **Biblioteca de arquivos**, sem card de biblioteca. Ele abre uma janela **Arquivos enviados** dentro do próprio painel.
+- Cada linha permite abrir/baixar o original conforme permissão e marcar sua exclusão. **Excluir tudo** marca todos os arquivos que a conta pode excluir. **Desfazer** recupera uma marcação antes de salvar.
+- **Salvar** confirma as exclusões. Fechar pelo X, por Escape ou pelo fundo com alterações pendentes pede confirmação de descarte. Falha do servidor conserva o rascunho.
+- O servidor remove o catálogo e todas as abas relacionadas em uma transação, atualizando os indicadores. A conta precisa da permissão **Excluir arquivos e seus dados do painel**; a administradora já a possui. Colaboradores não podem excluir um original compartilhado com um setor fora de seu acesso.
+- A limpeza dos objetos excluídos é retentável. Cada novo envio tem chave própria, para uma exclusão antiga não apagar uma reimportação posterior do mesmo conteúdo.
+- A versão escura da logo fornecida e o recorte com transparência real aparecem em cabeçalho, lateral, login, recuperação, favicon e instalação. Os JPGs fornecidos permanecem preservados na branch original.
 
 ## Limites explícitos
 
@@ -55,25 +63,9 @@ A identificação no cabeçalho, menu e rodapé é “PowerBI Completo MC”, se
 
 O manifesto, o service worker e os ícones próprios oferecem instalação e cache do shell em navegadores compatíveis. Os dados operacionais continuam locais no IndexedDB; o modo offline não garante acesso a recursos remotos. As referências de design usadas são as diretrizes oficiais de [modo escuro da Apple](https://developer.apple.com/design/human-interface-guidelines/dark-mode), [layouts adaptáveis do Android](https://developer.android.com/develop/adaptive-apps/guides/use-window-size-classes), [papéis de cores do Material Design](https://m3.material.io/styles/color/roles) e [WCAG 2.2](https://www.w3.org/TR/WCAG22/).
 
-## Quatro experiências no mesmo aplicativo (v4.1)
+## Contextos e acesso
 
-O Painel Michelle **não é uma apresentação ou quatro demos**: as quatro experiências são telas do mesmo aplicativo, usando **as mesmas planilhas reais, IndexedDB, cálculos, histórico, gráficos e relatórios**. Use o seletor **Experiência**, no topo do conteúdo, para trocar o foco. A escolha fica salva no navegador.
-
-| Experiência | Tela inicial | Acesso rápido | Ordem sugerida do dashboard |
-| --- | --- | --- | --- |
-| **Operação** | Arquivos ativos, alertas de qualidade, linhas recentes | Enviar dados, setores, relatório | Origem dos dados, registros e métricas |
-| **Supervisora** | OS em aberto, setores, alertas comprovados | Setores, análises, dashboard | Insights, status, setores, métricas |
-| **Gerente** | Indicadores, comparações sustentadas, prioridades | Dashboard, análises, relatório | Métricas, insights, cruzamentos |
-| **Direção** | Resumo executivo, tendências, apresentações | Dashboard, relatórios, Estúdio | Métricas, evolução e insights |
-
-**Nomes sujeitos à confirmação:** “Supervisora” e “Gerente” foram citados pelo solicitante; “Operação” e “Direção” são nomes provisórios, definidos de forma centralizada em `profiles.js` para serem renomeados sem migrar dados.
-
-Os painéis armazenam a composição de widgets separadamente por experiência, usando `michelle.dashboard.v2.<experiência>`. O layout anterior da Gerente (`michelle.dashboard.v1`) continua sendo recuperado e não é excluído.
-
-**Segurança:** a seleção é de **modo de visualização, não login nem permissão real**. Atualmente qualquer pessoa com acesso ao mesmo navegador e banco local pode mudar de experiência. Para contas distintas, supervisão de equipe e acesso restrito por função será necessário backend com autenticação e RBAC no servidor, sincronização e LGPD. Não representar o seletor como uma barreira de segurança.
-
-**Uso:** abra o endereço HTTPS, instale pelo botão **Instalar** quando suportado (ou pelo menu do navegador), escolha uma experiência e importe seus arquivos reais pelo menu **Dados**. O painel é alimentado com os mesmos dados nos quatro modos. A instalação não cria automaticamente uma conta, banco compartilhado ou sincronização entre dispositivos. Faça backup pelo módulo de Dados.
-
+O seletor de experiências foi retirado da interface. **Direção** não é mais uma opção; preferências antigas caem no contexto de **Gestão** sem apagar layouts salvos. Os contextos internos restantes são Gestão, Supervisão e Ronda / Vigia; eles organizam leitura e widgets, não concedem acesso. Contas, setores e permissões são aplicados no backend, separadamente desses contextos. Não há função de ronda/GPS criada por essa nomenclatura no painel BI.
 
 ## Código e testes
 

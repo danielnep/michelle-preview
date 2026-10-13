@@ -8,6 +8,7 @@ export const CAPABILITIES={
  filesView:"Visualizar lista de arquivos",
  filesUpload:"Enviar e importar planilhas",
  filesDownload:"Abrir e baixar arquivos originais",
+ filesDelete:"Excluir arquivos e seus dados do painel",
  reportsExport:"Exportar relatórios e análises",
  presentationsView:"Visualizar apresentações",
  presentationsEdit:"Criar ou editar apresentações",

@@ -222,18 +222,28 @@
     return `<button type="button" class="nav ${state.page === item ? "active" : ""}" data-nav="${item}" ${state.page === item ? 'aria-current="page"' : ""}>${icon(item === "geral" ? "grid" : item)} <span>${esc(label)}</span></button>`;
   }
 
-  function cloudToolbar(){
-    const access=window.MCAccess || {owner:false,rights:{},sectors:[]};
+  function fileActions(){
+    const access=window.MCAccess || {owner:false,rights:{}};
     const can=key=>access.owner||access.rights?.[key]===true;
-    const count=window.MCCloudFiles?.list()?.length||0;
     const actions=[];
-    if(can("filesUpload"))actions.push('<button type="button" class="btn btn-primary mc-upload-main" data-cloud-upload>'+icon("up",18)+' Subir arquivo</button><input type="file" id="mc-cloud-upload" hidden accept=".xlsx,.xls,.csv" multiple>');
-    if(can("filesView")||can("filesDownload"))actions.push('<a class="btn mc-cloud-view" href="/arquivos.html" target="_blank" rel="noopener noreferrer">'+icon("files",18)+' Visualizar</a>');
-    if(can("reportsExport"))actions.push('<button type="button" class="btn mc-cloud-export" data-cloud-export>'+icon("down",17)+' Exportar análises (Excel)</button>');
-    if(access.owner)actions.push('<a class="btn" href="/colaboradores.html">'+icon("settings",17)+' Colaboradores</a>');
-    return '<section class="mc-cloud-toolbar" aria-label="Arquivos do painel">'+
-      '<div class="mc-cloud-info"><span class="mc-cloud-icon" aria-hidden="true">'+icon("files",23)+'</span><div><strong>Biblioteca de planilhas</strong><p>Você possui '+count+' arquivo'+(count===1?'':'s')+' enviado'+(count===1?'':'s')+'.</p></div></div>'+
-      '<div class="mc-cloud-actions">'+actions.join("")+'</div></section>';
+    if(can("filesUpload"))actions.push('<button type="button" class="nav" data-cloud-upload>'+icon("up",18)+'<span>Enviar arquivo</span></button><input type="file" id="mc-cloud-upload" hidden accept=".xlsx,.xls,.csv" multiple>');
+    if(can("filesView")||can("filesDownload")||can("filesDelete"))actions.push('<button type="button" class="nav" data-cloud-library>'+icon("files",18)+'<span>Biblioteca de arquivos</span></button>');
+    if(can("reportsExport"))actions.push('<button type="button" class="nav" data-cloud-export>'+icon("down",18)+'<span>Exportar análises</span></button>');
+    if(access.owner)actions.push('<a class="nav" href="/colaboradores.html">'+icon("rh",18)+'<span>Colaboradores</span></a>');
+    return actions.join("");
+  }
+  function sidebarUtilities(){
+    const dark=appearance()==="dark";
+    return '<div class="nav-group"><div class="side-label">APLICATIVO</div>'+
+      '<button type="button" class="nav" data-toggle-theme aria-label="'+(dark?'Ativar modo claro':'Ativar modo escuro')+'">'+icon(dark?'sun':'moon',18)+'<span>'+(dark?'Modo claro':'Modo escuro')+'</span></button>'+
+      '<button type="button" class="nav install-shortcut" data-mc-install>'+icon("down",18)+'<span>Instalar aplicativo</span></button>'+
+      '<button type="button" class="nav" data-assistant-open="1">'+icon("spark",18)+'<span>Abrir Copiloto</span></button></div>';
+  }
+  function libraryShortcut(){
+    const access=window.MCAccess;
+    if(!access || !(access.owner||access.rights?.filesView||access.rights?.filesDownload||access.rights?.filesDelete))return "";
+    const count=window.MCCloudFiles?.list()?.length||0;
+    return '<div class="mc-home-library"><button type="button" class="btn" data-cloud-library>'+icon("files",18)+' Biblioteca de arquivos</button><span>'+count+' arquivo'+(count===1?' enviado':'s enviados')+'</span></div>';
   }
   function shell() {
     let sec = idSector(state.page);
@@ -250,7 +260,7 @@
           present: "Estúdio de apresentações",
           settings: "Configurações",
         }[state.page] || "Visão geral";
-    return `<div class="app"><div class="backdrop ${state.sidebar ? "open" : ""}" data-close="1"></div><aside id="panel-navigation" class="sidebar ${state.sidebar ? "open" : ""}" aria-label="Navegação do painel"><button type="button" class="sidebar-close small-icon-btn" data-close-nav aria-label="Fechar menu">${icon("close", 20)}</button><div class="brand"><span class="panel-logo" aria-hidden="true">${icon("brand", 26)}</span><strong class="panel-brand-title">PowerBI Completo MC</strong></div><label class="searchbox sidebar-search">${icon("search", 18)}<input aria-label="Pesquisar registros" id="global-search" placeholder="Buscar registros..." value="${esc(state.query)}" /></label><div class="nav-scroll"><div class="nav-group"><div class="side-label">PRINCIPAL</div>${nav("geral", "Visão Geral")}${nav("sectors", "Setores")}${nav("dashboard", "Visualizar dashboard")}${nav("present", "Estúdio de Apresentações")}</div><div class="nav-group"><div class="side-label">DEPARTAMENTOS</div>${sectors.filter(s => window.MCAccess?.owner || window.MCAccess?.sectors?.includes(s.id)).map((s) => nav(s.id, s.name)).join("")}</div><div class="nav-group"><div class="side-label">GESTÃO E DADOS</div>${nav("data", "Enviar Dados Excel")}${nav("report", "Relatórios")}${nav("insight", "Insights e análises")}${nav("settings", "Configurações")}</div></div><div class="side-bottom"><div class="side-credit">PowerBI Completo MC</div></div></aside><div class="main"><header class="topbar"><button aria-label="${state.sidebar ? "Fechar menu" : "Abrir menu"}" aria-expanded="${state.sidebar}" aria-controls="panel-navigation" class="small-icon-btn mob-toggle" data-toggle="1">${icon("menu", 20)}</button><div class="header-identity"><span class="panel-logo panel-logo-small" aria-hidden="true">${icon("brand", 19)}</span><div class="crumb"><strong class="app-title">PowerBI Completo MC</strong><span class="app-caption crumb-page">${esc(title)}</span></div></div><div class="head-actions">${themeButton()}<button type="button" class="install-shortcut" data-mc-install title="Instalar aplicativo" aria-label="Instalar aplicativo">${icon("down", 16)}<span class="install-label">Instalar</span></button><button aria-label="Estúdio de Apresentações" class="btn studio-top-button" data-nav="present">${icon("report", 15)} Estúdio de Apresentações</button><button type="button" class="top-assistant" data-assistant-open="1" aria-label="Abrir assistente">${icon("spark", 15)} <span>Assistente</span></button><span class="badge info" style="white-space:nowrap">${imports.length ? "Dados reais" : "Aguardando dados"}</span><div class="avatar">M</div></div></header><main class="content">${cloudToolbar()}<section class="mc-role-bar" aria-label="Selecionar experiência por função"><div class="mc-role-intro"><span class="mc-role-emblem">${icon(P.current().icon, 19)}</span><div><strong>${esc(P.current().title)}</strong><small>${esc(P.current().description)}</small></div></div><label class="mc-role-select"><span>Experiência</span><select id="mc-profile" aria-label="Experiência do painel por função">${P.ids.map(id => '<option value="' + id + '"' + (P.currentId() === id ? ' selected' : '') + '>' + esc(P.profiles[id].title) + '</option>').join("")}</select></label></section><div class="print-header">PowerBI Completo MC</div>${body()}</main><footer class="footer"><span>PowerBI Completo MC</span></footer></div><nav class="mobile-nav" aria-label="Navegação principal">${[
+    return `<div class="app"><div class="backdrop ${state.sidebar ? "open" : ""}" data-close="1"></div><aside id="panel-navigation" class="sidebar ${state.sidebar ? "open" : ""}" aria-label="Navegação do painel"><button type="button" class="sidebar-close small-icon-btn" data-close-nav aria-label="Fechar menu">${icon("close", 20)}</button><div class="brand"><span class="panel-logo" aria-hidden="true">${icon("brand", 26)}</span><strong class="panel-brand-title">PowerBI Completo MC</strong></div><label class="searchbox sidebar-search">${icon("search", 18)}<input aria-label="Pesquisar registros" id="global-search" placeholder="Buscar registros..." value="${esc(state.query)}" /></label><div class="nav-scroll"><div class="nav-group"><div class="side-label">PRINCIPAL</div>${nav("geral", "Visão Geral")}${nav("sectors", "Setores")}${nav("dashboard", "Visualizar dashboard")}${nav("present", "Estúdio de Apresentações")}</div><div class="nav-group"><div class="side-label">DEPARTAMENTOS</div>${sectors.filter(s => window.MCAccess?.owner || window.MCAccess?.sectors?.includes(s.id)).map((s) => nav(s.id, s.name)).join("")}</div><div class="nav-group"><div class="side-label">GESTÃO E DADOS</div>${fileActions()}${nav("data", "Conferir importações")}${nav("report", "Relatórios")}${nav("insight", "Insights e análises")}${nav("settings", "Configurações")}</div>${sidebarUtilities()}</div><div class="side-bottom"><div class="side-credit">PowerBI Completo MC</div></div></aside><div class="main"><header class="topbar"><button aria-label="${state.sidebar ? "Fechar menu" : "Abrir menu"}" aria-expanded="${state.sidebar}" aria-controls="panel-navigation" class="small-icon-btn mob-toggle" data-toggle="1">${icon("menu", 20)}</button><div class="header-identity"><span class="panel-logo panel-logo-small" aria-hidden="true">${icon("brand", 19)}</span><div class="crumb"><strong class="app-title">PowerBI Completo MC</strong><span class="app-caption crumb-page">${esc(title)}</span></div></div></header><main class="content"><div class="print-header">PowerBI Completo MC</div>${body()}</main><footer class="footer"><span>PowerBI Completo MC</span></footer></div><nav class="mobile-nav" aria-label="Navegação principal">${[
       ["geral", "Resumo", "grid"],
       ["sectors", "Setores", "coi"],
       ["data", "Dados", "up"],
@@ -461,7 +471,7 @@
   }
   function pageOverview() {
     const rs = recordsFor(), role = P.currentId();
-    const essential = roleHome(rs);
+    const essential = libraryShortcut() + roleHome(rs);
     const aiHome = window.MCAI?.home(rs, imports, esc) || "";
     if (role === "operacao") {
       return essential + aiHome + statCards(rs) + recentActivity(rs) +
@@ -470,12 +480,6 @@
     if (role === "supervisora") {
       return essential + aiHome + managerialHighlights(rs) + statCards(rs) + homeSectors(rs) +
         recentActivity(rs);
-    }
-    if (role === "direcao") {
-      return essential + aiHome + managerialHighlights(rs) + statCards(rs) + graphPanels(rs) +
-        '<section class="studio-promo"><div class="studio-promo-icon">' + icon("report",22) +
-        '</div><div><strong>Apresentar resultados</strong><span>Prepare uma apresentação usando somente indicadores realmente importados.</span></div>' +
-        '<button class="btn btn-primary" data-nav="present">Abrir Estúdio</button></section>';
     }
     return essential + aiHome + managerialHighlights(rs) + statCards(rs) + graphPanels(rs) +
       homeSectors(rs) + '<div class="mc-role-actions"><button class="btn" data-nav="dashboard">Ver dashboard completo</button>' +
@@ -1236,12 +1240,6 @@
     document
       .querySelectorAll("[data-assistant-root]")
       .forEach(wireAssistantChat);
-    document.getElementById("mc-profile")?.addEventListener("change", e => {
-      if (!P.set(e.target.value)) return;
-      invalidate();
-      navigate("geral");
-      notify("Experiência alterada para " + P.current().title + ". Os dados permanecem os mesmos.");
-    });
     document.querySelectorAll("[data-nav]").forEach(
       (el) =>
         (el.onclick = () => {
@@ -1858,6 +1856,7 @@
       }
       state.ready = true;
       render();
+      window.dispatchEvent(new CustomEvent("mc:app-ready"));
     } catch (e) {
       state.ready = false;
       render();
@@ -1881,6 +1880,12 @@
     getAIInsight: () => ({ text: state.aiInsightText, scope: state.aiInsightScope, busy: state.aiInsightBusy }),
     clearAIInsight: () => { state.aiInsightText = ""; },
     generateAIInsights,
+    applyDeletedFiles: ids => {
+      const removed=new Set(ids);
+      imports=imports.filter(lot=>!removed.has(lot.fileId));
+      if(!imports.some(lot=>lot.id===state.viewLot))state.viewLot=null;
+      state.report=null; invalidate(); render();
+    },
     render,
     navigate,
     icon,

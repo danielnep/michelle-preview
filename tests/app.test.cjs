@@ -726,21 +726,22 @@ test("seleção de indicadores é respeitada, quantidades são cumpridas e os mo
   t.w.close();
 });
 
-test("as quatro experiências integram o aplicativo real e compartilham os dados", async () => {
+test("o painel remove o seletor de experiências e mantém dados e contextos compatíveis", async () => {
   const t = await boot(), b = t.w.MichelleBridge;
   assert.equal(t.w.MCProfiles.currentId(), "gerente");
   assert.match(t.w.document.querySelector(".mc-role-home").textContent, /Visão gerencial/);
   const records = [{id:"001",type:"ordens",sector:"tec",status:"Pendente",title:"Atendimento",value:1,source:"os.xlsx"}];
   b.getImports().push({id:"teste",name:"os.xlsx",filename:"os.xlsx",sector:"tec",type:"ordens",rows:records,created:"2026-10-11T12:00:00.000Z"});
   b.render();
-  t.input("#mc-profile", "supervisora");
+  assert.equal(t.w.document.querySelector("#mc-profile"),null);
+  t.w.MCProfiles.set("supervisora"); b.render();
   assert.equal(t.w.MCProfiles.currentId(), "supervisora");
   assert.match(t.w.document.querySelector(".mc-role-home").textContent, /Acompanhamento da supervisão/);
   assert.equal(b.getAll().length, 1);
-  t.input("#mc-profile", "operacao");
+  t.w.MCProfiles.set("operacao"); b.render();
   assert.match(t.w.document.querySelector(".mc-role-home").textContent, /Central operacional/);
-  t.input("#mc-profile", "direcao");
-  assert.match(t.w.document.querySelector(".mc-role-home").textContent, /Resumo estratégico/);
+  assert.equal(t.w.MCProfiles.set("direcao"),false);
+  assert.equal(t.w.document.querySelector(".mc-role-bar"),null);
   assert.equal(b.getAll().length, 1);
   assert.equal(t.errors.length, 0);
   t.w.close();
@@ -876,4 +877,16 @@ test("Copiloto permanece enviável, compacto e redimensionável, com insight sin
   assert.equal(b.getState().page,"insight");
   assert.equal(t.errors.length,0);
   t.w.close();
+});
+
+test("comandos ficam na lateral e a exclusão da biblioteca remove apenas os dados daquele original",async()=>{
+ const t=await boot(),b=t.w.MichelleBridge;
+ t.w.MCAccess={owner:true};t.w.MCCloudFiles={list:()=>[{id:'a'.repeat(64)}]};
+ b.getImports().push({id:'aba1',fileId:'a'.repeat(64),rows:[{id:'1',sector:'tec',type:'ordens',value:1}]},{id:'aba2',fileId:'a'.repeat(64),rows:[{id:'2',sector:'tec',type:'ordens',value:1}]},{id:'outro',fileId:'b'.repeat(64),rows:[{id:'3',sector:'tec',type:'ordens',value:1}]});
+ b.render();
+ assert.equal(t.w.document.querySelectorAll('.topbar button:not(.mob-toggle)').length,0);
+ for(const selector of ['[data-cloud-upload]','[data-cloud-library]','[data-cloud-export]','[data-mc-install]','[data-toggle-theme]','[data-assistant-open]'])assert.ok(t.w.document.querySelector('.sidebar '+selector),selector);
+ assert.ok(t.w.document.querySelector('.mc-home-library [data-cloud-library]'));
+ assert.equal(t.w.document.querySelector('.mc-cloud-toolbar'),null);
+ b.applyDeletedFiles(['a'.repeat(64)]);assert.equal(b.getAll().length,1);assert.equal(b.getAll()[0].id,'3');assert.equal(t.errors.length,0);t.w.close();
 });

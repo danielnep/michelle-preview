@@ -16,7 +16,7 @@
  async function open(){
   root.MCAccess=await (await request("/api/me")).json();
   try{await refreshFiles()}catch(error){
-    if(!root.MCAccess.owner && !["filesView","filesUpload","filesDownload"].some(k=>root.MCAccess.rights?.[k])) catalog=[];
+    if(!root.MCAccess.owner && !["filesView","filesUpload","filesDownload","filesDelete"].some(k=>root.MCAccess.rights?.[k])) catalog=[];
     else throw error;
   }
   return true;
@@ -58,5 +58,10 @@
  const put=(store,value)=>batch([{store,value}]);
  const remove=(store,id)=>batch([{store,id,remove:true}]);
  root.MCStore={open,read,all,batch,put,remove};
- root.MCCloudFiles={list:()=>catalog.slice(),refresh:refreshFiles,openLibrary:()=>root.open("/arquivos.html","_blank","noopener,noreferrer")};
+ root.MCCloudFiles={list:()=>catalog.slice(),refresh:refreshFiles,openLibrary:()=>root.MCFileLibrary?.open(),deleteFiles:async(ids)=>{
+   const result=await (await request("/api/files/delete",json({ids}))).json();
+   const removed=new Set(result.deletedIds);
+   catalog=catalog.filter(file=>!removed.has(file.id));
+   return result;
+ }};
 })(window);

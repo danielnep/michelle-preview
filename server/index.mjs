@@ -8,6 +8,7 @@ import { Readable } from "node:stream";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { randomBytes, randomUUID } from "node:crypto";
+import { deleteFiles, cleanDeletedObjects } from "./file-library.mjs";
 import { mailConfigured, sendTransactionalEmail } from "./mail.mjs";
 import { SECTORS, CAPABILITIES, allRights, normalizeRights, normalizeSectors, can, anyRights } from "./acl.mjs";
 
@@ -143,6 +144,11 @@ app.post("/api/store/batch",protectedRoute,async(req,res,next)=>{
  let client;
  try {
   client=await pool.connect();await client.query("BEGIN");
+  const fileIds=[...new Set(ops.filter(op=>op.store==="lots"&&!op.remove&&op.value?.fileId).map(op=>op.value.fileId))].sort();
+  if(fileIds.length){
+   const existing=await client.query("SELECT id FROM mc_files WHERE id=ANY($1::text[]) ORDER BY id FOR KEY SHARE",[fileIds]);
+   if(existing.rows.length!==fileIds.length)throw Object.assign(new Error("Um arquivo foi excluído. Atualize a biblioteca antes de importar novamente."),{status:409});
+  }
   for(const op of ops){
    if(!namespaces.has(op.store))throw Object.assign(new Error("Coleção inválida."),{status:400});
    if(!isWritable(req,op.store))throw Object.assign(new Error("Ação não autorizada."),{status:403});
@@ -232,13 +238,23 @@ async function accessibleFile(req,id){
  const pending=await pool.query("SELECT 1 FROM mc_files WHERE id=$1 AND uploaded_by=$2 AND NOT EXISTS(SELECT 1 FROM mc_records WHERE namespace='lots' AND content->>'fileId'=$1) LIMIT 1",[id,req.auth.user.id]);
  return pending.rows.length>0;
 }
-app.get("/api/files",protectedRoute,requireRight("filesView","filesUpload","filesDownload"),async(req,res,next)=>{
+app.get("/api/files",protectedRoute,requireRight("filesView","filesUpload","filesDownload","filesDelete"),async(req,res,next)=>{
  try{
   let result;
   if(req.access.owner)result=await pool.query("SELECT id,name,mime_type AS mime,byte_size AS size,created_at AS created FROM mc_files ORDER BY created_at DESC");
   else result=await pool.query("SELECT f.id,f.name,f.mime_type AS mime,f.byte_size AS size,f.created_at AS created FROM mc_files f WHERE (f.uploaded_by=$1 AND NOT EXISTS(SELECT 1 FROM mc_records z WHERE z.namespace='lots' AND z.content->>'fileId'=f.id)) OR EXISTS(SELECT 1 FROM mc_records l WHERE l.namespace='lots' AND l.content->>'fileId'=f.id AND l.content->>'sector'=ANY($2::text[])) ORDER BY f.created_at DESC",[req.auth.user.id,req.access.sectors]);
-  res.json(result.rows);
+  const canDelete=can(req.access,"filesDelete");
+  let links=[];
+  if(canDelete&&!req.access.owner)links=(await pool.query("SELECT content->>'fileId' AS file_id,content->>'sector' AS sector FROM mc_records WHERE namespace='lots' AND content->>'fileId'=ANY($1::text[])",[result.rows.map(file=>file.id)])).rows;
+  res.json(result.rows.map(file=>({...file,canDelete:canDelete&&(req.access.owner||!links.some(lot=>lot.file_id===file.id&&!req.access.sectors.includes(lot.sector)))})));
  }catch(err){next(err)}
+});
+app.post("/api/files/delete",protectedRoute,requireRight("filesDelete"),async(req,res,next)=>{
+ try{
+  const result=await deleteFiles(pool,req.access,req.auth.user.id,req.body?.ids);
+  res.json(result);
+  void cleanDeletedObjects(pool,s3,bucket).catch(()=>console.error("Limpeza de arquivos pendente."));
+ }catch(error){next(error)}
 });
 app.put("/api/files/:id",protectedRoute,requireRight("filesUpload"),express.raw({type:"application/octet-stream",limit:"52mb"}),async(req,res,next)=>{
  try {
@@ -253,8 +269,20 @@ app.put("/api/files/:id",protectedRoute,requireRight("filesUpload"),express.raw(
   if(!Buffer.isBuffer(req.body)||!req.body.length||req.body.length>50*1024*1024)return res.status(413).json({error:"Arquivo vazio ou maior que 50 MB."});
   const {createHash}=await import("node:crypto");
   if(createHash("sha256").update(req.body).digest("hex")!==id)return res.status(422).json({error:"Verificação de integridade falhou."});
-  await s3.send(new PutObjectCommand({Bucket:bucket,Key:fileKey(id),Body:req.body,ContentType:"application/octet-stream"}));
-  await pool.query("INSERT INTO mc_files(id,name,mime_type,byte_size,uploaded_by) VALUES($1,$2,$3,$4,$5) ON CONFLICT(id) DO NOTHING",[id,name,"application/octet-stream",req.body.length,req.auth.user.id]);
+  const previous=await pool.query("SELECT id FROM mc_files WHERE id=$1",[id]);
+  if(previous.rows.length)return res.json({id,name,size:req.body.length});
+  const objectKey=fileKey(id)+"-"+randomUUID();
+  await s3.send(new PutObjectCommand({Bucket:bucket,Key:objectKey,Body:req.body,ContentType:"application/octet-stream"}));
+  let inserted;
+  try{
+   inserted=await pool.query("INSERT INTO mc_files(id,name,mime_type,byte_size,uploaded_by,object_key) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(id) DO NOTHING RETURNING id",[id,name,"application/octet-stream",req.body.length,req.auth.user.id,objectKey]);
+  }catch(error){
+   await s3.send(new DeleteObjectCommand({Bucket:bucket,Key:objectKey})).catch(()=>{});throw error;
+  }
+  if(!inserted.rows.length){
+   await pool.query("INSERT INTO mc_file_cleanup(object_key) VALUES($1) ON CONFLICT DO NOTHING",[objectKey]);
+   void cleanDeletedObjects(pool,s3,bucket).catch(()=>{});
+  }
   res.status(201).json({id,name,size:req.body.length});
  }catch(err){next(err)}
 });
@@ -262,9 +290,9 @@ app.get("/api/files/:id",protectedRoute,requireRight("filesDownload"),async(req,
  try {
   if(!fileIdOk(req.params.id))return res.status(400).json({error:"Arquivo inválido."});
   if(!await accessibleFile(req,req.params.id))return res.status(403).json({error:"Arquivo não autorizado."});
-  const {rows}=await pool.query("SELECT name FROM mc_files WHERE id=$1",[req.params.id]);
+  const {rows}=await pool.query("SELECT name,object_key FROM mc_files WHERE id=$1",[req.params.id]);
   if(!rows.length)return res.status(404).json({error:"Arquivo não encontrado."});
-  const result=await s3.send(new GetObjectCommand({Bucket:bucket,Key:fileKey(req.params.id)}));
+  const result=await s3.send(new GetObjectCommand({Bucket:bucket,Key:rows[0].object_key||fileKey(req.params.id)}));
   const disposition=req.query.mode==="download"?"attachment":"inline";
   res.setHeader("Content-Type","application/octet-stream");
   res.setHeader("Content-Disposition",disposition+"; filename*=UTF-8''"+encodeURIComponent(rows[0].name));
@@ -320,6 +348,9 @@ async function boot() {
  await pool.query("CREATE TABLE IF NOT EXISTS mc_records(namespace text NOT NULL,id text NOT NULL,content jsonb NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now(),PRIMARY KEY(namespace,id))");
  await pool.query("CREATE TABLE IF NOT EXISTS mc_files(id text PRIMARY KEY,name text NOT NULL,mime_type text NOT NULL,byte_size bigint NOT NULL,uploaded_by text,created_at timestamptz NOT NULL DEFAULT now())");
  await pool.query("ALTER TABLE mc_files ADD COLUMN IF NOT EXISTS uploaded_by text");
+ await pool.query("ALTER TABLE mc_files ADD COLUMN IF NOT EXISTS object_key text");
+ await pool.query("CREATE TABLE IF NOT EXISTS mc_file_cleanup(object_key text PRIMARY KEY,created_at timestamptz NOT NULL DEFAULT now())");
+ void cleanDeletedObjects(pool,s3,bucket).catch(()=>console.error("Limpeza de arquivos pendente."));
  await pool.query("CREATE TABLE IF NOT EXISTS mc_collaborators(user_id text PRIMARY KEY,email text UNIQUE NOT NULL,name text NOT NULL,active boolean NOT NULL DEFAULT false,rights jsonb NOT NULL DEFAULT '{}'::jsonb,sectors jsonb NOT NULL DEFAULT '[]'::jsonb,created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now())");
  await pool.query("ALTER TABLE mc_collaborators ADD COLUMN IF NOT EXISTS onboarding_pending boolean NOT NULL DEFAULT false");
  const initialEmail=process.env.MICHELLE_INITIAL_EMAIL?.trim().toLowerCase();
