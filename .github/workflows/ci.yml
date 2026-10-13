@@ -1,7 +1,7 @@
-name: Testes Painel Michelle
+name: Testes PowerBI CompletoMC
 on:
   push:
-    branches: [main]
+    branches: [main, railway-power-bi-michelle]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -10,25 +10,26 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: npm
       - name: Instalar dependências
-        run: npm ci --ignore-scripts
+        run: npm install --ignore-scripts --no-audit --no-fund
       - name: Executar testes
         run: npm test
-      - name: Verificar sintaxe dos módulos principais
+      - name: Verificar sintaxe da aplicação e backend
         run: |
           node --check profiles.js
           node --check app.js
           node --check dashboard.js
           node --check data-core.js
+          node --check mc-cloud-store.js
           node --check analysis/mc-analysis.js
           node --check service-worker.js
           node --check michelle-ai-client.js
           node --check michelle-ai-dock.js
-          node --check netlify/functions/michelle-ai.mjs
+          node --check server/index.mjs
+          node --check server/michelle-ai.mjs
