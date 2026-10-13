@@ -60,11 +60,11 @@
   }
   function chart(data,mode,esc=x=>String(x??"")){
     const fmt=new Intl.NumberFormat("pt-BR",{maximumFractionDigits:0});
+    if(mode==="table")return table(data,esc);
     const trend=mode==="line"&&data.hasTrend;
     const items=trend?data.trend:data.bars;
     if(!items.length)return '<p class="mc-source-empty-viz">Não há categorias ou datas suficientes para desenhar um gráfico confiável nesta fonte. Confira os indicadores e o detalhamento das colunas.</p>';
     const title=trend?"Registros por data (fonte selecionada)":"Registros por "+data.categoryField;
-    if(mode==="table")return table(data,esc);
     const w=700,h=246,pad={left:46,right:14,top:20,bottom:58};
     const plotW=w-pad.left-pad.right,plotH=h-pad.top-pad.bottom;
     const max=Math.max(1,...items.map(i=>i.value));
