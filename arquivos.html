@@ -1,0 +1,25 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Arquivos enviados | Michelle Cândido</title>
+<style>:root{font-family:Inter,system-ui,sans-serif;color-scheme:dark;background:#070b11;color:#edf6ff}*{box-sizing:border-box}body{margin:0;padding:clamp(16px,4vw,40px)}
+header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px}h1{font-size:clamp(23px,4vw,34px);margin:0}
+a,button{font:inherit;border:1px solid #36516a;border-radius:9px;color:#9fdcff;background:#14283a;padding:10px 14px;text-decoration:none;cursor:pointer}
+p{color:#9cacbd}ul{list-style:none;padding:0;margin-top:24px}li{padding:16px 0;border-bottom:1px solid #2d4052;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.row-title{font-weight:700;overflow-wrap:anywhere}small{display:block;color:#9cacbd;margin-top:5px}.actions{display:flex;gap:8px;flex-wrap:wrap}
+#preview{margin-top:24px;border:1px solid #36516a;border-radius:14px;padding:16px;display:none;overflow:auto;max-height:70vh}
+table{border-collapse:collapse;min-width:500px;width:100%;font-size:13px}td{padding:8px 10px;border:1px solid #344251;max-width:340px;overflow-wrap:anywhere}tr:first-child{background:#20384d}
+#message{color:#efbba7}</style></head><body><header><div><h1>Arquivos enviados</h1><p id="count">Carregando biblioteca…</p></div><a href="/" aria-label="Voltar ao painel">← Voltar ao painel</a></header><p id="message" role="status"></p><ul id="list"></ul><section id="preview"><header><h2 id="preview-title">Prévia</h2><button id="close">Fechar</button></header><p>Prévia das primeiras 50 linhas da primeira aba. Para conteúdo completo, use Baixar.</p><div id="table"></div></section>
+<script src="/vendor/xlsx.full.min.js"></script><script>
+const list=document.querySelector("#list"),count=document.querySelector("#count"),msg=document.querySelector("#message");
+let files=[];
+const niceSize=n=>n<1048576?Math.round(n/1024)+" KB":(n/1048576).toFixed(1)+" MB";
+async function init(){
+try{const r=await fetch("/api/files",{credentials:"same-origin",cache:"no-store"});if(r.status===401){location.replace("/login.html");return;}if(!r.ok)throw Error("Não foi possível consultar os arquivos.");
+files=await r.json();count.textContent="Você possui "+files.length+" arquivo"+(files.length===1?"":"s")+" enviado"+(files.length===1?"":"s")+".";
+if(!files.length){msg.textContent="Nenhum arquivo enviado até agora.";return;}
+for(const file of files){const li=document.createElement("li"),intro=document.createElement("div"),title=document.createElement("div"),info=document.createElement("small"),actions=document.createElement("div"),view=document.createElement("button"),download=document.createElement("a");title.className="row-title";title.textContent=file.name;info.textContent=niceSize(Number(file.size))+" · "+new Date(file.created).toLocaleString("pt-BR");intro.append(title,info);actions.className="actions";view.textContent="Abrir arquivo";view.onclick=()=>preview(file);download.textContent="Baixar";download.href="/api/files/"+encodeURIComponent(file.id)+"?mode=download";actions.append(view,download);li.append(intro,actions);list.append(li);}}
+catch(e){msg.textContent=e.message;}}
+async function preview(file){
+const section=document.querySelector("#preview"),target=document.querySelector("#table");section.style.display="block";target.textContent="Abrindo…";document.querySelector("#preview-title").textContent=file.name;section.scrollIntoView({behavior:"smooth",block:"start"});
+try{const r=await fetch("/api/files/"+encodeURIComponent(file.id),{credentials:"same-origin"});if(!r.ok)throw Error("Não foi possível abrir.");const ab=await r.arrayBuffer();const book=XLSX.read(ab,{type:"array"});const sheet=book.Sheets[book.SheetNames[0]];const grid=XLSX.utils.sheet_to_json(sheet,{header:1,raw:false,defval:""}).slice(0,50);target.replaceChildren();const table=document.createElement("table");for(const values of grid){const tr=document.createElement("tr");for(const val of values.slice(0,35)){const td=document.createElement("td");td.textContent=String(val??"");tr.append(td)}table.append(tr)}target.append(table)}
+catch(e){target.textContent=e.message}}
+document.querySelector("#close").onclick=()=>document.querySelector("#preview").style.display="none";init();
+</script></body></html>
