@@ -137,7 +137,13 @@
     if(state.busy||!root.MCAI?.request)return;
     state.busy=true;state.error="";root.MichelleBridge?.render();
     try {
-      const r=await root.MCAI.request("plan",{context:{sources:state.catalog.slice(0,MAX_SOURCES)}});
+      const sources=state.catalog.slice(0,MAX_SOURCES).map(p=>({
+        id:p.id,file:p.file,sheet:p.sheet,rowCount:p.rowCount,
+        registeredType:p.registeredType,destination:p.destination,types:p.types,
+        hasIndividualDates:p.hasIndividualDates,hasPeriod:p.hasPeriod,
+        columns:p.columns.map(c=>({name:c.name,inferredShape:c.inferredShape}))
+      }));
+      const r=await root.MCAI.request("plan",{context:{sources}});
       if(!r.plan || !Array.isArray(r.plan.sources))throw Error("Esta versão da API ainda não suporta o agente de planilhas. É necessário publicar a função atualizada no Netlify.");
       state.plan=validatePlan(r.plan,state.catalog);
     }catch(e){state.error=e?.message||"Não foi possível consultar a IA.";}
