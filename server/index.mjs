@@ -1,3 +1,4 @@
+import {readReview,writeReview} from "./review-store.mjs";
 import express from "express";
 import { Pool } from "pg";
 import { betterAuth } from "better-auth";
@@ -300,6 +301,13 @@ app.get("/api/files/:id",protectedRoute,requireRight("filesDownload"),async(req,
   if(result.ContentLength)res.setHeader("Content-Length",String(result.ContentLength));
   Readable.fromWeb(result.Body.transformToWebStream()).pipe(res);
  }catch(err){next(err)}
+});
+// Revisão privada por usuário: não compartilha análises de setores com outros perfis.
+app.get("/api/analysis-review",protectedRoute,requireRight("ai"),async(req,res,next)=>{
+ try{res.json(await readReview(pool,req.access,req.auth.user.id));}catch(error){next(error)}
+});
+app.put("/api/analysis-review",protectedRoute,requireRight("ai"),async(req,res,next)=>{
+ try{res.json(await writeReview(pool,req.access,req.auth.user.id,req.body));}catch(error){next(error)}
 });
 app.post("/api/michelle-ai", protectedRoute, requireRight("ai"), async(req,res,next)=>{
  try {

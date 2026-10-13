@@ -83,7 +83,7 @@ test("PWA não armazena páginas privadas ou respostas das APIs no cache",()=>{
   const root=path.join(__dirname,"..");
   const sw=fs.readFileSync(path.join(root,"service-worker.js"),"utf8");
   const html=fs.readFileSync(path.join(root,"index.html"),"utf8");
-  for(const resource of ["source-agent.js","source-visuals.js","workbook-sheets.js","compact-dock.js","compact-shell.css","source-studio.css"]){
+  for(const resource of ["source-agent.js","source-visuals.js","workbook-sheets.js","automatic-review.js","compact-shell.css","source-studio.css"]){
     assert.ok(html.includes(resource));
   }
   assert.match(sw,/michelle-railway-shell-v5/);

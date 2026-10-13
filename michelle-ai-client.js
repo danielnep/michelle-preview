@@ -6,13 +6,13 @@
     try { return JSON.parse(localStorage.getItem(SETTINGS) || "{}"); } catch (_) { return {}; }
   };
   const save = data => { try { localStorage.setItem(SETTINGS, JSON.stringify(data)); } catch (_) {} };
-  const consent = () => !!memory().automaticInsights;
+  const consent = () => memory().automaticInsights !== false;
   function setConsent(yes) { const m=memory();m.automaticInsights=!!yes;save(m); }
   // O Copiloto usa a API protegida da mesma hospedagem Railway.
   function apiUrl() {return "/api/michelle-ai";}
   async function request(mode, data={}) {
     const ctrl=new AbortController();
-    const timer=setTimeout(()=>ctrl.abort(),27000);
+    const timer=setTimeout(()=>ctrl.abort(),mode==="review"?60000:27000);
     try {
       const response=await fetch(apiUrl(),{
         method:"POST",signal:ctrl.signal,
@@ -20,7 +20,7 @@
         body:JSON.stringify({mode,...data})
       });
       const body=await response.json().catch(()=>({}));
-      if(!response.ok) throw Error(body.error || "A IA está indisponível ("+response.status+").");
+      if(!response.ok) { const error=Error(body.error || "A IA está indisponível ("+response.status+").");error.status=response.status;throw error; }
       return body;
     } catch(error) {
       if(error?.name==="AbortError") throw Error("A IA demorou demais. Tente novamente.");
@@ -114,6 +114,10 @@
       totalImportedFiles:activeFiles.length,allData:summarize(all,false),
       selectedData:summarize(selected,true),files:fileCatalog,
       calculatedFindings:findings,calculatedInsights:localInsights,
+      automaticReview:root.MCAutoReview?.current()?{
+        coverage:root.MCAutoReview.current().coverage,
+        insights:root.MCAutoReview.current().insights.slice(0,5).map(i=>({title:i.title,interpretation:i.interpretation,action:i.action,confidence:i.confidence,sourceIds:i.sourceIds}))
+      }:null,
       analyzedAt:new Date().toISOString()
     };
     // Reserva espaço para as fontes: nunca envia um JSON acima do teto do servidor.
@@ -177,6 +181,11 @@
   }
   function home(rows=[],imports=[],esc=(x)=>String(x??"")) {
     if(!rows.length)return "";
+    const review=root.MCAutoReview?.current();
+    if(review?.insights?.length)return '<section class="mc-ai-home" aria-label="Percepções do Copiloto"><div class="mc-ai-home-title"><strong>Copiloto</strong><span>Leitura inteligente</span></div>'+
+      review.insights.slice(0,2).map(i=>'<p><b>'+esc(i.title)+'</b> · '+esc(i.interpretation)+'</p>').join('')+
+      '<button type="button" class="btn" data-nav="insight">Ver percepções e evidências</button></section>';
+
     const latest=(root.MCAnalysis?.analyze(rows,imports)||[]).find(x=>["attention","comparison","concentration"].includes(x.kind));
     const top=Object.entries(memory().topics||{}).sort((a,b)=>b[1]-a[1])[0];
     if(!latest && !(top&&top[1]>=2))return "";

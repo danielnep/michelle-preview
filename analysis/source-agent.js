@@ -24,10 +24,10 @@
   function catalog(rows=[],lots=[]) {
     const activeIds=new Set((rows||[]).map(r=>r.lotId).filter(Boolean));
     return (lots||[]).filter(l=>!l.deleted&&!l.archived&&!l.supersededBy&&activeIds.has(l.id))
-      .slice(0,MAX_SOURCES).map(l=>{
+      .map(l=>{
         const records=(rows||[]).filter(r=>r.lotId===l.id);
         const keys=new Map();
-        for(const record of records.slice(0,300)) {
+        for(const record of records) {
           for(const [name,value] of Object.entries(record.raw||{})) {
             const k=text(name,95);if(!k)continue;
             if(!keys.has(k))keys.set(k,{name:k,filled:0,kinds:new Map()});
@@ -36,9 +36,9 @@
             const kind=shape(value);field.kinds.set(kind,(field.kinds.get(kind)||0)+1);
           }
         }
-        const columns=[...keys.values()].slice(0,MAX_COLUMNS).map(field=>({
+        const columns=[...keys.values()].map(field=>({
           name:field.name,filledSample:field.filled,
-          sampleSize:Math.min(records.length,300),
+          sampleSize:records.length,
           inferredShape:[...field.kinds].sort((a,b)=>b[1]-a[1])[0]?.[0]||"desconhecido"
         }));
         const byType={};
@@ -136,14 +136,15 @@
     const profiles=state.catalog;
     if(!profiles.some(p=>p.id===state.activeSource))state.activeSource=profiles[0].id;
     const selected=profiles.find(p=>p.id===state.activeSource);
+    const generated=p=>root.MCAutoReview?.current()?.sources.find(s=>s.id===p.id);
     const V=root.MCSourceVisuals;
     const visual=V?.seriesFor(rows,selected);
-    const currentView=state.view==="auto"?(visual?.bars?.length?"bar":visual?.hasTrend?"line":"table"):state.view;
+    const currentView=state.view==="auto"?(generated(selected)?.chart|| (visual?.bars?.length?"bar":visual?.hasTrend?"line":"table")):state.view;
     const allowedView=currentView==="line"&&!visual?.hasTrend?"table":currentView==="bar"&&!visual?.bars?.length?"table":currentView;
     const sourceNav=profiles.map(p=>
       '<button type="button" class="mc-source-tab '+(p.id===selected.id?"is-active":"")+'" data-mc-pick-source="'+esc(p.id)+
       '" aria-pressed="'+(p.id===selected.id?"true":"false")+'">'+
-      '<span class="mc-source-tab-icon" aria-hidden="true">▦</span><span><b>'+esc(p.file)+'</b><small>'+esc(p.sheet)+
+      '<span class="mc-source-tab-icon" aria-hidden="true">▦</span><span><b>'+esc(generated(p)?.title||p.file)+'</b><small>'+esc(p.file)+' · '+esc(p.sheet)+
       ' · '+new Intl.NumberFormat("pt-BR").format(p.rowCount)+' linhas</small></span></button>'
     ).join("");
     const viewControls=visual?[
@@ -167,7 +168,7 @@
       '<nav class="mc-source-sidebar" aria-label="Planilhas independentes"><div class="mc-source-sidebar-head">'+
       '<strong>Fontes analisadas</strong><small>'+profiles.length+' aba(s)</small></div>'+sourceNav+'</nav>'+
       '<div class="mc-source-canvas"><header class="mc-source-canvas-head">'+
-      '<div><span class="mc-source-kicker">EXPLORAR FONTE</span><h4>'+esc(selected.file)+'</h4><p>Aba '+esc(selected.sheet)+
+      '<div><span class="mc-source-kicker">EXPLORAR FONTE</span><h4>'+esc(generated(selected)?.title||selected.file)+'</h4><p>'+esc(generated(selected)?.description||selected.file)+' · Aba '+esc(selected.sheet)+
       ' · '+esc(selected.registeredType)+' · sem cruzar outras fontes</p></div>'+
       '<div class="mc-source-view-switch" role="group" aria-label="Formato da visualização">'+viewControls+'</div></header>'+
       metricTiles+'<div class="mc-source-visual">'+(V&&visual?V.chart(visual,allowedView,esc):
@@ -212,10 +213,11 @@
       workspace+overlap+
       '<button type="button" class="btn" data-mc-source-plan '+(state.busy?"disabled":"")+'>'+
         (state.busy?"Planejando dashboard…":"✦ Planejar dashboard com IA")+'</button>'+
-      '<small>Ao tocar, apenas nomes, cabeçalhos e formatos agregados serão enviados à IA. Nenhuma célula original será transmitida.'+(lots.filter(l=>!l.deleted&&!l.archived&&!l.supersededBy).length>MAX_SOURCES?" Limite desta análise: as primeiras "+MAX_SOURCES+" fontes ativas; demais devem ser avaliadas em lotes.":"")+'</small>'+
+      '<small>Ao tocar, apenas nomes, cabeçalhos e formatos agregados serão enviados à IA. Nenhuma célula original será transmitida.'+(!root.MCAutoReview&&lots.filter(l=>!l.deleted&&!l.archived&&!l.supersededBy).length>MAX_SOURCES?" Limite desta análise: as primeiras "+MAX_SOURCES+" fontes ativas; demais devem ser avaliadas em lotes.":"")+'</small>'+
       (state.error?'<p role="alert">'+esc(state.error)+'</p>':"")+result+'</section>';
   }
   async function onPlan() {
+    if(root.MCAutoReview){root.MCAutoReview.state.signature="";root.MCAutoReview.schedule(true);return;}
     if(state.busy||!root.MCAI?.request)return;
     state.busy=true;state.error="";state.applied=false;root.MichelleBridge?.render();
     try {

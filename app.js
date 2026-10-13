@@ -149,6 +149,7 @@
     chatModes: loadChats(),
     assistantMode: "dados",
     assistantOpen: false,
+    navCollapsed: null,
     assistantBusy: false,
     aiInsightBusy: false,
     aiInsightText: "",
@@ -236,7 +237,8 @@
   }
   function sidebarUtilities(){
     return '<div class="nav-group"><div class="side-label">APLICATIVO</div>'+
-      '<button type="button" class="nav install-shortcut" data-mc-install>'+icon("down",18)+'<span>Instalar aplicativo</span></button></div>';
+      '<button type="button" class="nav install-shortcut" data-mc-install>'+icon("down",18)+'<span>Instalar aplicativo</span></button>'+
+      ((!window.MCAccess||window.MCAccess.owner||window.MCAccess.rights?.ai)?'<button type="button" class="nav mc-nav-ai" data-assistant-open="1">'+icon("spark",22)+'<span>Inteligência artificial</span></button>':'')+'</div>';
   }
   function headerUpload(){
     const access=window.MCAccess;
@@ -245,11 +247,10 @@
   }
   function headerActions(){
     const access=window.MCAccess;
-    const ai=!access || access.owner || access.rights?.ai;
     return '<div class="head-actions" aria-label="Ferramentas do painel">'+
       '<button type="button" class="mc-toolbar-button mc-header-imports" data-nav="data" aria-label="Conferir importações" title="Conferir importações">'+icon("files",20)+'<span>Importações</span></button>'+
       themeButton()+
-      (ai?'<button type="button" class="mc-toolbar-button mc-header-ai" data-assistant-open="1" aria-label="Abrir Copiloto de IA" title="Abrir Copiloto de IA">'+icon("spark",20)+'<span>IA</span></button>':'')+'</div>';
+      '</div>';
   }
   function libraryShortcut(){
     const access=window.MCAccess;
@@ -272,7 +273,7 @@
           present: "Estúdio de apresentações",
           settings: "Configurações",
         }[state.page] || "Visão geral";
-    return `<div class="app"><div class="backdrop ${state.sidebar ? "open" : ""}" data-close="1"></div><aside id="panel-navigation" class="sidebar ${state.sidebar ? "open" : ""}" aria-label="Navegação do painel"><button type="button" class="sidebar-close small-icon-btn" data-close-nav aria-label="Fechar menu">${icon("close", 20)}</button><div class="brand"><span class="panel-logo" aria-hidden="true">${icon("brand", 26)}</span><strong class="panel-brand-title">PowerBI Completo MC</strong></div><label class="searchbox sidebar-search">${icon("search", 18)}<input aria-label="Pesquisar registros" id="global-search" placeholder="Buscar registros..." value="${esc(state.query)}" /></label><div class="nav-scroll"><div class="nav-group nav-group-primary"><div class="side-label">PRINCIPAL</div>${nav("geral", "Visão Geral")}${nav("sectors", "Setores")}${nav("dashboard", "Visualizar dashboard")}${nav("present", "Estúdio de Apresentações")}</div><div class="nav-group"><div class="side-label">DEPARTAMENTOS</div>${sectors.filter(s => window.MCAccess?.owner || window.MCAccess?.sectors?.includes(s.id)).map((s) => nav(s.id, s.name)).join("")}</div><div class="nav-group"><div class="side-label">GESTÃO E DADOS</div>${fileActions()}${nav("data", "Conferir importações")}${nav("report", "Relatórios")}${nav("insight", "Insights e análises")}${nav("settings", "Configurações")}</div>${sidebarUtilities()}</div><div class="side-bottom"><div class="side-credit">PowerBI Completo MC</div></div></aside><div class="main"><header class="topbar"><button aria-label="${state.sidebar ? "Fechar menu" : "Abrir menu"}" aria-expanded="${state.sidebar}" aria-controls="panel-navigation" class="small-icon-btn mob-toggle" data-toggle="1">${icon("menu", 20)}</button><div class="header-identity"><span class="panel-logo panel-logo-small" aria-hidden="true">${icon("brand", 19)}</span><div class="crumb"><strong class="app-title">PowerBI Completo MC</strong><span class="app-caption crumb-page">${esc(title)}</span></div>${headerUpload()}</div>${headerActions()}</header><main class="content"><div class="print-header">PowerBI Completo MC</div>${body()}</main><footer class="footer"><span>PowerBI Completo MC</span></footer></div><nav class="mobile-nav" aria-label="Navegação principal">${[
+    return `<div class="app"><div class="backdrop ${state.sidebar ? "open" : ""}" data-close="1"></div><aside id="panel-navigation" class="sidebar ${state.sidebar ? "open" : ""}" aria-label="Navegação do painel"><button type="button" class="sidebar-close small-icon-btn" data-close-nav aria-label="Fechar menu">${icon("close", 20)}</button><div class="brand"><span class="panel-logo" aria-hidden="true">${icon("brand", 26)}</span><strong class="panel-brand-title">PowerBI Completo MC</strong></div><label class="searchbox sidebar-search">${icon("search", 18)}<input aria-label="Pesquisar registros" id="global-search" placeholder="Buscar registros..." value="${esc(state.query)}" /></label><div class="nav-scroll"><div class="nav-group nav-group-primary"><div class="side-label">PRINCIPAL</div>${nav("geral", "Visão Geral")}${nav("sectors", "Setores")}${nav("dashboard", "Visualizar dashboard")}${nav("present", "Estúdio de Apresentações")}</div><div class="nav-group"><div class="side-label">DEPARTAMENTOS</div>${sectors.filter(s => window.MCAccess?.owner || window.MCAccess?.sectors?.includes(s.id)).map((s) => nav(s.id, s.name)).join("")}</div><div class="nav-group"><div class="side-label">GESTÃO E DADOS</div>${fileActions()}${nav("data", "Conferir importações")}${nav("report", "Relatórios")}${nav("insight", "Insights e análises")}${nav("settings", "Configurações")}</div>${sidebarUtilities()}</div><div class="side-bottom"><div class="side-credit">PowerBI Completo MC</div></div></aside><div class="main"><header class="topbar"><button aria-label="${state.sidebar ? "Fechar menu" : "Abrir menu"}" aria-expanded="${state.sidebar}" aria-controls="panel-navigation" class="small-icon-btn mob-toggle" data-toggle="1">${icon("menu", 20)}</button><div class="header-identity"><span class="panel-logo panel-logo-small" aria-hidden="true">${icon("brand", 19)}</span><div class="crumb"><strong class="app-title">PowerBI Completo MC</strong><span class="app-caption crumb-page">${esc(title)}</span></div>${headerUpload()}</div>${headerActions()}</header><main class="content"><div class="print-header">PowerBI Completo MC</div>${window.MCAutoReview?.status()||""}${body()}</main><footer class="footer"><span>PowerBI Completo MC</span></footer></div><nav class="mobile-nav" aria-label="Navegação principal">${[
       ["geral", "Resumo", "grid"],
       ["sectors", "Setores", "coi"],
       ["data", "Dados", "up"],
@@ -636,7 +637,14 @@
       )}</div><form class="assistant-form" data-assistant-form="1"><label class="sr-only" for="${full ? "assistant-text-full" : "assistant-text-dock"}">Mensagem ao assistente</label><textarea id="${full ? "assistant-text-full" : "assistant-text-dock"}" data-assistant-input="1" rows="1" maxlength="1800" placeholder="${state.assistantMode === "dados" ? "Pergunte sobre seus indicadores..." : "Escreva sua mensagem..."}" aria-label="Mensagem ao assistente"></textarea><button type="submit" aria-label="Enviar mensagem">${icon("arrow", 18)}</button></form><p class="assistant-disclaimer">${state.assistantBusy ? "✦ Copiloto analisando… " : ""}${state.assistantMode === "dados" ? "IA com resumos dos arquivos ativos e cálculos do painel. Dados agregados enviados ao DeepSeek." : "Conversa com o Copiloto conectada quando a API estiver disponível."}</p></div>`;
   }
   function assistantDock() {
-    return `<div class="assistant-layer ${state.assistantOpen ? "open" : ""}"><button type="button" class="assistant-dismiss" data-assistant-close="1" aria-label="Fechar assistente" tabindex="${state.assistantOpen ? "0" : "-1"}"></button><section class="assistant-window" role="dialog" aria-modal="false" aria-label="Copiloto" aria-hidden="${!state.assistantOpen}"><div class="assistant-window-header"><div class="assistant-identity"><span class="assistant-emblem" aria-hidden="true">${icon("spark", 22)}</span><span><strong>Copiloto</strong><small>Seu espaço para análises e conversas</small></span></div><div class="assistant-header-actions"><button type="button" class="mc-ai-sidebar-toggle" data-mc-ai-sidebar title="Alternar chat flutuante e barra lateral" aria-pressed="false">Barra lateral</button><button type="button" data-assistant-clear="1" title="Limpar conversa deste modo" aria-label="Limpar conversa">${icon("trash", 15)}</button><button type="button" data-assistant-expand="1" title="Abrir em página inteira" aria-label="Abrir assistente em página inteira">${icon("grid", 15)}</button><button type="button" data-assistant-close="1" title="Fechar" aria-label="Fechar assistente">${icon("close", 16)}</button></div></div><div class="assistant-chat-root" data-assistant-root="dock">${assistantChat()}</div><button type="button" class="mc-ai-resize-handle" data-mc-ai-resize title="Arraste para ajustar largura e altura" aria-label="Redimensionar Copiloto: arraste ou use as setas"></button></section></div><button type="button" class="assistant-fab ${state.assistantOpen ? "active" : ""} ${state.aiInsightText ? "mc-ai-insight-ready" : ""}" data-assistant-toggle="1" aria-expanded="${state.assistantOpen}" aria-label="${state.aiInsightText ? "Insight pronto. Abrir Copiloto" : state.assistantOpen ? "Fechar assistente" : "Abrir Copiloto"}"><span class="fab-emblem">${icon(state.assistantOpen ? "close" : "spark", 20)}</span><span class="fab-label">${state.assistantOpen ? "Fechar assistente" : "Assistente"}</span><span class="fab-presence"></span></button>`;
+    if(window.MCAccess&&!window.MCAccess.owner&&!window.MCAccess.rights?.ai)return "";
+    return `<button type="button" class="mc-chat-edge" data-assistant-open="1" data-panel-drag="right" aria-controls="mc-copiloto-panel" aria-expanded="${state.assistantOpen}" aria-label="Abrir inteligência artificial">${icon("spark",18)}<span>IA</span></button>
+      <div class="assistant-layer ${state.assistantOpen ? "open" : ""}"><button type="button" class="assistant-dismiss" data-assistant-close="1" aria-label="Recolher Copiloto" tabindex="${state.assistantOpen ? "0" : "-1"}"></button>
+      <section id="mc-copiloto-panel" class="assistant-window" role="dialog" aria-modal="false" aria-label="Copiloto" aria-hidden="${!state.assistantOpen}">
+      <header class="assistant-window-header" data-panel-drag="right"><button type="button" class="mc-chat-back" data-assistant-close="1" title="Voltar e recolher" aria-label="Voltar e recolher Copiloto">${icon("arrow",20)}</button>
+      <div class="assistant-identity"><span class="assistant-emblem" aria-hidden="true">${icon("spark",22)}</span><span><strong>Copiloto</strong><small>Inteligência artificial</small></span></div>
+      <div class="assistant-header-actions"><button type="button" data-mc-ai-pin aria-label="Fixar ou desafixar Copiloto" title="Fixar ou desafixar">${icon("target",18)}</button><button type="button" data-assistant-clear="1" title="Limpar conversa" aria-label="Limpar conversa">${icon("trash",17)}</button></div></header>
+      <div class="assistant-chat-root" data-assistant-root="dock">${assistantChat()}</div><button type="button" class="mc-ai-resize-handle" data-mc-ai-resize title="Arraste para ajustar a largura" aria-label="Ajustar largura do Copiloto: arraste ou use as setas"></button></section></div>`;
   }
   function pageInsight() {
     return (
@@ -644,6 +652,7 @@
         "Insights e Análises",
         "Diagnósticos gerenciais calculados com os dados disponíveis.",
       ) +
+      (window.MCAutoReview?.insightsHTML()||"") +
       managerialHighlights(recordsFor()) +
       insightsPanel(recordsFor(), null, true) +
       `<div class="insight-actions"><button class="btn btn-primary" data-refresh-insights>Atualizar cálculos</button><button class="btn btn-primary" data-ai-generate-insights ${state.aiInsightBusy ? "disabled" : ""}>${state.aiInsightBusy ? "Copiloto analisando…" : "✦ Gerar análise inteligente"}</button><button class="btn" data-nav="data">Importar Novos Dados</button><button class="btn" data-nav="report">Gerar Relatório</button></div>${state.aiInsightText ? `<section class="mc-ai-insight" aria-label="Insights produzidos pelo Copiloto"><strong>✦ Descobertas do Copiloto · ${esc(state.aiInsightScope || "Recorte atual")}</strong><p>${esc(state.aiInsightText).replace(/\n/g,"<br>")}</p></section>` : ""}<section class="card panel assistant-full-card section-space"><div class="panel-head"><div><h3>Copiloto</h3><p class="panel-sub">Consultas locais ao painel. IA online via DeepSeek (conexão necessária).</p></div><button class="btn" data-assistant-clear>Limpar conversa</button></div><div class="assistant-chat-root assistant-chat-full" data-assistant-root="full">${assistantChat(true)}</div></section>`
@@ -655,7 +664,7 @@
         "Configurações",
         "Personalize metas, identificação e preferências do seu painel.",
       ) +
-      `<section class="mc-install-panel"><div><strong>Instalar Painel Michelle</strong><p data-install-status>Suporte varia conforme o navegador. Seus dados permanecem neste navegador e não são sincronizados com outros dispositivos.</p><p id="mc-install-guide" hidden></p></div><button type="button" class="install-shortcut" data-mc-install>Instalar aplicativo</button></section><section class="mc-ai-import-help"><strong>✦ Aprendizado do Copiloto</strong><p>Os assuntos mais consultados são lembrados apenas neste navegador. As análises automáticas enviam ao DeepSeek totais, períodos, nomes de arquivos/abas, cabeçalhos e categorias agregadas. Linhas originais não são enviadas.</p><label><input type="checkbox" data-ai-auto ${window.MCAI?.consent() ? "checked" : ""}> Sugerir insights via IA após novas importações</label> <button type="button" class="btn" data-ai-clear-memory>Limpar preferências do Copiloto</button> <button type="button" class="btn btn-primary" data-ai-check ${state.aiCheckBusy ? "disabled" : ""}>${state.aiCheckBusy ? "Verificando…" : "✦ Testar conexão DeepSeek"}</button>${state.aiCheckStatus ? `<p role="status" class="mc-ai-status">${esc(state.aiCheckStatus)}</p>` : ""}</section><div class="mc-analysis-notes"><strong>Memória de interpretação de planilhas</strong><p>Correções feitas nos campos e confirmadas ficam salvas por modelo de planilha, apenas neste navegador. Você pode apagá-las sem excluir suas importações.</p><button type="button" class="btn" data-mc-reset-mappings>Apagar correções salvas</button></div><div class="page-grid"><section class="card panel"><div class="panel-head"><div><h3 class="panel-title">Identidade do painel</h3><p class="panel-sub">Informações desta operação</p></div>${icon("settings", 19)}</div><div class="field appearance-field"><label for="appearance-select">Aparência do aplicativo</label><select id="appearance-select" class="control"><option value="light" ${appearance() === "light" ? "selected" : ""}>Claro · cinza e grafite</option><option value="dark" ${appearance() === "dark" ? "selected" : ""}>Escuro · grafite</option></select><p class="panel-sub">A preferência fica salva. Os temas dos slides são configurados no Estúdio.</p></div><div class="field"><label>Nome da operação</label><input class="control" id="operation" value="${esc(settings.operation)}" /></div><button class="btn btn-primary section-space" data-save="1">Salvar configurações</button><div class="info-box section-space"><strong>Seus dados operacionais</strong><p>Exporte as planilhas do sistema de origem e importe por Enviar Dados Excel. O painel preserva os arquivos originais e o histórico de atualização.</p></div></section><section class="card panel"><div class="panel-head"><div><h3 class="panel-title">Metas por departamento</h3><p class="panel-sub">Percentual de conclusão desejado</p></div>${icon("target", 18)}</div><div class="settings-list section-space">${sectors.map((s) => `<div class="settings-item"><div><strong>${s.name}</strong><small>Meta de conclusão (percentual)</small><div class="progress"><div style="width:${settings.goals?.[s.id] ?? 0}%"></div></div></div><div class="row" style="gap:4px"><input class="control" type="number" min="0" max="100" step="1" data-goal="${s.id}" value="${settings.goals?.[s.id] ?? ""}" placeholder="Sem meta"/><span>%</span></div></div>`).join("")}</div><button class="btn btn-primary section-space" data-save="1">${icon("check", 14)} Aplicar metas</button></section></div>`
+      `<section class="mc-install-panel"><div><strong>Instalar Painel Michelle</strong><p data-install-status>Suporte varia conforme o navegador. Seus dados permanecem neste navegador e não são sincronizados com outros dispositivos.</p><p id="mc-install-guide" hidden></p></div><button type="button" class="install-shortcut" data-mc-install>Instalar aplicativo</button></section><section class="mc-ai-import-help"><strong>✦ Aprendizado do Copiloto</strong><p>Os assuntos mais consultados são lembrados apenas neste navegador. As análises automáticas enviam ao DeepSeek totais, períodos, nomes de arquivos/abas, cabeçalhos e categorias agregadas. Todas as linhas são percorridas no sistema. Células pessoais originais não são enviadas. A IA organiza títulos e indicadores, sem alterar os dados.</p><label><input type="checkbox" data-ai-auto ${window.MCAI?.consent() ? "checked" : ""}> Conferir todos os arquivos e configurar o painel após cada importação</label> <button type="button" class="btn" data-ai-clear-memory>Limpar preferências do Copiloto</button> <button type="button" class="btn btn-primary" data-ai-check ${state.aiCheckBusy ? "disabled" : ""}>${state.aiCheckBusy ? "Verificando…" : "✦ Testar conexão DeepSeek"}</button>${state.aiCheckStatus ? `<p role="status" class="mc-ai-status">${esc(state.aiCheckStatus)}</p>` : ""}</section><div class="mc-analysis-notes"><strong>Memória de interpretação de planilhas</strong><p>Correções feitas nos campos e confirmadas ficam salvas por modelo de planilha, apenas neste navegador. Você pode apagá-las sem excluir suas importações.</p><button type="button" class="btn" data-mc-reset-mappings>Apagar correções salvas</button></div><div class="page-grid"><section class="card panel"><div class="panel-head"><div><h3 class="panel-title">Identidade do painel</h3><p class="panel-sub">Informações desta operação</p></div>${icon("settings", 19)}</div><div class="field appearance-field"><label for="appearance-select">Aparência do aplicativo</label><select id="appearance-select" class="control"><option value="light" ${appearance() === "light" ? "selected" : ""}>Claro · cinza e grafite</option><option value="dark" ${appearance() === "dark" ? "selected" : ""}>Escuro · grafite</option></select><p class="panel-sub">A preferência fica salva. Os temas dos slides são configurados no Estúdio.</p></div><div class="field"><label>Nome da operação</label><input class="control" id="operation" value="${esc(settings.operation)}" /></div><button class="btn btn-primary section-space" data-save="1">Salvar configurações</button><div class="info-box section-space"><strong>Seus dados operacionais</strong><p>Exporte as planilhas do sistema de origem e importe por Enviar Dados Excel. O painel preserva os arquivos originais e o histórico de atualização.</p></div></section><section class="card panel"><div class="panel-head"><div><h3 class="panel-title">Metas por departamento</h3><p class="panel-sub">Percentual de conclusão desejado</p></div>${icon("target", 18)}</div><div class="settings-list section-space">${sectors.map((s) => `<div class="settings-item"><div><strong>${s.name}</strong><small>Meta de conclusão (percentual)</small><div class="progress"><div style="width:${settings.goals?.[s.id] ?? 0}%"></div></div></div><div class="row" style="gap:4px"><input class="control" type="number" min="0" max="100" step="1" data-goal="${s.id}" value="${settings.goals?.[s.id] ?? ""}" placeholder="Sem meta"/><span>%</span></div></div>`).join("")}</div><button class="btn btn-primary section-space" data-save="1">${icon("check", 14)} Aplicar metas</button></section></div>`
     );
   }
   function pageSectorDirectory() {
@@ -696,6 +705,11 @@
   }
   let lastAnimatedPage = "";
   function render() {
+    const drafts=[...document.querySelectorAll("[data-assistant-root]")].map(root=>{
+      const input=root.querySelector("textarea"),log=root.querySelector(".assistant-messages");
+      return {key:root.dataset.assistantRoot,value:input?.value||"",focused:document.activeElement===input,start:input?.selectionStart,end:input?.selectionEnd,
+        scroll:log?.scrollTop||0,atBottom:!log||log.scrollHeight-log.clientHeight-log.scrollTop<30};
+    });
     applyAppearance();
     document.getElementById("app").innerHTML = shell() + importReview();
     const pageKey = state.page + "|" + (P?.currentId?.() || "gerente");
@@ -710,6 +724,11 @@
     window.MCDock?.wire();
     window.MCInstall?.bind();
     window.MichelleDashboard?.wire();
+    for(const draft of drafts){
+      const root=document.querySelector('[data-assistant-root="'+draft.key+'"]'),input=root?.querySelector('textarea'),log=root?.querySelector('.assistant-messages');
+      if(input){input.value=draft.value;if(draft.focused&&!document.querySelector('dialog[open]')){input.focus({preventScroll:true});input.setSelectionRange(draft.start,draft.end);}}
+      if(log&&!draft.atBottom)log.scrollTop=draft.scroll;
+    }
   }
   function appearance() {
     if (["light", "dark"].includes(settings.appearance))
@@ -879,6 +898,7 @@
     return "Entendi sua mensagem. Este modo geral já permite trocar mensagens, mas ainda usa respostas locais limitadas. Para conversar livremente sobre qualquer assunto, a versão final precisará da IA generativa conectada. Você também pode usar o modo Análises para consultar os dados atuais da operação.";
   }
   async function generateAIInsights({ silent = false, viewRows = null } = {}) {
+    if(window.MCAutoReview){window.MCAutoReview.state.signature="";window.MCAutoReview.schedule(true);return;}
     if (!window.MCAI || state.aiInsightBusy || !getAll().length) return;
     state.aiInsightBusy = true;
     if (!silent) render();
@@ -1045,7 +1065,7 @@
   async function saveImports() {
     await S.batch(imports.map((value) => ({ store: "lots", value })));
   }
-  async function confirmImport(p = state.pending) {
+  async function confirmImport(p = state.pending, options = {}) {
     if (p instanceof Event) p = state.pending;
     if (!p || state.importBusy || p.selected === false) return;
     state.importBusy = true;
@@ -1121,10 +1141,10 @@
       state.report = null;
       state.tablePage = 0;
       notify(
-        `${lot.rows.length} linhas salvas. Indicadores e insights atualizados.`,
+        `${lot.rows.length} linhas salvas. A revisão do Copiloto começa após o envio.`,
       );
       render();
-      if (window.MCAI?.consent()) void generateAIInsights({silent:true});
+      if (!options.deferAnalysis && window.MCAI?.consent()) window.MCAutoReview?.schedule();
     } catch (e) {
       p.status = "error";
       p.error = e.message;
@@ -1137,7 +1157,8 @@
   async function importQueue() {
     if (state.importBusy || state.readingFiles) return;
     const pending = state.uploadQueue.filter((p) => p.grid && !p.lotId && p.selected !== false);
-    for (const p of pending) await confirmImport(p);
+    for (const p of pending) await confirmImport(p,{deferAnalysis:true});
+    if(pending.some(p=>p.status==="saved")&&window.MCAI?.consent())window.MCAutoReview?.schedule();
     const remaining = pending.filter((p) => !p.lotId);
     notify(
       remaining.length
@@ -1166,7 +1187,8 @@
       form.addEventListener("submit", (e) => {
         e.preventDefault();
         let text = form.querySelector("textarea");
-        ask(text?.value || "");
+        const question=text?.value||"";
+        if(question.trim()&&!state.assistantBusy){if(text)text.value="";ask(question);}
       }),
     );
     root.querySelectorAll("[data-assistant-input]").forEach((el) => {
@@ -1256,6 +1278,7 @@
       (el) =>
         (el.onclick = () => {
           state.tablePage = 0;
+          if(state.sidebar&&window.MCDock?.closeNav){window.MCDock.closeNav(()=>navigate(el.dataset.nav));return;}
           navigate(el.dataset.nav);
         }),
     );
@@ -1286,6 +1309,7 @@
         render();
       });
     document.querySelector("[data-toggle]")?.addEventListener("click", () => {
+      if(window.MCDock?.toggleNav){window.MCDock.toggleNav();return;}
       state.sidebar = !state.sidebar;
       render();
       document
@@ -1295,11 +1319,13 @@
     document
       .querySelector("[data-close-nav]")
       ?.addEventListener("click", () => {
+        if(window.MCDock?.closeNav){window.MCDock.closeNav();return;}
         state.sidebar = false;
         render();
         document.querySelector("[data-toggle]")?.focus();
       });
     document.querySelector("[data-close]")?.addEventListener("click", () => {
+      if(window.MCDock?.closeNav){window.MCDock.closeNav();return;}
       state.sidebar = false;
       render();
     });
@@ -1592,6 +1618,7 @@
       .forEach(
         (el) =>
           (el.onclick = () => {
+            if(window.MCDock?.openChat){window.MCDock.openChat();return;}
             state.assistantOpen = !state.assistantOpen;
             render();
           }),
@@ -1599,6 +1626,7 @@
     document.querySelectorAll("[data-assistant-close]").forEach(
       (el) =>
         (el.onclick = () => {
+          if(window.MCDock?.closeChat){window.MCDock.closeChat();return;}
           state.assistantOpen = false;
           render();
         }),
@@ -1889,7 +1917,7 @@
     getRecords: (sector, days, range) => recordsFor(sector, days, range),
     getSectors: () => sectors,
     getSettings: () => settings,
-    getAIInsight: () => ({ text: state.aiInsightText, scope: state.aiInsightScope, busy: state.aiInsightBusy }),
+    getAIInsight: () => ({ text: window.MCAutoReview?.textSummary()||state.aiInsightText, scope: "Arquivos ativos", busy: ["queued","analyzing"].includes(window.MCAutoReview?.state.phase)||state.aiInsightBusy }),
     clearAIInsight: () => { state.aiInsightText = ""; },
     generateAIInsights,
     applyDeletedFiles: ids => {
@@ -1897,6 +1925,7 @@
       imports=imports.filter(lot=>!removed.has(lot.fileId));
       if(!imports.some(lot=>lot.id===state.viewLot))state.viewLot=null;
       state.report=null; invalidate(); render();
+      window.MCAutoReview?.invalidate();
     },
     render,
     navigate,
@@ -1909,12 +1938,14 @@
   };
   window.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && state.sidebar) {
+      if(window.MCDock?.closeNav){window.MCDock.closeNav();return;}
       state.sidebar = false;
       render();
       document.querySelector("[data-toggle]")?.focus();
       return;
     }
     if (e.key === "Escape" && state.assistantOpen) {
+      if(window.MCDock?.closeChat){window.MCDock.closeChat();return;}
       state.assistantOpen = false;
       render();
     }

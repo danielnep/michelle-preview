@@ -238,6 +238,8 @@ async function boot(db = new IDBFactory(), dashboardPreference) {
     },
   );
   const w = dom.window;
+  w.localStorage.setItem("michelle.ai.automatic-review.v2","1");
+  w.localStorage.setItem("michelle.ai.behavior.v1",JSON.stringify({automaticInsights:false}));
   if (dashboardPreference) w.localStorage.setItem("michelle.dashboard.v2.gerente", dashboardPreference);
   Object.defineProperty(w, "indexedDB", { value: db });
   w.IDBKeyRange = IDBKeyRange;
@@ -273,7 +275,8 @@ async function boot(db = new IDBFactory(), dashboardPreference) {
     "analysis/source-visuals.js",
     "analysis/source-agent.js",
     "michelle-ai-dock.js",
-    "analysis/compact-dock.js",
+    "michelle-ai-client.js",
+    "analysis/automatic-review.js",
     "app.js",
     "studio.js",
     "dashboard.js",
@@ -855,28 +858,33 @@ test("fontes gerais distintas com mesmo período não bloqueiam importação",as
   t.w.close();
 });
 
-test("Copiloto permanece enviável, compacto e redimensionável, com insight sinalizado",async()=>{
+test("Copiloto abre como barra fixável, sem bolinha, e recolhe sem espaço reservado",async()=>{
   const t=await boot(),w=t.w,b=w.MichelleBridge;
-  assert.ok(w.MCCompactDock);
-  const old=w.MCCompactDock.dimensions().width;
-  const win=w.document.querySelector(".assistant-window");
-  assert.ok(win);
-  assert.ok(Number.parseInt(win.style.width)>0);
-  t.click("[data-assistant-toggle]");
+  assert.equal(w.document.querySelector(".assistant-fab"),null);
+  assert.equal(w.document.querySelector("#mc-ai-return"),null);
+  t.click(".sidebar [data-assistant-open]");
+  assert.equal(b.getState().assistantOpen,true);
+  assert.ok(w.document.body.classList.contains("mc-chat-pinned"));
   assert.ok(w.document.querySelector(".assistant-layer.open .assistant-form button[type=submit]"));
-  const handle=w.document.querySelector("[data-mc-ai-resize]");
-  assert.ok(handle);
-  handle.dispatchEvent(new w.KeyboardEvent("keydown",{key:"ArrowLeft",bubbles:true,cancelable:true}));
-  assert.equal(w.MCCompactDock.dimensions().width,old-16);
-  assert.ok(w.localStorage.getItem("michelle.ai.compact-dock.v1"));
-  b.getState().aiInsightText="Registros relevantes analisados";
-  b.render();
-  assert.ok(w.document.querySelector(".assistant-fab.mc-ai-insight-ready"));
-  assert.ok(w.document.querySelector(".assistant-layer .mc-ai-insight-callout"));
-  t.click(".assistant-layer [data-assistant-expand]");
-  assert.equal(b.getState().page,"insight");
-  assert.equal(t.errors.length,0);
-  t.w.close();
+  const width=w.MCDock.dimensions().width;
+  w.document.querySelector('[data-mc-ai-resize]').dispatchEvent(new w.KeyboardEvent('keydown',{key:'ArrowLeft',bubbles:true,cancelable:true}));
+  assert.equal(w.MCDock.dimensions().width,width+16);
+  t.click('[data-mc-ai-pin]');assert.equal(w.document.body.classList.contains('mc-chat-pinned'),false);
+  t.click('.mc-chat-back');await wait(()=>!w.document.body.classList.contains('mc-chat-open'));
+  assert.equal(b.getState().assistantOpen,false);assert.equal(w.document.querySelector('.mc-chat-edge').hidden,false);
+  t.click('.mc-chat-edge');assert.equal(b.getState().assistantOpen,true);
+  t.click('.sidebar [data-close-nav]');await wait(()=>w.document.body.classList.contains('mc-nav-collapsed'));
+  assert.equal(b.getState().navCollapsed,true);assert.equal(w.document.getElementById('mc-nav-edge').hidden,false);
+  t.click('#mc-nav-edge');assert.equal(b.getState().navCollapsed,false);
+  Object.defineProperty(w,'innerWidth',{value:390,writable:true});w.dispatchEvent(new w.Event('resize'));
+  t.click('.mc-chat-back');await wait(()=>!w.document.body.classList.contains('mc-chat-open'));
+  t.click('.sidebar [data-assistant-open]');assert.equal(b.getState().assistantOpen,true);
+  assert.equal(w.MCDock.dimensions().width,390);assert.equal(w.document.querySelector('.assistant-window').getAttribute('aria-modal'),'true');
+  assert.equal(w.document.body.classList.contains('mc-chat-pinned'),false);
+  assert.equal(w.MCDock.gestureDecision('right',90,2,true),'close');
+  assert.equal(w.MCDock.gestureDecision('left',90,2,false),'open');
+  assert.equal(w.MCDock.gestureDecision('left',3,90,true),null);
+  assert.equal(t.errors.length,0);w.close();
 });
 
 test("barra superior executa envio, importações, tema e IA; biblioteca exclui só dados daquele original",async()=>{
@@ -884,7 +892,7 @@ test("barra superior executa envio, importações, tema e IA; biblioteca exclui 
  t.w.MCAccess={owner:true};t.w.MCCloudFiles={list:()=>[{id:'a'.repeat(64)}]};
  b.getImports().push({id:'aba1',fileId:'a'.repeat(64),rows:[{id:'1',sector:'tec',type:'ordens',value:1}]},{id:'aba2',fileId:'a'.repeat(64),rows:[{id:'2',sector:'tec',type:'ordens',value:1}]},{id:'outro',fileId:'b'.repeat(64),rows:[{id:'3',sector:'tec',type:'ordens',value:1}]});
  b.render();
- for(const selector of ['[data-cloud-upload]','[data-toggle-theme]','[data-assistant-open]','.mc-header-imports'])assert.ok(t.w.document.querySelector('.topbar '+selector),selector);
+ for(const selector of ['[data-cloud-upload]','[data-toggle-theme]','.mc-header-imports'])assert.ok(t.w.document.querySelector('.topbar '+selector),selector);
  for(const selector of ['[data-cloud-library]','[data-cloud-export]','[data-mc-install]'])assert.ok(t.w.document.querySelector('.sidebar '+selector),selector);
  assert.equal(t.w.document.querySelectorAll('#mc-cloud-upload').length,1);
  let picked=0;t.w.document.getElementById('mc-cloud-upload').click=()=>picked++;
@@ -893,20 +901,42 @@ test("barra superior executa envio, importações, tema e IA; biblioteca exclui 
  await wait(()=>t.w.localStorage.getItem('horizon.appearance')==='light');
  t.click('.topbar [data-toggle-theme]');assert.equal(t.w.document.documentElement.dataset.theme,'dark');
  await wait(()=>t.w.localStorage.getItem('horizon.appearance')==='dark');
- t.click('.topbar [data-assistant-open]');assert.equal(b.getState().assistantOpen,true);
+ t.click('.sidebar [data-assistant-open]');assert.equal(b.getState().assistantOpen,true);
  t.click('.topbar .mc-header-imports');assert.equal(b.getState().page,'data');
- t.click('.topbar .mob-toggle');assert.equal(b.getState().sidebar,true);
- t.click('.sidebar [data-close-nav]');assert.equal(b.getState().sidebar,false);
+ t.click('.topbar .mob-toggle');assert.equal(b.getState().navCollapsed,true);
+ await wait(()=>t.w.document.body.classList.contains('mc-nav-collapsed'));t.click('.topbar .mob-toggle');assert.equal(b.getState().navCollapsed,false);
  b.navigate('geral');
  assert.ok(t.w.document.querySelector('.mc-home-library [data-cloud-library]'));
  assert.equal(t.w.document.querySelector('.mc-cloud-toolbar'),null);
  b.applyDeletedFiles(['a'.repeat(64)]);assert.equal(b.getAll().length,1);assert.equal(b.getAll()[0].id,'3');
  t.w.MCAccess={owner:false,rights:{filesView:true,ai:false,filesUpload:false},sectors:[]};b.render();
  assert.equal(t.w.document.querySelector('.topbar [data-cloud-upload]'),null);
- assert.equal(t.w.document.querySelector('.topbar [data-assistant-open]'),null);
+ assert.equal(t.w.document.querySelector('.sidebar [data-assistant-open]'),null);
  assert.ok(t.w.document.querySelector('.topbar [data-toggle-theme]'));
  t.w.MCAccess.rights.filesUpload=true;t.w.MCAccess.rights.ai=true;b.render();
  assert.ok(t.w.document.querySelector('.topbar [data-cloud-upload]'));
- assert.ok(t.w.document.querySelector('.topbar [data-assistant-open]'));
+ assert.ok(t.w.document.querySelector('.sidebar [data-assistant-open]'));
  assert.equal(t.errors.length,0);t.w.close();
+});
+
+test("gestos das duas barras respeitam direção e cancelamento; atualizações preservam o rascunho",async()=>{
+ const t=await boot(),w=t.w,b=w.MichelleBridge;
+ Object.defineProperty(w,'innerWidth',{value:390,writable:true});w.MCDock.sync();
+ const event=(name,x,y=200)=>new w.MouseEvent(name,{bubbles:true,cancelable:true,clientX:x,clientY:y,button:0});
+ const swipe=async(selector,x,z,cancel=false)=>{
+  w.document.querySelector(selector).dispatchEvent(event('pointerdown',x));
+  w.dispatchEvent(event('pointermove',z));w.dispatchEvent(event(cancel?'pointercancel':'pointerup',z));
+ };
+ await swipe('#mc-nav-edge',5,110);assert.equal(b.getState().sidebar,true);
+ await swipe('.sidebar .brand',130,20,true);assert.equal(b.getState().sidebar,true);
+ await swipe('.sidebar .brand',130,20);await wait(()=>!w.document.body.classList.contains('mc-nav-open'));
+ assert.equal(b.getState().sidebar,false);
+ await swipe('.mc-chat-edge',385,270);assert.equal(b.getState().assistantOpen,true);
+ const input=w.document.querySelector('.assistant-window textarea');input.value='Comparar os arquivos sem perder este texto';input.focus();input.setSelectionRange(7,7);
+ b.render();const updated=w.document.querySelector('.assistant-window textarea');
+ assert.equal(updated.value,'Comparar os arquivos sem perder este texto');assert.equal(updated.selectionStart,7);assert.equal(w.document.activeElement,updated);
+ await swipe('.assistant-window-header',90,220,true);assert.equal(b.getState().assistantOpen,true);
+ await swipe('.assistant-window-header',90,220);await wait(()=>!w.document.body.classList.contains('mc-chat-open'));
+ assert.equal(b.getState().assistantOpen,false);
+ assert.equal(t.errors.length,0);w.close();
 });

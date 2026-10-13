@@ -84,13 +84,12 @@ test("diagnóstico informa variável disponível e autentica com o DeepSeek sem 
    if(prior===undefined)delete process.env.DEEPSEEK_API_KEY; else process.env.DEEPSEEK_API_KEY=prior;
  }
 });
-test("os tamanhos da bolinha do Copiloto cresceram 30%",()=>{
- const css=fs.readFileSync(path.join(base,"michelle-ai-dock.css"),"utf8");
- const js=fs.readFileSync(path.join(base,"michelle-ai-dock.js"),"utf8");
- assert.match(css,/width:73px;height:73px;min-height:73px/);
- assert.match(css,/width:65px!important;height:65px!important;min-height:65px!important/);
- assert.match(css,/width:26px!important;height:26px!important/);
- assert.match(js,/const size=mobile\(\)\?65:73/);
+test("o carregador usa o Copiloto lateral e não carrega o posicionador de bolinha",()=>{
+ const html=fs.readFileSync(path.join(base,"index.html"),"utf8");
+ const src=fs.readFileSync(path.join(base,"app.js"),"utf8");
+ assert.equal(html.includes('analysis/compact-dock.js'),false);
+ assert.ok(html.includes('mc-live.css'));
+ assert.equal(src.includes('class="assistant-fab'),false);
 });
 
 test("função lê POWER_BI_MICHELLE_IA antes da variável antiga, sem expor valor", async()=>{
