@@ -13,7 +13,14 @@
    catalog=await (await request("/api/files")).json();
    return catalog;
  }
- async function open(){await (await request("/api/me")).json();await refreshFiles();return true;}
+ async function open(){
+  root.MCAccess=await (await request("/api/me")).json();
+  try{await refreshFiles()}catch(error){
+    if(!root.MCAccess.owner && !["filesView","filesUpload","filesDownload"].some(k=>root.MCAccess.rights?.[k])) catalog=[];
+    else throw error;
+  }
+  return true;
+}
  async function read(store,id){
    if(store==="files"){
      const file=catalog.find(f=>f.id===id);
