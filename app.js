@@ -1001,7 +1001,15 @@
         const digest=await crypto.subtle.digest("SHA-256",bytes);
         const hash=Array.from(new Uint8Array(digest)).map(n=>n.toString(16).padStart(2,"0")).join("");
         const wb=XLSX.read(bytes,{type:"array",cellDates:false});
-        const inspected=window.MCWorkbookSheets?.inspect(wb,XLSX,D.detect,file.name)||[];
+        const inspected=window.MCWorkbookSheets?.inspect(wb,XLSX,D.detect,file.name) ||
+          wb.SheetNames.map(name=>{
+            const sheet=wb.Sheets[name],ref=sheet?.["!ref"];
+            if(!ref)return null;
+            const bounds=XLSX.utils.decode_range(ref);
+            const sample=XLSX.utils.sheet_to_json(sheet,{header:1,raw:false,defval:"",
+              range:{s:{r:0,c:0},e:{r:Math.min(49,bounds.e.r),c:bounds.e.c}}});
+            return {name,score:D.detect(sample,{filename:file.name,sheet:name}).score,summary:false,selected:true};
+          }).filter(Boolean).sort((a,b)=>b.score-a.score);
         if(!inspected.length)throw Error("Nenhuma aba com cabeçalhos e linhas de dados foi encontrada.");
         state.uploadQueue=state.uploadQueue.filter(p=>p!==placeholder);
         let first=true;
