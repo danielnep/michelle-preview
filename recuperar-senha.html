@@ -1,0 +1,14 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Esqueci a senha | PowerBI CompletoMC</title><style>
+:root{font-family:Inter,system-ui,sans-serif;color-scheme:dark;background:#070b13;color:#f3f8ff}*{box-sizing:border-box}body{display:grid;place-items:center;min-height:100dvh;margin:0;padding:20px}
+main{max-width:430px;width:100%;background:#121c2c;border:1px solid #33485e;border-radius:17px;padding:25px}h1{font-size:26px}
+p{color:#b5c5d7;line-height:1.6}label{display:block;margin:20px 0 7px}
+input,button{font:inherit;width:100%;border-radius:10px;padding:13px}input{background:#0a1220;color:white;border:1px solid #5a7088}
+button{background:#4bc3ff;color:#081928;font-weight:800;border:0;cursor:pointer;margin:17px 0}a{color:#88d6ff}
+</style></head><body><main><h1>Esqueci minha senha</h1><p>Informe o e-mail cadastrado para receber um link de redefinição.</p><form id="form"><label for="email">E-mail</label><input id="email" type="email" autocomplete="email" required>
+<button type="submit">Enviar link de redefinição</button><p id="result" role="status"></p></form><a href="/login.html">← Voltar ao login</a></main>
+<script>document.querySelector("#form").onsubmit=async e=>{
+e.preventDefault();const btn=e.currentTarget.querySelector("button"),status=document.querySelector("#result");btn.disabled=true;status.textContent="Solicitando...";
+try{const res=await fetch("/api/auth/request-password-reset",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:document.querySelector("#email").value.trim(),redirectTo:location.origin+"/redefinir-senha.html"})});
+status.textContent=res.ok?"Se houver uma conta com esse e-mail, você receberá um link para redefinir a senha.":"Não foi possível enviar agora. Verifique se o serviço de e-mail está configurado."}
+catch(_){status.textContent="Serviço indisponível. Tente novamente."}finally{btn.disabled=false}};
+</script></body></html>
