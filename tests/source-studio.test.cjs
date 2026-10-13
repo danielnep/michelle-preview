@@ -78,3 +78,16 @@ test("estrutura de layout adaptativo e arquivos scripts presentes",()=>{
   assert.match(agent,/mc-source-workspace/);
   assert.match(agent,/data-mc-source-view/);
 });
+
+test("PWA armazena os módulos de exploração e invalida cache antigo",()=>{
+  const root=path.join(__dirname,"..");
+  const sw=fs.readFileSync(path.join(root,"service-worker.js"),"utf8");
+  const html=fs.readFileSync(path.join(root,"index.html"),"utf8");
+  for(const resource of ["source-agent.js","source-visuals.js","workbook-sheets.js","compact-dock.js","compact-shell.css","source-studio.css"]){
+    assert.match(sw,new RegExp(resource.replace(/\./g,"\\.")));
+    assert.ok(html.includes(resource));
+  }
+  assert.match(sw,/michelle-shell-v4\.7\.0/);
+  assert.match(sw,/const canonical=new URL\(url\.pathname,url\.origin\)\.href/);
+  assert.match(html,/app-version" content="4\.7\.0"/);
+});
