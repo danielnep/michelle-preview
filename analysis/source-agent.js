@@ -6,7 +6,7 @@
 })(typeof window!=="undefined"?window:globalThis,function(root) {
   "use strict";
   const MAX_SOURCES=12, MAX_COLUMNS=18;
-  const state={busy:false,plan:null,applied:false,error:"",fingerprint:"",catalog:[]};
+  const state={busy:false,plan:null,applied:false,error:"",fingerprint:"",catalog:[],activeSource:"",view:"auto"};
   const text=(v,max=110)=>String(v??"").trim().slice(0,max);
   const norm=v=>text(v,150).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/\s+/g," ");
   const shape=v=>{
@@ -130,14 +130,57 @@
   }
   function render(rows=[],lots=[],esc=x=>String(x??"")) {
     const fp=fingerprint(lots)+"#"+(rows||[]).length+"#"+[...new Set((rows||[]).map(r=>r.lotId).filter(Boolean))].sort().join("|");
-    if(fp!==state.fingerprint){state.fingerprint=fp;state.plan=null;state.applied=false;state.error="";state.busy=false;}
+    if(fp!==state.fingerprint){state.fingerprint=fp;state.plan=null;state.applied=false;state.error="";state.busy=false;state.view="auto";}
     state.catalog=catalog(rows,lots);
     if(!state.catalog.length)return "";
     const profiles=state.catalog;
-    const profileHtml=profiles.map(p=>
-      '<details><summary>'+esc(p.file)+' · '+esc(p.sheet)+' · '+p.rowCount+' linhas</summary>'+
-      '<p>Tipo identificado: '+esc(p.registeredType)+'. Colunas analisadas separadamente: '+p.columns.length+'. Datas individuais: '+(p.hasIndividualDates?"sim":"não")+'.</p>'+
-      '<p>'+esc(p.columns.map(c=>c.name+" ("+c.inferredShape+")").join(" · "))+'</p></details>').join("");
+    if(!profiles.some(p=>p.id===state.activeSource))state.activeSource=profiles[0].id;
+    const selected=profiles.find(p=>p.id===state.activeSource);
+    const V=root.MCSourceVisuals;
+    const visual=V?.seriesFor(rows,selected);
+    const currentView=state.view==="auto"?(visual?.bars?.length?"bar":visual?.hasTrend?"line":"table"):state.view;
+    const allowedView=currentView==="line"&&!visual?.hasTrend?"table":currentView==="bar"&&!visual?.bars?.length?"table":currentView;
+    const sourceNav=profiles.map(p=>
+      '<button type="button" class="mc-source-tab '+(p.id===selected.id?"is-active":"")+'" data-mc-pick-source="'+esc(p.id)+
+      '" aria-pressed="'+(p.id===selected.id?"true":"false")+'">'+
+      '<span class="mc-source-tab-icon" aria-hidden="true">▦</span><span><b>'+esc(p.file)+'</b><small>'+esc(p.sheet)+
+      ' · '+new Intl.NumberFormat("pt-BR").format(p.rowCount)+' linhas</small></span></button>'
+    ).join("");
+    const viewControls=visual?[
+      ["bar","Barras",!!visual.bars.length],["line","Evolução",!!visual.hasTrend],["table","Tabela",true]
+    ].map(([mode,label,enabled])=>'<button type="button" class="mc-source-view-choice '+(allowedView===mode?"is-active":"")+
+      '" data-mc-source-view="'+mode+'" aria-pressed="'+(allowedView===mode?"true":"false")+'" '+(enabled?"":"disabled")+'>'+label+'</button>').join(""):"";
+    const localMetrics=state.applied&&state.plan?
+      computeMetrics(state.plan,rows).find(g=>g.id===selected.id)?.metrics||[]:[];
+    const suggestions=state.plan?.sources.find(p=>p.id===selected.id);
+    const metricTiles='<div class="mc-source-facts" aria-label="Informações da fonte">'+
+      '<div><span>Linhas no recorte</span><strong>'+new Intl.NumberFormat("pt-BR").format(visual?.sourceRows||0)+'</strong></div>'+
+      '<div><span>Com data</span><strong>'+new Intl.NumberFormat("pt-BR").format(visual?.dated||0)+'</strong></div>'+
+      '<div><span>Campos originais</span><strong>'+selected.columns.length+'</strong></div>'+
+      '</div>';
+    const metricDetail=localMetrics.length?
+      '<div class="mc-source-metrics">'+localMetrics.map(m=>
+        '<div><small>'+esc(m.name)+'</small><strong>'+(m.value==null?"A confirmar":esc(new Intl.NumberFormat("pt-BR",{maximumFractionDigits:2}).format(m.value)))+
+        '</strong><small>'+esc(m.value===null?m.warning:m.unit||"linhas")+'</small></div>'
+      ).join("")+'</div>':"";
+    const workspace='<div class="mc-source-workspace">'+
+      '<nav class="mc-source-sidebar" aria-label="Planilhas independentes"><div class="mc-source-sidebar-head">'+
+      '<strong>Fontes analisadas</strong><small>'+profiles.length+' aba(s)</small></div>'+sourceNav+'</nav>'+
+      '<div class="mc-source-canvas"><header class="mc-source-canvas-head">'+
+      '<div><span class="mc-source-kicker">EXPLORAR FONTE</span><h4>'+esc(selected.file)+'</h4><p>Aba '+esc(selected.sheet)+
+      ' · '+esc(selected.registeredType)+' · sem cruzar outras fontes</p></div>'+
+      '<div class="mc-source-view-switch" role="group" aria-label="Formato da visualização">'+viewControls+'</div></header>'+
+      metricTiles+'<div class="mc-source-visual">'+(V&&visual?V.chart(visual,allowedView,esc):
+      '<p>Visualização indisponível. Consulte a lista de colunas abaixo.</p>')+'</div>'+metricDetail+
+      (suggestions?'<details class="mc-source-recommendation"><summary>✦ Recomendações da IA para esta fonte</summary>'+
+        '<p>'+esc(suggestions.purpose)+'</p><p><b>Unidade de análise:</b> '+esc(suggestions.grain)+'</p>'+
+        '<p><b>Gráfico sugerido:</b> '+esc(suggestions.chart||"A conferir")+'</p>'+
+        (suggestions.warnings.length?'<p>'+esc(suggestions.warnings.join(" · "))+'</p>':"")+
+        '</details>':"")+
+      '<details class="mc-source-columns"><summary>Estrutura e formatos das colunas</summary><div class="mc-source-scroll">'+
+      '<table><thead><tr><th>Coluna original</th><th>Tipo inferido</th><th>Preenchimento na amostra</th></tr></thead><tbody>'+
+      selected.columns.map(c=>'<tr><th>'+esc(c.name)+'</th><td>'+esc(c.inferredShape)+'</td><td>'+c.filledSample+'/'+c.sampleSize+'</td></tr>').join("")+
+      '</tbody></table></div></details></div></div>';
     const matches=localGroups(profiles);
     const overlap=matches.length?'<p class="dash-note">Esquemas parecidos encontrados em '+matches.length+' grupo(s). Isso não autoriza somar nem cruzar os arquivos.</p>':"";
     let result="";
@@ -166,7 +209,7 @@
     }
     return '<section class="mc-source-agent" aria-label="Agente de planilhas"><h3>Leitura independente por planilha</h3>'+
       '<p class="dash-note">Cada arquivo e aba é analisado por si. A comparação entre eles é opcional, auditável e nunca cria vínculos automaticamente.</p>'+
-      '<div class="dash-readings">'+profileHtml+'</div>'+overlap+
+      workspace+overlap+
       '<button type="button" class="btn" data-mc-source-plan '+(state.busy?"disabled":"")+'>'+
         (state.busy?"Planejando dashboard…":"✦ Planejar dashboard com IA")+'</button>'+
       '<small>Ao tocar, apenas nomes, cabeçalhos e formatos agregados serão enviados à IA. Nenhuma célula original será transmitida.'+(lots.filter(l=>!l.deleted&&!l.archived&&!l.supersededBy).length>MAX_SOURCES?" Limite desta análise: as primeiras "+MAX_SOURCES+" fontes ativas; demais devem ser avaliadas em lotes.":"")+'</small>'+
@@ -192,6 +235,14 @@
     const target=event.target.closest?.("button");
     if(!target)return;
     if(target.matches("[data-mc-source-plan]")){event.preventDefault();onPlan();}
+    if(target.matches("[data-mc-pick-source]")){
+      state.activeSource=target.dataset.mcPickSource;state.view="auto";
+      root.MichelleBridge?.render();
+    }
+    if(target.matches("[data-mc-source-view]")){
+      state.view=target.dataset.mcSourceView;
+      root.MichelleBridge?.render();
+    }
     if(target.matches("[data-mc-source-apply]")&&state.plan?.dashboard.order.length) {
       state.applied=true;
       root.dispatchEvent(new CustomEvent("mc:source-plan-apply",{detail:{order:state.plan.dashboard.order}}));
