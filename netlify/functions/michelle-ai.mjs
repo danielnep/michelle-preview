@@ -1,4 +1,4 @@
-import {PLANILHA_AGENT_SYSTEM} from "./planilha-agent-prompt.mjs";
+import {PLANILHA_AGENT_SYSTEM} from "../lib/planilha-agent-prompt.mjs";
 // Netlify Function: DeepSeek Copiloto, segredo somente no servidor.
 // Publicacao: https://<site>.netlify.app/api/michelle-ai
 const SYSTEM = `Você é o Copiloto, a inteligência integrada ao Power BI | Painel Completo / Michelle Cândido.
