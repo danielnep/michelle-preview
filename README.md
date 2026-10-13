@@ -101,3 +101,10 @@ A chave `POWER_BI_MICHELLE_IA` permanece somente no ambiente Netlify.
 Se a função Netlify ficar indisponível, a conversa remota também ficará.
 Os dados importados ficam no navegador/origem, separados entre os dois domínios.
 Mais detalhes: [manual do Copiloto](docs/copiloto.md).
+
+
+## Agente de planilhas independentes (prévia em revisão)
+
+O bloco **Entendimento das planilhas** do dashboard apresenta um inventário separado por arquivo e aba, com tipos de colunas, período e origem, antes de qualquer comparação. O botão **Planejar dashboard com IA** envia somente metadados de até 12 fontes ativas para o Copiloto, sem valores originais. O modo \`plan\` da função Netlify sugere indicadores, gráficos, independência, complementaridade e sobreposição, sempre como hipóteses revisáveis. Pode-se aplicar apenas a **ordem dos blocos existentes**, nunca a fusão de dados, o cálculo ou a publicação no Microsoft Power BI.
+
+A classificação automática de importação já existente continua separada. Atualmente **uma aba é selecionada por importação**; importar outras abas exige seleção explícita da aba e nova importação. Para arquivos acima do limite da prévia do agente, analisar em lotes. O planejamento remoto requer nova publicação da função Netlify, com \`POWER_BI_MICHELLE_IA\` configurada. Sem essa publicação, o botão informa indisponibilidade. O aplicativo ainda não cria PBIX nem faz treinamento/fine-tuning de modelo.
