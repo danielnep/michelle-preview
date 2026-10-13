@@ -389,7 +389,7 @@ test("múltiplos arquivos: ligações, erro independente, deduplicação e lista
     file(w, "invalido.txt", [1, 2, 3]),
     file(w, "ordens.xlsx", workbook()),
   ]);
-  assert.equal(b.getState().uploadQueue.length, 3);
+  assert.equal(b.getState().uploadQueue.length, 5); // 2 abas de ligações + arquivo inválido + 2 abas de ordens
   assert.equal(b.getState().pending.sheet, "Sheet1");
   assert.equal(b.getState().pending.type, "ligacoes");
   assert.match(
