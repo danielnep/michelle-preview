@@ -787,10 +787,10 @@ test("duas abas de dados do mesmo arquivo podem ser importadas em lotes independ
   await b.handleFile(file(w,"fontes.xlsx",X.write(wb,{type:"buffer",bookType:"xlsx"})));
   const queued=b.getState().uploadQueue.filter(p=>p.grid&&!p.lotId);
   assert.equal(queued.length,2);
-  assert.deepEqual(queued.map(x=>x.selected),[true,true]);
+  assert.deepEqual(Array.from(queued,x=>x.selected),[true,true]);
   t.click("[data-import-queue]");
   await wait(()=>b.getImports().length===2&&!b.getState().importBusy);
-  assert.deepEqual(b.getImports().map(l=>l.sheet),["Dados A","Dados B"]);
+  assert.deepEqual(Array.from(b.getImports(),l=>l.sheet),["Dados A","Dados B"]);
   assert.equal(b.getImports()[0].hash,b.getImports()[1].hash);
   assert.notEqual(b.getImports()[0].id,b.getImports()[1].id);
   assert.equal(b.getImports()[0].rows.length,2);
