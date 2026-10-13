@@ -343,7 +343,12 @@
     });
     return { rows, errors, skipped, mapping };
   }
+  function schemaColumns(lot) {
+    const raw=(lot.rows||[]).find(row=>row?.raw&&Object.keys(row.raw).length)?.raw;
+    return raw?Object.keys(raw).map(norm).sort().join("|"):"";
+  }
   function inspect(lots, lot) {
+    const incomingSchema=schemaColumns(lot);
     const duplicate = lots.find(
       (l) =>
         l.hash === lot.hash &&
@@ -357,6 +362,10 @@
         !l.archived && !l.deleted &&
         l.type === lot.type &&
         l.sector === lot.sector &&
+        // Fontes genéricas de esquemas diferentes não são versões entre si.
+        // Esquemas idênticos ou abas do mesmo workbook continuam sob revisão.
+        (lot.type !== "geral" || !incomingSchema || !schemaColumns(l) ||
+          incomingSchema === schemaColumns(l) || l.hash === lot.hash) &&
         l.periodStart &&
         lot.periodStart &&
         l.periodStart <= lot.periodEnd &&
