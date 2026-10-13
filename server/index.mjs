@@ -162,6 +162,67 @@ app.post("/api/store/batch",protectedRoute,async(req,res,next)=>{
  }catch(err){if(client)await client.query("ROLLBACK").catch(()=>{});next(err)}
  finally{client?.release()}
 });
+
+const administrator=(req,res,next)=>req.access?.owner?next():res.status(403).json({error:"Somente a administradora pode gerenciar colaboradores."});
+app.get("/api/collaborators",protectedRoute,administrator,async(_req,res,next)=>{
+ try{
+  const {rows}=await pool.query("SELECT user_id AS id,name,email,active,rights,sectors,created_at AS created,updated_at AS updated FROM mc_collaborators ORDER BY created_at DESC");
+  res.json({users:rows,capabilities:CAPABILITIES,sectors:SECTORS,mailReady:mailConfigured()});
+ }catch(error){next(error)}
+});
+app.get("/api/mail-status",protectedRoute,administrator,(_req,res)=>res.json({configured:mailConfigured()}));
+app.post("/api/collaborators",protectedRoute,administrator,async(req,res,next)=>{
+ try{
+  const name=String(req.body?.name||"").trim().slice(0,120);
+  const email=String(req.body?.email||"").trim().toLowerCase().slice(0,254);
+  const rights=normalizeRights(req.body?.rights);
+  const sectors=normalizeSectors(req.body?.sectors);
+  if(name.length<2||! /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return res.status(400).json({error:"Informe nome e e-mail válido."});
+  if(email===process.env.MICHELLE_INITIAL_EMAIL?.trim().toLowerCase())return res.status(409).json({error:"Este e-mail é da administradora."});
+  if(!sectors.length)return res.status(400).json({error:"Selecione pelo menos um setor."});
+  if(!Object.values(rights).some(Boolean))return res.status(400).json({error:"Selecione pelo menos uma permissão."});
+  if(!mailConfigured())return res.status(503).json({error:"Configure SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD e SMTP_FROM no Railway para enviar convites."});
+  const present=await pool.query('SELECT 1 FROM "user" WHERE lower(email)=$1',[email]);
+  if(present.rows.length)return res.status(409).json({error:"Este e-mail já tem cadastro no aplicativo."});
+  const temporaryPassword=randomBytes(36).toString("base64url");
+  const account=await auth.api.signUpEmail({body:{name,email,password:temporaryPassword}});
+  const userId=account?.user?.id;
+  if(!userId)throw Error("A autenticação não confirmou a criação do usuário.");
+  await pool.query("INSERT INTO mc_collaborators(user_id,name,email,active,rights,sectors) VALUES($1,$2,$3,false,$4::jsonb,$5::jsonb)",
+   [userId,name,email,JSON.stringify(rights),JSON.stringify(sectors)]);
+  let invited=false;
+  try {
+   await auth.api.requestPasswordReset({body:{email,redirectTo:(process.env.BETTER_AUTH_URL||"")+"/redefinir-senha.html"}});
+   invited=true;
+  }catch(error){console.error("Falha ao convidar:",error?.message||error)}
+  res.status(201).json({id:userId,name,email,active:false,invited,
+   message:invited?"Conta criada. O colaborador receberá um link para definir a própria senha.":"Conta criada, mas o convite não foi enviado. Use Reenviar convite."});
+ }catch(error){next(error)}
+});
+app.patch("/api/collaborators/:id",protectedRoute,administrator,async(req,res,next)=>{
+ try {
+  const id=String(req.params.id);
+  const rights=normalizeRights(req.body?.rights);
+  const sectors=normalizeSectors(req.body?.sectors);
+  const active=req.body?.active===true;
+  const exists=await pool.query("SELECT 1 FROM mc_collaborators WHERE user_id=$1",[id]);
+  if(!exists.rows.length)return res.status(404).json({error:"Colaborador não encontrado."});
+  await pool.query("UPDATE mc_collaborators SET rights=$2::jsonb,sectors=$3::jsonb,active=$4,updated_at=now() WHERE user_id=$1",
+   [id,JSON.stringify(rights),JSON.stringify(sectors),active]);
+  if(!active)await pool.query('DELETE FROM "session" WHERE "userId"=$1',[id]);
+  res.json({saved:true});
+ }catch(error){next(error)}
+});
+app.post("/api/collaborators/:id/reinvite",protectedRoute,administrator,async(req,res,next)=>{
+ try{
+  if(!mailConfigured())return res.status(503).json({error:"Configure o serviço de e-mail no Railway antes de enviar convites."});
+  const {rows}=await pool.query("SELECT email FROM mc_collaborators WHERE user_id=$1",[String(req.params.id)]);
+  if(!rows.length)return res.status(404).json({error:"Colaborador não encontrado."});
+  await auth.api.requestPasswordReset({body:{email:rows[0].email,redirectTo:(process.env.BETTER_AUTH_URL||"")+"/redefinir-senha.html"}});
+  res.json({sent:true});
+ }catch(error){next(error)}
+});
+
 const fileIdOk=id=>/^[a-f0-9]{64}$/.test(id);
 const fileKey=id=>"originais/"+id;
 async function accessibleFile(req,id){
