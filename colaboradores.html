@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Colaboradores | PowerBI CompletoMC</title>
+<style>
+:root{font-family:Inter,system-ui,sans-serif;color-scheme:dark;background:#080b12;color:#f2f8ff}
+*{box-sizing:border-box}body{margin:0;padding:clamp(16px,3vw,42px)}
+header.page{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-bottom:20px;border-bottom:1px solid #263a50}
+h1{font-size:clamp(23px,4vw,33px);margin:5px 0}h2{font-size:20px;margin:0 0 12px}
+p,small{color:#9cb0c5;line-height:1.5}.eyebrow{font-size:12px;letter-spacing:1px;color:#62c5ff;text-transform:uppercase}
+a,button{font:inherit;cursor:pointer}a{color:#92d8ff}.back{border:1px solid #355570;border-radius:10px;padding:12px 16px;text-decoration:none}
+main{max-width:1120px;margin:auto}.layout{display:grid;grid-template-columns:minmax(300px,1fr) minmax(340px,1.3fr);gap:18px;margin-top:20px;align-items:start}
+.panel{border:1px solid #2a4056;background:#101926;border-radius:16px;padding:22px;min-width:0}
+label.caption{display:block;margin:16px 0 7px;font-weight:600;font-size:14px}
+input[type=text],input[type=email]{width:100%;padding:12px;border-radius:9px;color:#f0f8ff;border:1px solid #496178;background:#070f1a;font:inherit}
+fieldset{min-width:0;border:1px solid #304962;border-radius:12px;padding:12px;margin:18px 0}
+legend{padding:0 5px;font-weight:700}.choices{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px 15px}
+label.choice{display:flex;gap:8px;align-items:flex-start;font-size:13px;line-height:1.35;padding:6px 0}
+input[type=checkbox]{width:17px;height:17px;accent-color:#4dbbff;flex:none}
+button.primary{border:0;border-radius:11px;padding:14px 20px;background:#43baff;color:#051320;font-weight:800;min-height:44px}
+button.secondary{border:1px solid #3e627e;border-radius:9px;color:#d2eaff;background:#172c40;padding:10px 13px;min-height:40px}
+button:disabled{opacity:.6;cursor:wait}.person{padding:18px 0;border-top:1px solid #2d455b}.person:first-child{border-top:0}
+.person-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
+.person-head strong{overflow-wrap:anywhere}.tag{font-size:11px;padding:4px 9px;border-radius:20px;background:#244254;color:#afdeff}
+.person-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}
+.person fieldset{margin:8px 0}.actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+#message{min-height:20px;color:#ffc0b1}.warning{padding:10px;background:#2d241d;border-radius:8px;color:#ffd5a8}
+#empty{color:#a2b2c5}
+@media(max-width:790px){.layout{grid-template-columns:minmax(0,1fr)}.panel{padding:15px}.person-fields{grid-template-columns:minmax(0,1fr)}}
+</style></head>
+<body><main><header class="page"><div><span class="eyebrow">PowerBI CompletoMC</span><h1>Colaboradores</h1><p>Crie contas individuais e escolha os setores e as ações permitidas.</p></div><a class="back" href="/">← Voltar ao painel</a></header>
+<p id="message" role="status" aria-live="polite"></p>
+<div class="layout"><section class="panel"><h2>Criar usuário</h2><p>O colaborador recebe um e-mail para definir sua própria senha. Não é necessário informar uma senha para outra pessoa.</p>
+<form id="create"><label class="caption" for="new-name">Nome completo</label><input id="new-name" name="name" type="text" autocomplete="off" minlength="2" required maxlength="120">
+<label class="caption" for="new-email">E-mail do colaborador</label><input id="new-email" name="email" type="email" autocomplete="off" required maxlength="254">
+<fieldset><legend>O que poderá ver e fazer</legend><div class="choices" id="new-rights"></div></fieldset>
+<fieldset><legend>Setores autorizados</legend><div class="choices" id="new-sectors"></div></fieldset>
+<button class="primary" type="submit">Criar usuário e enviar convite</button></form>
+<p class="warning" id="mail-warning" hidden>O serviço de envio de e-mails ainda precisa ser configurado no Railway antes de criar convites ou permitir recuperação de senha.</p></section>
+<section class="panel"><h2>Usuários cadastrados</h2><p>Consulte os acessos e altere as permissões. Suspender um usuário encerra as sessões atuais.</p><div id="users"><p id="empty">Carregando colaboradores…</p></div></section></div>
+</main><script>
+"use strict";
+const message=document.querySelector("#message"),userList=document.querySelector("#users");
+let capabilities={},sectors={};
+const el=(tag,cls="",txt="")=>{const node=document.createElement(tag);if(cls)node.className=cls;if(txt)node.textContent=txt;return node;};
+function choices(target,values,selected,group){
+ target.replaceChildren();
+ for(const [key,label] of Object.entries(values)){
+  const item=el("label","choice"),box=el("input"),text=el("span","",label);
+  box.type="checkbox";box.name=group;box.value=key;box.checked=Boolean(group==="sectors"?selected.includes(key):selected[key]);
+  item.append(box,text);target.append(item);
+ }
+}
+function take(el,group,asObject=false){
+ const keys=[...el.querySelectorAll('input[name="'+group+'"]:checked')].map(n=>n.value);
+ return asObject?Object.fromEntries(Object.keys(capabilities).map(k=>[k,keys.includes(k)])):keys;
+}
+async function api(url,options={}){
+ const res=await fetch(url,{credentials:"same-origin",cache:"no-store",...options});
+ if(res.status===401){location.href="/login.html";throw Error("Entre novamente.");}
+ const value=await res.json().catch(()=>({}));
+ if(!res.ok)throw Error(value.error||"Não foi possível concluir a solicitação.");
+ return value;
+}
+const payload=x=>({method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(x)});
+function renderPerson(person){
+ const article=el("article","person"),head=el("div","person-head"),identity=el("div");
+ identity.append(el("strong","",person.name),el("small","",person.email));head.append(identity,el("span","tag",person.active?"Ativo":"Aguardando ativação / suspenso"));article.append(head);
+ const forms=el("div","person-fields"),rightsForm=el("fieldset"),sectorsForm=el("fieldset");
+ rightsForm.append(el("legend","","Permissões"));sectorsForm.append(el("legend","","Setores"));
+ const rightsBox=el("div","choices"),sectorsBox=el("div","choices");
+ choices(rightsBox,capabilities,person.rights||{},"rights");choices(sectorsBox,sectors,person.sectors||[],"sectors");
+ rightsForm.append(rightsBox);sectorsForm.append(sectorsBox);forms.append(rightsForm,sectorsForm);
+ const actions=el("div","actions"),save=el("button","secondary","Salvar permissões"),toggle=el("button","secondary",person.active?"Suspender acesso":"Reativar acesso"),invite=el("button","secondary","Reenviar convite / redefinição");
+ for(const b of [save,toggle,invite])b.type="button";
+ save.onclick=()=>update(person,rightsBox,sectorsBox,person.active,save);
+ toggle.onclick=()=>update(person,rightsBox,sectorsBox,!person.active,toggle);
+ invite.onclick=async()=>{invite.disabled=true;try{await api("/api/collaborators/"+encodeURIComponent(person.id)+"/reinvite",payload({}));message.textContent="E-mail enviado para "+person.email;}catch(e){message.textContent=e.message}finally{invite.disabled=false}};
+ actions.append(save,toggle,invite);article.append(forms,actions);return article;
+}
+async function update(person,rights,sectorsBox,active,button){
+ button.disabled=true;message.textContent="";
+ try{
+  await api("/api/collaborators/"+encodeURIComponent(person.id),{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({rights:take(rights,"rights",true),sectors:take(sectorsBox,"sectors"),active})});
+  message.textContent="Permissões atualizadas.";await load();
+ }catch(e){message.textContent=e.message}finally{button.disabled=false}
+}
+async function load(){
+ try{
+  const result=await api("/api/collaborators");capabilities=result.capabilities;sectors=result.sectors;
+  choices(document.querySelector("#new-rights"),capabilities,{},"rights");choices(document.querySelector("#new-sectors"),sectors,[],"sectors");
+  document.querySelector("#mail-warning").hidden=!!result.mailReady;
+  userList.replaceChildren();
+  if(!result.users?.length){userList.append(el("p","", "Nenhum colaborador cadastrado."));return;}
+  for(const person of result.users)userList.append(renderPerson(person));
+ }catch(e){message.textContent=e.message}
+}
+document.querySelector("#create").onsubmit=async e=>{
+ e.preventDefault();const form=e.currentTarget,button=form.querySelector("button[type=submit]");button.disabled=true;message.textContent="";
+ try{
+  const data={name:form.name.value.trim(),email:form.email.value.trim(),rights:take(document.querySelector("#new-rights"),"rights",true),sectors:take(document.querySelector("#new-sectors"),"sectors")};
+  const response=await api("/api/collaborators",payload(data));
+  message.textContent=response.message||"Conta criada.";form.reset();await load();
+ }catch(err){message.textContent=err.message}finally{button.disabled=false}
+};
+load();
+</script></body></html>
