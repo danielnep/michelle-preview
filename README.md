@@ -1,4 +1,4 @@
-# PowerBI CompletoMC
+# PowerBI Completo MC
 
 Aplicativo operacional de Michelle Cândido. A interface e os cinco modelos de apresentação existentes foram preservados e integrados a um fluxo de dados real.
 
@@ -14,7 +14,7 @@ Aplicativo operacional de Michelle Cândido. A interface e os cinco modelos de a
 
 Todos os números exibem a unidade ou a definição da medida. Nos cartões do dashboard, **Fonte** mostra arquivo e aba, e **Como este número foi obtido** detalha a operação e as colunas associadas quando identificadas. Gráficos e rankings trazem legenda da unidade e a tabela de registros mostra o tipo de quantidade ao lado do valor. Se fontes de unidades diferentes forem visualizadas em conjunto, os gráficos da visão geral contam linhas, sem somar eventos, deslocamentos e registros como uma única métrica.
 
-O título do aplicativo é **PowerBI CompletoMC** e símbolo de indicadores próprio em SVG. Os dados não dependem de arquivos PBIX; a integração com o serviço Microsoft Power BI é opcional e exige um relatório existente publicado com permissões próprias.
+O título do aplicativo é **PowerBI Completo MC** e símbolo de indicadores próprio em SVG. Os dados não dependem de arquivos PBIX; a integração com o serviço Microsoft Power BI é opcional e exige um relatório existente publicado com permissões próprias.
 
 
 - Excel XLSX/XLS e CSV: seleção de arquivos abre a janela **Importar e ler**, com tipo, aba detalhada, prévia das colunas originais e datas detectados automaticamente. Basta confirmar. Aba, associação de colunas, destino e competência são ajustes opcionais. Original e histórico são preservados.
@@ -51,7 +51,7 @@ A Visão Geral começa com o Dashboard central. O botão **Adicionar dados** abr
 
 O quadro aceita vários arquivos por seleção ou arrastar e soltar. A confirmação na janela processa cada planilha independentemente e mantém erros visíveis para correção. A área de arquivos importados preserva nome, linhas, destino, datas disponíveis, consulta, original e exclusão, inclusive após recarregar. Logo abaixo ficam **Gerar relatório**, **Visualizar dashboard** e **Gerar e criar apresentação**. O último cria uma nova apresentação e preserva as anteriores.
 
-A identificação no cabeçalho, menu e rodapé é “PowerBI CompletoMC”, sem logotipos ou créditos de desenvolvimento. O favicon, os ícones de atalho e a imagem de compartilhamento usam um símbolo neutro de indicadores. A paleta escura usa preto e cinza neutro, branco e azul celeste nas ações. O modo escuro é o padrão para novos acessos; preferências já salvas são preservadas. O modo claro/escuro é persistido, a navegação móvel respeita a área segura e o menu pode ser fechado por botão ou Esc. Os resumos de insights usam três colunas no computador e uma no celular, com tipografia e foco de teclado consistentes. A aparência do aplicativo não modifica os temas das apresentações. A busca de registros fica no menu e está disponível também no celular, com indicação do filtro ativo e ação para limpar.
+A identificação no cabeçalho, menu e rodapé é “PowerBI Completo MC”, sem logotipos ou créditos de desenvolvimento. O favicon, os ícones de atalho e a imagem de compartilhamento usam um símbolo neutro de indicadores. A paleta escura usa preto e cinza neutro, branco e azul celeste nas ações. O modo escuro é o padrão para novos acessos; preferências já salvas são preservadas. O modo claro/escuro é persistido, a navegação móvel respeita a área segura e o menu pode ser fechado por botão ou Esc. Os resumos de insights usam três colunas no computador e uma no celular, com tipografia e foco de teclado consistentes. A aparência do aplicativo não modifica os temas das apresentações. A busca de registros fica no menu e está disponível também no celular, com indicação do filtro ativo e ação para limpar.
 
 O manifesto, o service worker e os ícones próprios oferecem instalação e cache do shell em navegadores compatíveis. Os dados operacionais continuam locais no IndexedDB; o modo offline não garante acesso a recursos remotos. As referências de design usadas são as diretrizes oficiais de [modo escuro da Apple](https://developer.apple.com/design/human-interface-guidelines/dark-mode), [layouts adaptáveis do Android](https://developer.android.com/develop/adaptive-apps/guides/use-window-size-classes), [papéis de cores do Material Design](https://m3.material.io/styles/color/roles) e [WCAG 2.2](https://www.w3.org/TR/WCAG22/).
 
