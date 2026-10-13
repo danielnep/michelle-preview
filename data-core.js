@@ -365,7 +365,7 @@
         // Fontes genéricas de esquemas diferentes não são versões entre si.
         // Esquemas idênticos ou abas do mesmo workbook continuam sob revisão.
         (lot.type !== "geral" || !incomingSchema || !schemaColumns(l) ||
-          incomingSchema === schemaColumns(l) || l.hash === lot.hash) &&
+          incomingSchema === schemaColumns(l)) &&
         l.periodStart &&
         lot.periodStart &&
         l.periodStart <= lot.periodEnd &&
