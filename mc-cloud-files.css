@@ -1,0 +1,11 @@
+
+/* Biblioteca de originais no Railway: destaque funcional no topo, sem confundir com indicadores. */
+.mc-cloud-toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;margin:0 0 18px;padding:14px 18px;border:1px solid rgba(82,155,213,.28);border-radius:16px;background:linear-gradient(110deg,rgba(30,98,150,.14),rgba(71,92,132,.06));}
+.mc-cloud-info{display:flex;align-items:center;gap:13px;min-width:0;}
+.mc-cloud-info strong{display:block;font-size:15px;color:var(--text,#e9f5ff);}
+.mc-cloud-info p{margin:4px 0 0;font-size:13px;color:var(--muted,#b8c7d9);}
+.mc-cloud-icon{display:grid;place-items:center;flex-shrink:0;width:43px;height:43px;border-radius:13px;background:rgba(49,163,239,.17);color:#69c5ff;}
+.mc-cloud-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.mc-cloud-actions .btn{min-height:43px;display:inline-flex;align-items:center;justify-content:center;gap:6px;text-decoration:none;white-space:nowrap;}
+.mc-cloud-actions .mc-upload-main{font-weight:750;box-shadow:0 2px 9px rgba(33,147,230,.2);}
+@media(max-width:680px){.mc-cloud-toolbar{padding:12px;align-items:stretch;gap:10px}.mc-cloud-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;width:100%}.mc-cloud-actions .btn{min-width:0;font-size:12px;padding:10px 8px;white-space:normal;text-align:center}.mc-cloud-actions .mc-upload-main{grid-column:1/-1;min-height:48px;font-size:15px}.mc-cloud-actions .mc-cloud-export{grid-column:1/-1}.mc-cloud-info p{font-size:12px}}
