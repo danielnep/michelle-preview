@@ -55,3 +55,15 @@ test("interface carrega o agente e usa o painel real",()=>{
   assert.match(dash,/MCSourceAgent\?\.render/);
   assert.match(dash,/mc:source-plan-apply/);
 });
+
+test("indicadores calculados permanecem por arquivo e sem dados incompatíveis",()=>{
+  const a=lot("a","a.csv","A",[{Qtd:"10"},{Qtd:"20"}]);
+  const b=lot("b","b.csv","B",[{Qtd:"7"}]);
+  const profiles=A.catalog([...a.rows,...b.rows],[a,b]);
+  const plan=A.validatePlan({sources:profiles.map(p=>({id:p.id,metrics:[{name:"Total",operation:"sum",column:"Qtd",unit:"unidades"}]}))},profiles);
+  const out=A.computeMetrics(plan,[...a.rows,...b.rows]);
+  assert.equal(out[0].metrics[0].value,30);
+  assert.equal(out[1].metrics[0].value,7);
+  const invalid=A.computeMetrics({sources:[{id:"a",metrics:[{name:"Inválida",operation:"sum",column:"Qtd",unit:"incerta"}]}]},a.rows);
+  assert.equal(invalid[0].metrics[0].value,null);
+});
