@@ -269,6 +269,9 @@ async function boot(db = new IDBFactory(), dashboardPreference) {
     "install.js",
     "profiles.js",
     "motion.js",
+    "analysis/workbook-sheets.js",
+    "analysis/source-visuals.js",
+    "analysis/source-agent.js",
     "app.js",
     "studio.js",
     "dashboard.js",
@@ -795,6 +798,56 @@ test("duas abas de dados do mesmo arquivo podem ser importadas em lotes independ
   assert.notEqual(b.getImports()[0].id,b.getImports()[1].id);
   assert.equal(b.getImports()[0].rows.length,2);
   assert.equal(b.getImports()[1].rows.length,2);
+  assert.equal(t.errors.length,0);
+  t.w.close();
+});
+
+
+test("dashboard real apresenta fontes em aba própria e gráficos por fonte",async()=>{
+  const t=await boot(),w=t.w,b=w.MichelleBridge;
+  const wb=X.utils.book_new();
+  X.utils.book_append_sheet(wb,X.utils.aoa_to_sheet([
+    ["Data","Status","Chamado"],["01/09/2026","Aberto","A1"],["02/09/2026","Fechado","A2"],["03/09/2026","Aberto","A3"]
+  ]),"Chamados");
+  X.utils.book_append_sheet(wb,X.utils.aoa_to_sheet([
+    ["Data","Categoria","Produto"],["01/09/2026","Almoxarifado","P1"],["02/09/2026","Patrimônio","P2"],["03/09/2026","Almoxarifado","P3"]
+  ]),"Inventario");
+  b.navigate("data");
+  await b.handleFile(file(w,"operacao.xlsx",X.write(wb,{type:"buffer",bookType:"xlsx"})));
+  t.click("[data-import-queue]");
+  await wait(()=>b.getImports().length===2&&!b.getState().importBusy);
+  b.navigate("dashboard");
+  t.click('[data-mc-dash-tab="sources"]');
+  assert.ok(w.document.querySelector(".mc-source-workspace"));
+  assert.equal(w.document.querySelectorAll(".mc-source-tab").length,2);
+  const tabs=Array.from(w.document.querySelectorAll(".mc-source-tab"));
+  assert.match(tabs[0].textContent,/Chamados/);
+  assert.match(tabs[1].textContent,/Inventario/);
+  assert.ok(w.document.querySelector(".mc-source-visual svg"));
+  t.click(".mc-source-tab:last-child");
+  assert.match(w.document.querySelector(".mc-source-canvas-head").textContent,/Inventario/);
+  assert.equal(w.document.querySelector(".mc-source-facts strong").textContent,"3");
+  t.click('[data-mc-source-view="table"]');
+  assert.ok(w.document.querySelector(".mc-source-visual table"));
+  t.click('[data-mc-dash-tab="overview"]');
+  assert.ok(w.document.querySelector(".dash-grid"));
+  assert.equal(t.errors.length,0);
+  t.w.close();
+});
+test("fontes gerais distintas com mesmo período não bloqueiam importação",async()=>{
+  const t=await boot(),w=t.w,b=w.MichelleBridge;
+  const wb=X.utils.book_new();
+  X.utils.book_append_sheet(wb,X.utils.aoa_to_sheet([
+    ["Data","Status","Chamado"],["01/09/2026","Aberto","A"],["02/09/2026","Fechado","B"]
+  ]),"Ocorrencias");
+  X.utils.book_append_sheet(wb,X.utils.aoa_to_sheet([
+    ["Data","Produto","Setor"],["01/09/2026","Mouse","TI"],["02/09/2026","Monitor","RH"]
+  ]),"Inventario");
+  await b.handleFile(file(w,"independentes.xlsx",X.write(wb,{type:"buffer",bookType:"xlsx"})));
+  t.click("[data-import-queue]");
+  await wait(()=>b.getImports().length===2&&!b.getState().importBusy);
+  assert.equal(b.getImports().length,2);
+  assert.deepEqual(Array.from(b.getImports(),p=>p.sheet),["Ocorrencias","Inventario"]);
   assert.equal(t.errors.length,0);
   t.w.close();
 });
