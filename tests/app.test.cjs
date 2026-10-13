@@ -879,14 +879,34 @@ test("Copiloto permanece enviável, compacto e redimensionável, com insight sin
   t.w.close();
 });
 
-test("comandos ficam na lateral e a exclusão da biblioteca remove apenas os dados daquele original",async()=>{
+test("barra superior executa envio, importações, tema e IA; biblioteca exclui só dados daquele original",async()=>{
  const t=await boot(),b=t.w.MichelleBridge;
  t.w.MCAccess={owner:true};t.w.MCCloudFiles={list:()=>[{id:'a'.repeat(64)}]};
  b.getImports().push({id:'aba1',fileId:'a'.repeat(64),rows:[{id:'1',sector:'tec',type:'ordens',value:1}]},{id:'aba2',fileId:'a'.repeat(64),rows:[{id:'2',sector:'tec',type:'ordens',value:1}]},{id:'outro',fileId:'b'.repeat(64),rows:[{id:'3',sector:'tec',type:'ordens',value:1}]});
  b.render();
- assert.equal(t.w.document.querySelectorAll('.topbar button:not(.mob-toggle)').length,0);
- for(const selector of ['[data-cloud-upload]','[data-cloud-library]','[data-cloud-export]','[data-mc-install]','[data-toggle-theme]','[data-assistant-open]'])assert.ok(t.w.document.querySelector('.sidebar '+selector),selector);
+ for(const selector of ['[data-cloud-upload]','[data-toggle-theme]','[data-assistant-open]','.mc-header-imports'])assert.ok(t.w.document.querySelector('.topbar '+selector),selector);
+ for(const selector of ['[data-cloud-library]','[data-cloud-export]','[data-mc-install]'])assert.ok(t.w.document.querySelector('.sidebar '+selector),selector);
+ assert.equal(t.w.document.querySelectorAll('#mc-cloud-upload').length,1);
+ let picked=0;t.w.document.getElementById('mc-cloud-upload').click=()=>picked++;
+ t.click('.topbar [data-cloud-upload]');assert.equal(picked,1);
+ t.click('.topbar [data-toggle-theme]');assert.equal(t.w.document.documentElement.dataset.theme,'light');
+ await wait(()=>t.w.localStorage.getItem('horizon.appearance')==='light');
+ t.click('.topbar [data-toggle-theme]');assert.equal(t.w.document.documentElement.dataset.theme,'dark');
+ await wait(()=>t.w.localStorage.getItem('horizon.appearance')==='dark');
+ t.click('.topbar [data-assistant-open]');assert.equal(b.getState().assistantOpen,true);
+ t.click('.topbar .mc-header-imports');assert.equal(b.getState().page,'data');
+ t.click('.topbar .mob-toggle');assert.equal(b.getState().sidebar,true);
+ t.click('.sidebar [data-close-nav]');assert.equal(b.getState().sidebar,false);
+ b.navigate('geral');
  assert.ok(t.w.document.querySelector('.mc-home-library [data-cloud-library]'));
  assert.equal(t.w.document.querySelector('.mc-cloud-toolbar'),null);
- b.applyDeletedFiles(['a'.repeat(64)]);assert.equal(b.getAll().length,1);assert.equal(b.getAll()[0].id,'3');assert.equal(t.errors.length,0);t.w.close();
+ b.applyDeletedFiles(['a'.repeat(64)]);assert.equal(b.getAll().length,1);assert.equal(b.getAll()[0].id,'3');
+ t.w.MCAccess={owner:false,rights:{filesView:true,ai:false,filesUpload:false},sectors:[]};b.render();
+ assert.equal(t.w.document.querySelector('.topbar [data-cloud-upload]'),null);
+ assert.equal(t.w.document.querySelector('.topbar [data-assistant-open]'),null);
+ assert.ok(t.w.document.querySelector('.topbar [data-toggle-theme]'));
+ t.w.MCAccess.rights.filesUpload=true;t.w.MCAccess.rights.ai=true;b.render();
+ assert.ok(t.w.document.querySelector('.topbar [data-cloud-upload]'));
+ assert.ok(t.w.document.querySelector('.topbar [data-assistant-open]'));
+ assert.equal(t.errors.length,0);t.w.close();
 });

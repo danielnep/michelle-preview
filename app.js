@@ -4,6 +4,9 @@
     grid: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
     brand: '<rect x="2.5" y="2.5" width="19" height="19" rx="5"/><path d="M7 16v-3m5 3V9m5 7V6"/><path d="m7 9 4-3 3 2 3-3"/>',
     chart: '<path d="M3 3v18h18"/><path d="m7 15 5-5 4 3 5-8"/>',
+    sectors: '<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><path d="M17.5 14v7M14 17.5h7"/>',
+    dashboard: '<rect x="2" y="3" width="20" height="18" rx="2"/><path d="M2 9h20M9 9v12M13 17v-3M17 17v-5"/>',
+    present: '<rect x="3" y="3" width="18" height="13" rx="2"/><path d="m10 6 5 3.5-5 3.5zM12 16v5M8 21h8"/>',
     coi: '<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4M7 11l3-3 3 3 4-4"/>',
     fac: '<path d="M4 21h16M6 21V5l6-2 6 2v16M9 9h1M14 9h1M9 13h1M14 13h1M10 21v-4h4v4"/>',
     rh: '<circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2M16 7h5M18.5 4.5v5M16 20h5"/>',
@@ -226,18 +229,27 @@
     const access=window.MCAccess || {owner:false,rights:{}};
     const can=key=>access.owner||access.rights?.[key]===true;
     const actions=[];
-    if(can("filesUpload"))actions.push('<button type="button" class="nav" data-cloud-upload>'+icon("up",18)+'<span>Enviar arquivo</span></button><input type="file" id="mc-cloud-upload" hidden accept=".xlsx,.xls,.csv" multiple>');
     if(can("filesView")||can("filesDownload")||can("filesDelete"))actions.push('<button type="button" class="nav" data-cloud-library>'+icon("files",18)+'<span>Biblioteca de arquivos</span></button>');
     if(can("reportsExport"))actions.push('<button type="button" class="nav" data-cloud-export>'+icon("down",18)+'<span>Exportar análises</span></button>');
     if(access.owner)actions.push('<a class="nav" href="/colaboradores.html">'+icon("rh",18)+'<span>Colaboradores</span></a>');
     return actions.join("");
   }
   function sidebarUtilities(){
-    const dark=appearance()==="dark";
     return '<div class="nav-group"><div class="side-label">APLICATIVO</div>'+
-      '<button type="button" class="nav" data-toggle-theme aria-label="'+(dark?'Ativar modo claro':'Ativar modo escuro')+'">'+icon(dark?'sun':'moon',18)+'<span>'+(dark?'Modo claro':'Modo escuro')+'</span></button>'+
-      '<button type="button" class="nav install-shortcut" data-mc-install>'+icon("down",18)+'<span>Instalar aplicativo</span></button>'+
-      '<button type="button" class="nav" data-assistant-open="1">'+icon("spark",18)+'<span>Abrir Copiloto</span></button></div>';
+      '<button type="button" class="nav install-shortcut" data-mc-install>'+icon("down",18)+'<span>Instalar aplicativo</span></button></div>';
+  }
+  function headerUpload(){
+    const access=window.MCAccess;
+    if(!(access?.owner || access?.rights?.filesUpload))return "";
+    return '<button type="button" class="mc-toolbar-button mc-header-upload" data-cloud-upload aria-label="Enviar arquivo" title="Enviar arquivo">'+icon("up",20)+'<span>Enviar arquivo</span></button><input type="file" id="mc-cloud-upload" hidden accept=".xlsx,.xls,.csv" multiple>';
+  }
+  function headerActions(){
+    const access=window.MCAccess;
+    const ai=!access || access.owner || access.rights?.ai;
+    return '<div class="head-actions" aria-label="Ferramentas do painel">'+
+      '<button type="button" class="mc-toolbar-button mc-header-imports" data-nav="data" aria-label="Conferir importações" title="Conferir importações">'+icon("files",20)+'<span>Importações</span></button>'+
+      themeButton()+
+      (ai?'<button type="button" class="mc-toolbar-button mc-header-ai" data-assistant-open="1" aria-label="Abrir Copiloto de IA" title="Abrir Copiloto de IA">'+icon("spark",20)+'<span>IA</span></button>':'')+'</div>';
   }
   function libraryShortcut(){
     const access=window.MCAccess;
@@ -260,7 +272,7 @@
           present: "Estúdio de apresentações",
           settings: "Configurações",
         }[state.page] || "Visão geral";
-    return `<div class="app"><div class="backdrop ${state.sidebar ? "open" : ""}" data-close="1"></div><aside id="panel-navigation" class="sidebar ${state.sidebar ? "open" : ""}" aria-label="Navegação do painel"><button type="button" class="sidebar-close small-icon-btn" data-close-nav aria-label="Fechar menu">${icon("close", 20)}</button><div class="brand"><span class="panel-logo" aria-hidden="true">${icon("brand", 26)}</span><strong class="panel-brand-title">PowerBI Completo MC</strong></div><label class="searchbox sidebar-search">${icon("search", 18)}<input aria-label="Pesquisar registros" id="global-search" placeholder="Buscar registros..." value="${esc(state.query)}" /></label><div class="nav-scroll"><div class="nav-group"><div class="side-label">PRINCIPAL</div>${nav("geral", "Visão Geral")}${nav("sectors", "Setores")}${nav("dashboard", "Visualizar dashboard")}${nav("present", "Estúdio de Apresentações")}</div><div class="nav-group"><div class="side-label">DEPARTAMENTOS</div>${sectors.filter(s => window.MCAccess?.owner || window.MCAccess?.sectors?.includes(s.id)).map((s) => nav(s.id, s.name)).join("")}</div><div class="nav-group"><div class="side-label">GESTÃO E DADOS</div>${fileActions()}${nav("data", "Conferir importações")}${nav("report", "Relatórios")}${nav("insight", "Insights e análises")}${nav("settings", "Configurações")}</div>${sidebarUtilities()}</div><div class="side-bottom"><div class="side-credit">PowerBI Completo MC</div></div></aside><div class="main"><header class="topbar"><button aria-label="${state.sidebar ? "Fechar menu" : "Abrir menu"}" aria-expanded="${state.sidebar}" aria-controls="panel-navigation" class="small-icon-btn mob-toggle" data-toggle="1">${icon("menu", 20)}</button><div class="header-identity"><span class="panel-logo panel-logo-small" aria-hidden="true">${icon("brand", 19)}</span><div class="crumb"><strong class="app-title">PowerBI Completo MC</strong><span class="app-caption crumb-page">${esc(title)}</span></div></div></header><main class="content"><div class="print-header">PowerBI Completo MC</div>${body()}</main><footer class="footer"><span>PowerBI Completo MC</span></footer></div><nav class="mobile-nav" aria-label="Navegação principal">${[
+    return `<div class="app"><div class="backdrop ${state.sidebar ? "open" : ""}" data-close="1"></div><aside id="panel-navigation" class="sidebar ${state.sidebar ? "open" : ""}" aria-label="Navegação do painel"><button type="button" class="sidebar-close small-icon-btn" data-close-nav aria-label="Fechar menu">${icon("close", 20)}</button><div class="brand"><span class="panel-logo" aria-hidden="true">${icon("brand", 26)}</span><strong class="panel-brand-title">PowerBI Completo MC</strong></div><label class="searchbox sidebar-search">${icon("search", 18)}<input aria-label="Pesquisar registros" id="global-search" placeholder="Buscar registros..." value="${esc(state.query)}" /></label><div class="nav-scroll"><div class="nav-group nav-group-primary"><div class="side-label">PRINCIPAL</div>${nav("geral", "Visão Geral")}${nav("sectors", "Setores")}${nav("dashboard", "Visualizar dashboard")}${nav("present", "Estúdio de Apresentações")}</div><div class="nav-group"><div class="side-label">DEPARTAMENTOS</div>${sectors.filter(s => window.MCAccess?.owner || window.MCAccess?.sectors?.includes(s.id)).map((s) => nav(s.id, s.name)).join("")}</div><div class="nav-group"><div class="side-label">GESTÃO E DADOS</div>${fileActions()}${nav("data", "Conferir importações")}${nav("report", "Relatórios")}${nav("insight", "Insights e análises")}${nav("settings", "Configurações")}</div>${sidebarUtilities()}</div><div class="side-bottom"><div class="side-credit">PowerBI Completo MC</div></div></aside><div class="main"><header class="topbar"><button aria-label="${state.sidebar ? "Fechar menu" : "Abrir menu"}" aria-expanded="${state.sidebar}" aria-controls="panel-navigation" class="small-icon-btn mob-toggle" data-toggle="1">${icon("menu", 20)}</button><div class="header-identity"><span class="panel-logo panel-logo-small" aria-hidden="true">${icon("brand", 19)}</span><div class="crumb"><strong class="app-title">PowerBI Completo MC</strong><span class="app-caption crumb-page">${esc(title)}</span></div>${headerUpload()}</div>${headerActions()}</header><main class="content"><div class="print-header">PowerBI Completo MC</div>${body()}</main><footer class="footer"><span>PowerBI Completo MC</span></footer></div><nav class="mobile-nav" aria-label="Navegação principal">${[
       ["geral", "Resumo", "grid"],
       ["sectors", "Setores", "coi"],
       ["data", "Dados", "up"],
@@ -1180,7 +1192,7 @@
     });
   }
   function wire() {
-    document.querySelector("[data-cloud-upload]")?.addEventListener("click",()=>document.getElementById("mc-cloud-upload")?.click());
+    document.querySelectorAll("[data-cloud-upload]").forEach(button=>button.addEventListener("click",()=>document.getElementById("mc-cloud-upload")?.click()));
     document.getElementById("mc-cloud-upload")?.addEventListener("change",(event)=>handleFiles(event.target.files));
     document.querySelector("[data-cloud-export]")?.addEventListener("click",()=>exportCSV("geral"));
 

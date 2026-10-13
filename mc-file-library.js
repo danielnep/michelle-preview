@@ -17,7 +17,7 @@
     dialog.querySelector("[data-library-count]").textContent = loading ? "Carregando seus arquivos…" :
       files.length + " arquivo" + (files.length === 1 ? " enviado" : "s enviados");
     list.innerHTML = loading ? '<li class="mc-library-empty">Carregando…</li>' : !files.length ?
-      '<li class="mc-library-empty">Nenhum arquivo enviado. Use Enviar arquivo na barra lateral.</li>' : files.map(file => {
+      '<li class="mc-library-empty">Nenhum arquivo enviado. Use Enviar arquivo ao lado do título, na barra superior.</li>' : files.map(file => {
         const deleted = pending.has(file.id), date = new Date(file.created);
         const info = size(file.size) + (!Number.isNaN(date.valueOf()) ? " · " + date.toLocaleDateString("pt-BR") : "");
         return '<li class="mc-library-row' + (deleted ? ' is-pending' : '') + '">' +
