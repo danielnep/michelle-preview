@@ -91,3 +91,12 @@ test("PWA armazena os módulos de exploração e invalida cache antigo",()=>{
   assert.match(sw,/const canonical=new URL\(url\.pathname,url\.origin\)\.href/);
   assert.match(html,/app-version" content="4\.7\.0"/);
 });
+
+
+test("prompt da IA reside em biblioteca, sem endpoint Netlify desnecessário",()=>{
+  const base=path.join(__dirname,"..");
+  const fn=fs.readFileSync(path.join(base,"netlify/functions/michelle-ai.mjs"),"utf8");
+  assert.match(fn,/\.\.\/lib\/planilha-agent-prompt\.mjs/);
+  assert.ok(fs.existsSync(path.join(base,"netlify/lib/planilha-agent-prompt.mjs")));
+  assert.ok(!fs.existsSync(path.join(base,"netlify/functions/planilha-agent-prompt.mjs")));
+});
