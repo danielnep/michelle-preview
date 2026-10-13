@@ -6,7 +6,7 @@
 })(typeof window!=="undefined"?window:globalThis,function(root) {
   "use strict";
   const MAX_SOURCES=12, MAX_COLUMNS=18;
-  const state={busy:false,plan:null,error:"",fingerprint:"",catalog:[]};
+  const state={busy:false,plan:null,applied:false,error:"",fingerprint:"",catalog:[]};
   const text=(v,max=110)=>String(v??"").trim().slice(0,max);
   const norm=v=>text(v,150).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/\s+/g," ");
   const shape=v=>{
@@ -96,9 +96,41 @@
       questions:(Array.isArray(plan?.questions)?plan.questions:[]).slice(0,5).map(q=>short(q,170))
     };
   }
+  function readNumber(value) {
+    if(typeof value==="number")return Number.isFinite(value)?value:null;
+    let s=String(value??"").trim().replace(/\s+/g,"").replace(/^R\$/i,"").replace(/%$/,"");
+    if(!s||!/^[+-]?[\d.,]+$/.test(s))return null;
+    if(s.includes(","))s=s.replace(/\./g,"").replace(",",".");
+    else if(/^[+-]?\d{1,3}(?:\.\d{3})+$/.test(s))s=s.replace(/\./g,"");
+    const n=Number(s);return Number.isFinite(n)?n:null;
+  }
+  function computeMetrics(plan,rows=[]) {
+    const result=[];
+    for(const source of plan?.sources||[]) {
+      const values=rows.filter(r=>r.lotId===source.id);
+      const calculated=[];
+      for(const metric of source.metrics||[]) {
+        const field=metric.column,kind=metric.operation,items=field?values.map(r=>r.raw?.[field]).filter(v=>v!==undefined&&v!==null&&String(v).trim()):[];
+        let value=null,warning="";
+        if(kind==="count") value=field?items.length:values.length;
+        else if(kind==="distinct"&&field) value=new Set(items.map(v=>String(v).trim())).size;
+        else if(["sum","average"].includes(kind)&&field&&metric.unit&&!/incert|desconhec|a definir/i.test(metric.unit)) {
+          const nums=items.map(readNumber).filter(v=>v!==null);
+          if(nums.length&&nums.length===items.length) {
+            value=kind==="sum"?nums.reduce((a,b)=>a+b,0):nums.reduce((a,b)=>a+b,0)/nums.length;
+            if(items.length!==values.length)warning="Existem "+(values.length-items.length)+" linhas sem valor nessa coluna.";
+          } else warning="Há valores incompatíveis com uma medida numérica; cálculo não autorizado.";
+        } else warning="A medida exige definição ou confirmação de coluna e unidade.";
+        calculated.push({name:metric.name,operation:kind,column:field,unit:metric.unit,value,
+          rows:values.length,coverage:field?items.length:values.length,warning});
+      }
+      result.push({id:source.id,metrics:calculated});
+    }
+    return result;
+  }
   function render(rows=[],lots=[],esc=x=>String(x??"")) {
     const fp=fingerprint(lots)+"#"+(rows||[]).length+"#"+[...new Set((rows||[]).map(r=>r.lotId).filter(Boolean))].sort().join("|");
-    if(fp!==state.fingerprint){state.fingerprint=fp;state.plan=null;state.error="";state.busy=false;}
+    if(fp!==state.fingerprint){state.fingerprint=fp;state.plan=null;state.applied=false;state.error="";state.busy=false;}
     state.catalog=catalog(rows,lots);
     if(!state.catalog.length)return "";
     const profiles=state.catalog;
@@ -121,6 +153,13 @@
         p.groups.map(g=>'<p><b>'+esc(g.classification)+'</b>: '+esc(g.sourceIds.map(id=>profiles.find(x=>x.id===id)?.file||id).join(" + "))+
           '. '+esc(g.reason)+' <small>Proposta para revisão; nenhum cruzamento aplicado.</small></p>').join("")+
         (p.questions.length?'<p><b>Conferir:</b> '+esc(p.questions.join(" · "))+'</p>':"")+
+        (state.applied ? '<section class="mc-source-agent-calculated" aria-label="Indicadores calculados por fonte"><h4>Indicadores por planilha</h4>'+
+          computeMetrics(p,rows).map(group=>'<div><strong>'+esc(profiles.find(x=>x.id===group.id)?.file||group.id)+'</strong>'+
+            '<ul>'+group.metrics.map(metric=>'<li>'+esc(metric.name)+': <b>'+
+              (metric.value===null?'Não calculável':esc(new Intl.NumberFormat("pt-BR",{maximumFractionDigits:2}).format(metric.value)))+
+              '</b> '+esc(metric.value===null?'':metric.unit||"registros")+
+              ' <small>('+metric.coverage+'/'+metric.rows+' linhas'+(metric.warning?' · '+esc(metric.warning):'')+')</small></li>').join("")+'</ul></div>').join("")+
+          '<p class="dash-note">Resultados calculados no navegador, sempre por fonte, sem fusão automática.</p></section>' : "")+
         '<p class="dash-note">Os números continuam calculados localmente. O plano apenas orienta a apresentação dos blocos.</p>'+
         (p.dashboard.order.length?'<button type="button" class="btn btn-primary" data-mc-source-apply>Aplicar organização sugerida</button>':"")+
         '</div>';
@@ -135,7 +174,7 @@
   }
   async function onPlan() {
     if(state.busy||!root.MCAI?.request)return;
-    state.busy=true;state.error="";root.MichelleBridge?.render();
+    state.busy=true;state.error="";state.applied=false;root.MichelleBridge?.render();
     try {
       const sources=state.catalog.slice(0,MAX_SOURCES).map(p=>({
         id:p.id,file:p.file,sheet:p.sheet,rowCount:p.rowCount,
@@ -154,8 +193,9 @@
     if(!target)return;
     if(target.matches("[data-mc-source-plan]")){event.preventDefault();onPlan();}
     if(target.matches("[data-mc-source-apply]")&&state.plan?.dashboard.order.length) {
+      state.applied=true;
       root.dispatchEvent(new CustomEvent("mc:source-plan-apply",{detail:{order:state.plan.dashboard.order}}));
     }
   });
-  return {catalog,localGroups,validatePlan,render,fingerprint};
+  return {catalog,localGroups,validatePlan,render,fingerprint,computeMetrics,readNumber};
 });
