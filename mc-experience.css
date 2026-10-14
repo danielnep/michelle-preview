@@ -442,3 +442,9 @@
   .main .content { max-width:none; padding:0!important; }
   .content .mc-role-home.card, .content .card.panel { box-shadow:none!important; }
 }
+/* O menu e a barra superior permanecem escuros até no tema claro. */
+.sidebar .nav:focus-visible,
+.sidebar .mc-sector-tree > summary:focus-visible,
+.topbar button:focus-visible {
+  outline-color: #7edaff !important;
+}
