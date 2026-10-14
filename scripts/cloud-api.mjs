@@ -168,7 +168,7 @@ async function routeCloud(req, res) {
       const body = await readBody(req,2*1024*1024);
       const upstream = await fetch("https://powerbicompleto.netlify.app/api/michelle-ai",{
         method:"POST",headers:{"Content-Type":"application/json"},body,
-        signal:AbortSignal.timeout(30000)
+        signal:AbortSignal.timeout(47000)
       });
       res.writeHead(upstream.status,{"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"});
       res.end(Buffer.from(await upstream.arrayBuffer()));
