@@ -57,7 +57,7 @@
  }
  const put=(store,value)=>batch([{store,value}]);
  const remove=(store,id)=>batch([{store,id,remove:true}]);
- root.MCStore={open,read,all,batch,put,remove};
+ root.MCStore={open,read,all,batch,put,remove,cloud:true};
  root.MCCloudFiles={list:()=>catalog.slice(),refresh:refreshFiles,openLibrary:()=>root.MCFileLibrary?.open(),deleteFiles:async(ids)=>{
    const result=await (await request("/api/files/delete",json({ids}))).json();
    const removed=new Set(result.deletedIds);

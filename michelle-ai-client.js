@@ -12,7 +12,7 @@
   function apiUrl() {return "/api/michelle-ai";}
   async function request(mode, data={}) {
     const ctrl=new AbortController();
-    const timer=setTimeout(()=>ctrl.abort(),mode==="review"?60000:27000);
+    const timer=setTimeout(()=>ctrl.abort(),mode==="review"?60000:mode==="interpret-batch"?44000:27000);
     try {
       const response=await fetch(apiUrl(),{
         method:"POST",signal:ctrl.signal,

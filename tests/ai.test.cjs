@@ -123,3 +123,26 @@ test("função lê POWER_BI_MICHELLE_IA antes da variável antiga, sem expor val
    if(originalOld===undefined)delete process.env.DEEPSEEK_API_KEY;else process.env.DEEPSEEK_API_KEY=originalOld;
  }
 });
+
+test("Railway interpreta múltiplas fontes em uma solicitação sem aceitar campos inventados",async()=>{
+  const {default:handler}=await import("../server/michelle-ai.mjs");
+  const oldFetch=global.fetch,oldKey=process.env.POWER_BI_MICHELLE_IA;
+  process.env.POWER_BI_MICHELLE_IA="chave-de-teste";
+  global.fetch=async()=>new Response(JSON.stringify({choices:[{message:{content:JSON.stringify({
+    sources:[{id:"aba-01",type:"ordens",sector:"tec",headerRow:0,mapping:{date:0,campoInventado:1},confidence:"Alta",reason:"Data reconhecida"},
+      {id:"fonte-fantasma",type:"geral",sector:"coi",mapping:{}}]
+  })}}]}),{status:200});
+  try{
+    const response=await handler(new Request("https://railway.example/api/michelle-ai",{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({mode:"interpret-batch",context:{
+        sources:[{id:"aba-01",headers:["Data","Cliente"],name:"ordens.xlsx",sheet:"Registros"}],
+        allowedFields:["date"]}})
+    }));
+    assert.equal(response.status,200);
+    const result=await response.json();
+    assert.equal(result.sources.length,1);
+    assert.equal(result.sources[0].type,"ordens");
+    assert.deepEqual(result.sources[0].mapping,{date:0});
+  }finally{global.fetch=oldFetch;if(oldKey===undefined)delete process.env.POWER_BI_MICHELLE_IA;else process.env.POWER_BI_MICHELLE_IA=oldKey;}
+});
