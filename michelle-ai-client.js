@@ -17,7 +17,7 @@
   }
   async function request(mode, data={}) {
     const ctrl=new AbortController();
-    const timer=setTimeout(()=>ctrl.abort(),27000);
+    const timer=setTimeout(()=>ctrl.abort(),mode==="interpret-batch"?44000:27000);
     try {
       const response=await fetch(apiUrl(),{
         method:"POST",signal:ctrl.signal,
