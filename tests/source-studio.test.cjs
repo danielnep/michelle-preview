@@ -87,9 +87,9 @@ test("PWA armazena os módulos de exploração e invalida cache antigo",()=>{
     assert.match(sw,new RegExp(resource.replace(/\./g,"\\.")));
     assert.ok(html.includes(resource));
   }
-  assert.match(sw,/michelle-shell-v4\.7\.0/);
+  assert.match(sw,/michelle-shell-v4\.8\.0/);
   assert.match(sw,/const canonical=new URL\(url\.pathname,url\.origin\)\.href/);
-  assert.match(html,/app-version" content="4\.7\.0"/);
+  assert.match(html,/app-version" content="4\.8\.0"/);
 });
 
 
