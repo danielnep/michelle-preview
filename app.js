@@ -560,6 +560,7 @@
           <strong>${esc(l.name)}</strong><small>${l.archived?"Arquivado":l.supersededBy?"Versão anterior":S.cloud?"Salvo na nuvem":"Importado e salvo"} · ${fmtNum(l.rows.length)} linhas · ${esc(D.types[l.type]||"Registros")} · ${esc(idSector(l.sector)?.name||l.sector)}</small>
           <small>${esc(l.sheet)} · ${l.periodStart||l.periodEnd?`${fmtDate(l.periodStart)} a ${fmtDate(l.periodEnd)}`:"Sem data individual"}</small>
           ${l.errors?.length?`<p class="upload-file-error">${l.errors.length} linha(s) com erro foram ignoradas. Consulte o histórico da fonte.</p>`:""}
+          ${l.aiNote?`<p class="upload-hint">${esc(l.aiNote)}</p>`:""}
           <div class="upload-file-actions"><button class="btn" data-view-lot="${l.id}">Consultar dados</button>
           <button class="btn btn-quiet" data-original="${l.fileId||""}" ${l.fileId?"":"disabled"}>${icon("down",15)} Original</button>
           <button class="btn btn-quiet" data-delete-lot="${l.id}">Excluir arquivo</button></div>
@@ -1194,6 +1195,7 @@
           errors: result.errors,
           skipped: result.skipped,
           quality: window.MCAnalysis?.quality(result.rows, { type: p.type }) || null,
+          aiNote:p.aiWarning||"",
           fileId: p.hash,
         };
       const next = D.ingest(imports, lot, p.policy);
