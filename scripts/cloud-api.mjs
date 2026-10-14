@@ -140,7 +140,7 @@ async function listKeys(prefix) {
   return all;
 }
 const safeId = value => /^[a-f0-9-]{36}$/i.test(value);
-const safeHash = value => /^[a-f0-9]{64}$/i.test(value);
+const safeHash = value => /^[a-f0-9]{64}$/i.test(value) || /^legacy-[a-f0-9-]{36}$/i.test(value);
 const keyLot = id => ROOT + "lotes/" + id + ".json";
 const keyFile = hash => ROOT + "originais/" + hash + ".bin";
 async function listLots() {
