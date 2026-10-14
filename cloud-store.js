@@ -4,6 +4,7 @@
  if(!/\.up\.railway\.app$/i.test(root.location.hostname))return;
  const original=root.MCStore;
  let lots=[];
+ let migrated=false;
  const once=new Set();
  async function api(path,method="GET",body){
    const binary=body instanceof ArrayBuffer || ArrayBuffer.isView(body);
@@ -29,12 +30,30 @@
      });
    });
  }
+ async function migrateLegacy(){
+   if(migrated)return;
+   lots=(await(await api("/api/cloud/lots")).json()).lots||[];
+   const previous=await original.all("lots");
+   const known=new Set(lots.map(l=>l.id));
+   for(const item of previous){
+     if(known.has(item.id))continue;
+     const id=item.fileId;
+     if(typeof id==="string"&&/^[a-f0-9]{64}$/i.test(id)){
+       const file=await original.read("files",id);
+       if(file?.bytes)await put("files",file);
+     }
+     await put("lots",item);
+     known.add(item.id);
+   }
+   migrated=true;
+ }
  async function open(){
    const res=await api("/api/cloud/status");
    const state=await res.json();
    if(!state.configured)throw Error("Nuvem não configurada; nenhuma importação foi salva.");
    if(!state.authenticated)await signIn();
    await original.open();
+   await migrateLegacy();
  }
  async function all(table){
    if(table==="lots"){lots=(await(await api("/api/cloud/lots")).json()).lots||[];return lots;}
