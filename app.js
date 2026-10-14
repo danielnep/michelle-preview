@@ -488,7 +488,7 @@
     const aiHome = window.MCAI?.home(rs, imports, esc) || "";
     if (role === "operacao") {
       return essential + aiHome + statCards(rs) + recentActivity(rs) +
-        '<section class="mc-role-next card panel"><h2>Próximo passo</h2><p>Selecione um arquivo Excel ou CSV, confira a identificação automática e confirme. O painel dos demais perfis é atualizado com os mesmos dados.</p><button class="btn btn-primary" data-nav="data">Enviar dados</button></section>';
+        '<section class="mc-role-next card panel"><h2>Próximo passo</h2><p>Selecione arquivos Excel ou CSV. A importação e a identificação são automáticas. O painel dos demais perfis é atualizado com os mesmos dados.</p><button class="btn btn-primary" data-nav="data">Enviar dados</button></section>';
     }
     if (role === "supervisora") {
       return essential + aiHome + managerialHighlights(rs) + statCards(rs) + homeSectors(rs) +
@@ -527,25 +527,46 @@
     );
   }
   function uploadBox() {
-    const visibleImports = imports.filter(l => !l.deleted);
-    const queued = state.uploadQueue.filter((p) => !p.lotId);
-    const chosen = queued.filter(p => p.grid && p.selected !== false);
-    const statuses = {
-      reading: "Lendo arquivo",
-      ready: "Pronto para importar",
-      error: "Precisa de atenção",
-    };
-    return `<div class="dropzone" id="dropzone"><div class="upload-prompt"><div class="drop-symbol">${icon("up", 25)}</div><h3>Suas planilhas, em um só lugar</h3><p>Selecione ou arraste os arquivos para enviar.</p><p>Os arquivos enviados são mantidos na nuvem do Power BI MC até serem excluídos.</p><p class="upload-formats">XLSX, XLS ou CSV · até 50 MB por arquivo</p><label for="file-upload" class="btn btn-primary">${icon("plus", 18)} Selecionar arquivos</label><input class="file-input" type="file" id="file-upload" accept=".csv,.xlsx,.xls" multiple ${state.ready && !state.readingFiles && !state.importBusy ? "" : "disabled"}></div><div class="upload-file-list" aria-live="polite"><div class="upload-list-heading"><strong>Arquivos selecionados e importados</strong><span>${queued.length + visibleImports.length}</span></div>${queued.map((p) => `<article class="upload-file ${p.status === "error" ? "has-error" : ""} ${state.pending === p ? "is-selected" : ""}"><span class="upload-file-icon">${icon("files", 20)}</span><div class="upload-file-info"><strong>${esc(p.name)}</strong><small>${esc(statuses[p.status] || p.status)}${p.grid ? ` · aba ${esc(p.sheet)} · ${esc(idSector(p.sector)?.name)} · ${esc(D.types[p.type])}` : ""}</small>${p.error ? `<p class="upload-file-error">${esc(p.error)}</p>` : ""}${p.grid && p.autoSheet ? `<label class="mc-sheet-choice"><input type="checkbox" data-include-sheet="${esc(p.queueId)}" ${p.selected !== false ? "checked" : ""} ${state.importBusy ? "disabled" : ""}> Incluir aba ${esc(p.sheet)}${p.summarySheet ? " · possível resumo, revisar duplicidade" : ""}</label>` : ""}<div class="upload-file-actions">${p.grid ? `<button class="btn" data-configure-file="${p.queueId}">Conferir dados</button>` : ""}${p.status !== "reading" ? `<button class="btn btn-quiet" data-remove-queued="${p.queueId}">Remover da seleção</button>` : ""}</div></div></article>`).join("")}${[
-      ...visibleImports,
-    ]
-      .reverse()
-      .map(
-        (l) =>
-          `<article class="upload-file is-imported"><span class="upload-file-icon">${icon("check", 20)}</span><div class="upload-file-info"><strong>${esc(l.name)}</strong><small>${l.archived ? "Arquivado" : l.supersededBy ? "Versão anterior" : "Importado e salvo na nuvem"} · ${fmtNum(l.rows.length)} linhas · ${esc(D.types[l.type] || "Registros")} · ${esc(idSector(l.sector)?.name || l.sector)}</small><small>${esc(l.sheet)} · ${l.periodStart || l.periodEnd ? `${fmtDate(l.periodStart)} a ${fmtDate(l.periodEnd)}` : "Sem data na planilha"}</small><div class="upload-file-actions"><button class="btn" data-view-lot="${l.id}">Consultar dados</button><button class="btn btn-quiet" data-original="${l.fileId || ""}" ${l.fileId ? "" : "disabled"}>${icon("down", 15)} Original</button><button class="btn btn-quiet" data-delete-lot="${l.id}">Excluir arquivo</button></div></div></article>`,
-      )
-      .join(
-        "",
-      )}${queued.length || visibleImports.length ? "" : '<p class="upload-empty">Os arquivos aparecerão aqui e continuarão disponíveis depois da importação.</p>'}</div>${queued.length ? `<button class="btn btn-primary upload-confirm" data-open-import ${state.importBusy || state.readingFiles || !chosen.length ? "disabled" : ""}>${icon("up", 18)} ${state.readingFiles ? "Lendo arquivos…" : state.importBusy ? "Importando…" : `Conferir e confirmar (${chosen.length} abas)`}</button><p class="upload-hint">Cada aba é uma fonte independente. Abas de resumo ficam desmarcadas quando há detalhamento; confira antes de incluir.</p>` : ""}</div>`;
+    const visibleImports=imports.filter(l=>!l.deleted);
+    const queued=state.uploadQueue.filter(p=>!p.lotId);
+    const statuses={reading:"Lendo arquivo",analyzing:"IA identificando colunas",
+      uploading:"Salvando na nuvem",ready:"Processando",skipped:"Resumo identificado e não somado",
+      error:"Erro no arquivo",duplicate:"Já importado"};
+    const storage=S.cloud?"Os originais e os dados processados são armazenados na nuvem e permanecem disponíveis até serem excluídos.":"Os originais e dados desta versão ainda são guardados somente neste navegador.";
+    return `<div class="dropzone" id="dropzone">
+      <div class="upload-prompt">
+        <div class="drop-symbol">${icon("up",25)}</div>
+        <h3>Envie suas planilhas</h3>
+        <p>Escolha um ou vários arquivos. O Copiloto identifica as fontes, importa os dados e sinaliza qualquer problema automaticamente.</p>
+        <p class="upload-formats">XLSX, XLS e CSV · até 50 MB por arquivo</p>
+        <label for="file-upload" class="btn btn-primary">${icon("plus",18)} Selecionar arquivos</label>
+        <input class="file-input" type="file" id="file-upload" accept=".csv,.xlsx,.xls" multiple ${state.ready&&!state.readingFiles&&!state.importBusy?"":"disabled"}>
+        <p class="upload-hint">${storage}</p>
+        ${state.readingFiles?'<p class="upload-hint" role="status">Analisando e salvando os arquivos selecionados, sem confirmação adicional…</p>':""}
+      </div>
+      <div class="upload-file-list" aria-live="polite">
+        <div class="upload-list-heading"><strong>Arquivos e status de importação</strong><span>${queued.length+visibleImports.length}</span></div>
+        ${queued.map(p=>`<article class="upload-file ${p.status==="error"?"has-error":""}">
+          <span class="upload-file-icon">${icon(p.status==="error"?"alert":"files",20)}</span>
+          <div class="upload-file-info"><strong>${esc(p.name)}</strong>
+            <small>${esc(statuses[p.status]||p.status)}${p.sheet?" · "+esc(p.sheet):""}</small>
+            ${p.error?`<p class="upload-file-error">${esc(p.error)}</p>`:""}
+            ${p.aiWarning?`<p class="upload-hint">${esc(p.aiWarning)}</p>`:""}
+            ${p.status==="error"?`<div class="upload-file-actions"><button class="btn btn-quiet" data-remove-queued="${esc(p.queueId)}">Remover aviso</button></div>`:""}
+          </div>
+        </article>`).join("")}
+        ${[...visibleImports].reverse().map(l=>`<article class="upload-file is-imported">
+          <span class="upload-file-icon">${icon("check",20)}</span><div class="upload-file-info">
+          <strong>${esc(l.name)}</strong><small>${l.archived?"Arquivado":l.supersededBy?"Versão anterior":S.cloud?"Salvo na nuvem":"Importado e salvo"} · ${fmtNum(l.rows.length)} linhas · ${esc(D.types[l.type]||"Registros")} · ${esc(idSector(l.sector)?.name||l.sector)}</small>
+          <small>${esc(l.sheet)} · ${l.periodStart||l.periodEnd?`${fmtDate(l.periodStart)} a ${fmtDate(l.periodEnd)}`:"Sem data individual"}</small>
+          ${l.errors?.length?`<p class="upload-file-error">${l.errors.length} linha(s) com erro foram ignoradas. Consulte o histórico da fonte.</p>`:""}
+          <div class="upload-file-actions"><button class="btn" data-view-lot="${l.id}">Consultar dados</button>
+          <button class="btn btn-quiet" data-original="${l.fileId||""}" ${l.fileId?"":"disabled"}>${icon("down",15)} Original</button>
+          <button class="btn btn-quiet" data-delete-lot="${l.id}">Excluir arquivo</button></div>
+          </div></article>`).join("")}
+        ${queued.length||visibleImports.length?"":'<p class="upload-empty">Nenhum arquivo importado.</p>'}
+      </div>
+    </div>`;
   }
   function deletedFiles() {
     const deleted = imports.filter(l => l.deleted);
@@ -557,10 +578,10 @@
     return `<section class="data-next-actions"><h3>Dados prontos. Escolha o resultado</h3><p class="panel-sub">O dashboard deste sistema abre imediatamente com os dados importados. Para um relatório nativo do Microsoft Power BI, conecte um relatório publicado pelo botão no dashboard. A importação no painel não cria um arquivo PBIX.</p><div><button class="btn btn-primary" data-quick-report ${enabled ? "" : "disabled"}>${icon("report", 18)} Gerar relatório</button><button class="btn" data-nav="dashboard" ${enabled ? "" : "disabled"}>${icon("grid", 18)} Visualizar dashboard</button><button class="btn" data-create-presentation ${enabled ? "" : "disabled"}>${icon("plus", 18)} Gerar e criar apresentação</button></div></section>`;
   }
   function importGuide() {
-    return `<section class="import-journey" aria-label="Como usar o painel"><div class="import-journey-head"><span>${icon("brand", 19)}</span><div><strong>Da planilha ao painel em 4 passos</strong><small>Sem configurar datas ou fórmulas para começar</small></div></div><ol><li><b>1. Selecione</b><span>Envie um ou vários arquivos Excel/CSV.</span></li><li><b>2. Confira</b><span>Veja a fonte, aba, colunas e quantidade identificadas.</span></li><li><b>3. Confirme</b><span>O arquivo é salvo na nuvem e alimenta os indicadores.</span></li><li><b>4. Visualize</b><span>Abra o dashboard, aplique filtros e exporte o resultado.</span></li></ol><p>Para corrigir a base, use <b>Excluir arquivo</b> na lista abaixo. O painel deixa de considerar esse arquivo e permite restaurá-lo em <b>Arquivos excluídos</b>.</p></section>`;
+    return '<section class="import-journey" aria-label="Como usar o painel"><div class="import-journey-head"><span>'+icon("brand",19)+'</span><div><strong>Da planilha ao painel, automaticamente</strong><small>Sem configurar abas, períodos ou confirmações</small></div></div><ol><li><b>1. Selecione</b><span>Escolha um ou vários arquivos Excel/CSV.</span></li><li><b>2. O Copiloto analisa</b><span>Identifica arquivos, abas, colunas e possíveis problemas.</span></li><li><b>3. Visualize</b><span>Os arquivos válidos alimentam os indicadores; erros individuais aparecem acima.</span></li></ol></section>';
   }
   function pageData() {
-    return header(state.importSector === "coi" ? "Importar planilhas · COI" : "Importar planilhas", "Selecione, confira a leitura automática e confirme.") + `<section class="card panel data-import-panel">${importGuide()}${uploadBox()}${dataNextActions()}<details class="section-space"><summary>Backup e histórico</summary><p class="panel-sub">Os arquivos enviados são mantidos na nuvem do Power BI MC até serem excluídos. Exporte um backup adicional quando desejar.</p><div class="backup-actions"><button class="btn" data-backup>Exportar backup completo</button><label class="btn">Restaurar backup<input type="file" id="restore-backup" accept=".json" hidden></label><button class="btn" data-export="geral" ${getAll().length ? "" : "disabled"}>Exportar Excel (.xlsx)</button></div><div class="file-list">${imports.filter(l => !l.deleted).reverse().map(l => `<div class="file-row"><div><strong>${esc(l.name)}</strong><small>${l.rows.length} linhas · ${l.archived ? "Arquivado" : l.supersededBy ? "Versão anterior" : "Ativo"}</small></div><button class="btn" data-view-lot="${l.id}">Consultar</button>${!l.supersededBy ? `<button class="btn" data-archive-lot="${l.id}">${l.archived ? "Reativar" : "Arquivar"}</button>` : ""}</div>`).join("")}</div></details>${deletedFiles()}</section>${state.viewLot ? `<section id="lot-preview" class="card panel section-space"><h3>Dados do arquivo importado</h3>${table(D.allRows(imports.filter(l => l.id === state.viewLot)), 100)}</section>` : ""}`;
+    return header(state.importSector === "coi" ? "Importar planilhas · COI" : "Importar planilhas", "Selecione os arquivos: leitura, classificação e envio são automáticos.") + `<section class="card panel data-import-panel">${importGuide()}${uploadBox()}${dataNextActions()}<details class="section-space"><summary>Backup e histórico</summary><p class="panel-sub">Os arquivos enviados são mantidos na nuvem do Power BI MC até serem excluídos. Exporte um backup adicional quando desejar.</p><div class="backup-actions"><button class="btn" data-backup>Exportar backup completo</button><label class="btn">Restaurar backup<input type="file" id="restore-backup" accept=".json" hidden></label><button class="btn" data-export="geral" ${getAll().length ? "" : "disabled"}>Exportar Excel (.xlsx)</button></div><div class="file-list">${imports.filter(l => !l.deleted).reverse().map(l => `<div class="file-row"><div><strong>${esc(l.name)}</strong><small>${l.rows.length} linhas · ${l.archived ? "Arquivado" : l.supersededBy ? "Versão anterior" : "Ativo"}</small></div><button class="btn" data-view-lot="${l.id}">Consultar</button>${!l.supersededBy ? `<button class="btn" data-archive-lot="${l.id}">${l.archived ? "Reativar" : "Arquivar"}</button>` : ""}</div>`).join("")}</div></details>${deletedFiles()}</section>${state.viewLot ? `<section id="lot-preview" class="card panel section-space"><h3>Dados do arquivo importado</h3>${table(D.allRows(imports.filter(l => l.id === state.viewLot)), 100)}</section>` : ""}`;
   }
   function importReview() {
     if (!state.importReviewOpen) return "";
