@@ -11,11 +11,29 @@
    if(!r.ok){const error=await r.json().catch(()=>({}));throw Error(error.error||"Falha na nuvem ("+r.status+").");}
    return r;
  }
+ async function signIn(){
+   return new Promise(resolve=>{
+     const box=document.createElement("div");
+     box.id="mc-cloud-auth";
+     box.style.cssText="position:fixed;inset:0;z-index:2147483647;background:#0b1730f5;display:grid;place-items:center;padding:18px;color:white;font:15px system-ui";
+     box.innerHTML='<form style="width:min(100%,390px);box-sizing:border-box;padding:26px;border-radius:16px;background:#173454;border:1px solid #44739d"><h2>Power BI | Michelle Cândido</h2><p>Acesso seguro aos arquivos da nuvem</p><label>E-mail<input name="email" type="email" autocomplete="username" required style="width:100%;box-sizing:border-box;padding:12px;margin:7px 0 14px;border-radius:8px"></label><label>Senha<input name="password" type="password" autocomplete="current-password" required style="width:100%;box-sizing:border-box;padding:12px;margin:7px 0 10px;border-radius:8px"></label><p role="alert" style="color:#ffbebe"></p><button style="padding:13px;background:#4ab8ff;color:#082039;border:0;border-radius:8px;width:100%;font-weight:700">Entrar</button></form>';
+     document.body.append(box);
+     const form=box.querySelector("form"),error=box.querySelector('[role="alert"]');
+     form.addEventListener("submit",async e=>{
+       e.preventDefault();const button=form.querySelector("button");button.disabled=true;error.textContent="";
+       try{
+         await api("/api/cloud/login","POST",{email:form.elements.email.value,password:form.elements.password.value});
+         box.remove();resolve();
+       }catch(ex){error.textContent=ex.message;}
+       finally{button.disabled=false;}
+     });
+   });
+ }
  async function open(){
    const res=await api("/api/cloud/status");
    const state=await res.json();
    if(!state.configured)throw Error("Nuvem não configurada; nenhuma importação foi salva.");
-   if(!state.authenticated)throw Error("Autenticação necessária para acessar os arquivos na nuvem.");
+   if(!state.authenticated)await signIn();
    await original.open();
  }
  async function all(table){
