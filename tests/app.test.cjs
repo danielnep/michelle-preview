@@ -12,7 +12,7 @@ test("COI abre importação no destino escolhido e exclusão sai da base, persis
   b.navigate("coi"); t.click("[data-import-coi]");
   assert.equal(b.getState().page, "data");
   await b.handleFile(file(t.w, "ordens.xlsx", workbook()));
-  assert.equal(b.getState().pending.sector, "coi");
+  assert.equal(b.getImports()[0].sector, "coi");
   await b.confirmImport();
   assert.equal(b.getAll().length, 3);
   const id = b.getImports()[0].id;
@@ -40,11 +40,8 @@ test("importação automática em janela aceita arquivo sem datas e oferece rela
   const wb = X.utils.book_new();
   X.utils.book_append_sheet(wb, X.utils.aoa_to_sheet([["CUC", "Número de Eventos"], ["Restauração", 100], ["Teste", 50]]), "Eventos");
   await b.handleFiles([file(w, "eventos.xlsx", X.write(wb, { type: "buffer", bookType: "xlsx" })), file(w, "ordens.xlsx", workbook())]);
-  assert.ok(w.document.querySelector("#import-review[open]"));
-  assert.match(w.document.querySelector(".import-reading-summary").textContent, /Sem data na planilha/);
-  assert.equal(w.document.querySelector(".import-advanced").open, false);
-  assert.equal(b.getState().pending.periodStart, "");
-  t.click("[data-import-queue]");
+  assert.equal(w.document.querySelector("#import-review"), null);
+  assert.equal(b.getImports().find(l=>l.type==="cuc").periodStart, null);
   await wait(() => b.getImports().length === 2 && !b.getState().importBusy);
   assert.equal(w.document.querySelector("#import-review"), null);
   assert.equal(b.getImports().find(l => l.type === "cuc").periodStart, null);
@@ -392,13 +389,11 @@ test("múltiplos arquivos: ligações, erro independente, deduplicação e lista
     file(w, "ordens.xlsx", workbook()),
   ]);
   assert.equal(b.getState().uploadQueue.length, 5); // 2 abas de ligações + arquivo inválido + 2 abas de ordens
-  assert.equal(b.getState().pending.sheet, "Sheet1");
-  assert.equal(b.getState().pending.type, "ligacoes");
+  assert.equal(b.getImports().find(l=>l.type==="ligacoes").sheet, "Sheet1");
   assert.match(
     w.document.querySelector("#dropzone").textContent,
     /invalido.txt/,
   );
-  click("[data-import-queue]");
   await wait(() => b.getImports().length === 2 && !b.getState().importBusy);
   assert.equal(b.getAll().length, 5);
   assert.equal(b.D.stats(b.getAll()).unanswered, 1);
@@ -409,7 +404,7 @@ test("múltiplos arquivos: ligações, erro independente, deduplicação e lista
   );
   assert.match(
     w.document.querySelector("#dropzone").textContent,
-    /Selecione um arquivo XLSX/,
+    /Formato não permitido/,
   );
   await b.handleFile(file(w, "ligações.xlsx", calls));
   await b.confirmImport();
@@ -489,8 +484,8 @@ test("fluxo integrado: Excel → relatório/exportação → slides → edição
     studio = w.MichelleStudio;
   assert.equal(b.getAll().length, 0);
   await b.handleFile(file(w, "operacao.xlsx", workbook()));
-  assert.equal(b.getState().pending.sheet, "Registros");
-  assert.equal(b.getState().pending.type, "ordens");
+  assert.equal(b.getImports()[0].sheet, "Registros");
+  assert.equal(b.getImports()[0].type, "ordens");
   await b.confirmImport();
   assert.equal(b.getAll().length, 3);
   assert.equal(b.D.stats(b.getAll()).cancelled, 1);
@@ -636,15 +631,15 @@ test("PPTX real: conteúdo/imagem/gráfico, proporção, original e biblioteca p
 test("persistência falha sem contabilizar uma importação como salva", async () => {
   const t = await boot(),
     b = t.w.MichelleBridge;
-  await b.handleFile(file(t.w, "operacao.xlsx", workbook()));
   const batch = t.w.MCStore.batch;
   t.w.MCStore.batch = async () => {
     throw Error("Sem espaço");
   };
-  await b.confirmImport();
+  await b.handleFile(file(t.w, "operacao.xlsx", workbook()));
   assert.equal(b.getAll().length, 0);
-  assert.ok(b.getState().pending);
-  assert.match(t.w.document.querySelector(".toast").textContent, /Sem espaço/);
+  assert.ok(b.getState().uploadQueue.some(p=>p.status==="error"));
+  b.navigate("data");
+  assert.match(t.w.document.querySelector("#dropzone").textContent, /Sem espaço/);
   t.w.MCStore.batch = batch;
   t.w.close();
 });
@@ -769,12 +764,12 @@ test("importação multiaba mantém fontes separadas e não seleciona resumos po
   w.eval(fs.readFileSync(path.join(root,"analysis/workbook-sheets.js"),"utf8"));
   b.navigate("data");
   await b.handleFile(file(w,"ordens.xlsx",workbook()));
-  const queued=b.getState().uploadQueue.filter(p=>p.grid&&!p.lotId);
+  const queued=b.getState().uploadQueue.filter(p=>p.grid);
   assert.equal(queued.length,2);
   assert.equal(queued.find(p=>p.sheet==="Resumo").selected,false);
   assert.equal(queued.find(p=>p.sheet==="Registros").selected,true);
-  assert.equal(b.getState().pending.sheet,"Registros");
-  assert.equal(w.document.querySelectorAll("[data-include-sheet]").length,2);
+  assert.equal(b.getImports()[0].sheet,"Registros");
+  assert.equal(w.document.querySelectorAll("[data-include-sheet]").length,0);
   await b.confirmImport();
   assert.equal(b.getImports().length,1);
   assert.equal(b.getImports()[0].sheet,"Registros");
@@ -790,10 +785,10 @@ test("duas abas de dados do mesmo arquivo podem ser importadas em lotes independ
   X.utils.book_append_sheet(wb,X.utils.aoa_to_sheet([["Tipo","Categoria"],["A","Risco"],["B","Plano"]]),"Dados A");
   X.utils.book_append_sheet(wb,X.utils.aoa_to_sheet([["Tipo","Categoria"],["C","Risco"],["D","Plano"]]),"Dados B");
   await b.handleFile(file(w,"fontes.xlsx",X.write(wb,{type:"buffer",bookType:"xlsx"})));
-  const queued=b.getState().uploadQueue.filter(p=>p.grid&&!p.lotId);
+  const queued=b.getState().uploadQueue.filter(p=>p.grid);
   assert.equal(queued.length,2);
   assert.deepEqual(Array.from(queued,x=>x.selected),[true,true]);
-  t.click("[data-import-queue]");
+
   await wait(()=>b.getImports().length===2&&!b.getState().importBusy);
   assert.deepEqual(Array.from(b.getImports(),l=>l.sheet),["Dados A","Dados B"]);
   assert.equal(b.getImports()[0].hash,b.getImports()[1].hash);
@@ -816,7 +811,7 @@ test("dashboard real apresenta fontes em aba própria e gráficos por fonte",asy
   ]),"Inventario");
   b.navigate("data");
   await b.handleFile(file(w,"operacao.xlsx",X.write(wb,{type:"buffer",bookType:"xlsx"})));
-  t.click("[data-import-queue]");
+
   await wait(()=>b.getImports().length===2&&!b.getState().importBusy);
   b.navigate("dashboard");
   t.click('[data-mc-dash-tab="sources"]');
@@ -846,7 +841,7 @@ test("fontes gerais distintas com mesmo período não bloqueiam importação",as
     ["Data","Produto","Setor"],["01/09/2026","Mouse","TI"],["02/09/2026","Monitor","RH"]
   ]),"Inventario");
   await b.handleFile(file(w,"independentes.xlsx",X.write(wb,{type:"buffer",bookType:"xlsx"})));
-  t.click("[data-import-queue]");
+
   await wait(()=>b.getImports().length===2&&!b.getState().importBusy);
   assert.equal(b.getImports().length,2);
   assert.deepEqual(Array.from(b.getImports(),p=>p.sheet),["Ocorrencias","Inventario"]);

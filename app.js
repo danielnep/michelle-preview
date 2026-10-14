@@ -474,7 +474,7 @@
     const aiHome = window.MCAI?.home(rs, imports, esc) || "";
     if (role === "operacao") {
       return essential + aiHome + statCards(rs) + recentActivity(rs) +
-        '<section class="mc-role-next card panel"><h2>Próximo passo</h2><p>Selecione um arquivo Excel ou CSV, confira a identificação automática e confirme. O painel dos demais perfis é atualizado com os mesmos dados.</p><button class="btn btn-primary" data-nav="data">Enviar dados</button></section>';
+        '<section class="mc-role-next card panel"><h2>Próximo passo</h2><p>Selecione um arquivo Excel ou CSV. A leitura e a importação são automáticas, com aviso individual quando algo não puder ser processado.</p><button class="btn btn-primary" data-nav="data">Enviar dados</button></section>';
     }
     if (role === "supervisora") {
       return essential + aiHome + managerialHighlights(rs) + statCards(rs) + homeSectors(rs) +
@@ -519,25 +519,46 @@
     );
   }
   function uploadBox() {
-    const visibleImports = imports.filter(l => !l.deleted);
-    const queued = state.uploadQueue.filter((p) => !p.lotId);
-    const chosen = queued.filter(p => p.grid && p.selected !== false);
-    const statuses = {
-      reading: "Lendo arquivo",
-      ready: "Pronto para importar",
-      error: "Precisa de atenção",
-    };
-    return `<div class="dropzone" id="dropzone"><div class="upload-prompt"><div class="drop-symbol">${icon("up", 25)}</div><h3>Suas planilhas, em um só lugar</h3><p>Arraste arquivos aqui ou selecione no seu dispositivo.</p><p class="upload-formats">XLSX, XLS ou CSV · até 50 MB por arquivo</p><label for="file-upload" class="btn btn-primary">${icon("plus", 18)} Selecionar arquivos</label><input class="file-input" type="file" id="file-upload" accept=".csv,.xlsx,.xls" multiple ${state.ready && !state.readingFiles && !state.importBusy ? "" : "disabled"}></div><div class="upload-file-list" aria-live="polite"><div class="upload-list-heading"><strong>Arquivos selecionados e importados</strong><span>${queued.length + visibleImports.length}</span></div>${queued.map((p) => `<article class="upload-file ${p.status === "error" ? "has-error" : ""} ${state.pending === p ? "is-selected" : ""}"><span class="upload-file-icon">${icon("files", 20)}</span><div class="upload-file-info"><strong>${esc(p.name)}</strong><small>${esc(statuses[p.status] || p.status)}${p.grid ? ` · aba ${esc(p.sheet)} · ${esc(idSector(p.sector)?.name)} · ${esc(D.types[p.type])}` : ""}</small>${p.error ? `<p class="upload-file-error">${esc(p.error)}</p>` : ""}${p.grid && p.autoSheet ? `<label class="mc-sheet-choice"><input type="checkbox" data-include-sheet="${esc(p.queueId)}" ${p.selected !== false ? "checked" : ""} ${state.importBusy ? "disabled" : ""}> Incluir aba ${esc(p.sheet)}${p.summarySheet ? " · possível resumo, revisar duplicidade" : ""}</label>` : ""}<div class="upload-file-actions">${p.grid ? `<button class="btn" data-configure-file="${p.queueId}">Conferir dados</button>` : ""}${p.status !== "reading" ? `<button class="btn btn-quiet" data-remove-queued="${p.queueId}">Remover da seleção</button>` : ""}</div></div></article>`).join("")}${[
-      ...visibleImports,
-    ]
-      .reverse()
-      .map(
-        (l) =>
-          `<article class="upload-file is-imported"><span class="upload-file-icon">${icon("check", 20)}</span><div class="upload-file-info"><strong>${esc(l.name)}</strong><small>${l.archived ? "Arquivado" : l.supersededBy ? "Versão anterior" : "Importado e salvo"} · ${fmtNum(l.rows.length)} linhas · ${esc(D.types[l.type] || "Registros")} · ${esc(idSector(l.sector)?.name || l.sector)}</small><small>${esc(l.sheet)} · ${l.periodStart || l.periodEnd ? `${fmtDate(l.periodStart)} a ${fmtDate(l.periodEnd)}` : "Sem data na planilha"}</small><div class="upload-file-actions"><button class="btn" data-view-lot="${l.id}">Consultar dados</button><button class="btn btn-quiet" data-original="${l.fileId || ""}" ${l.fileId ? "" : "disabled"}>${icon("down", 15)} Original</button><button class="btn btn-quiet" data-delete-lot="${l.id}">Excluir arquivo</button></div></div></article>`,
-      )
-      .join(
-        "",
-      )}${queued.length || visibleImports.length ? "" : '<p class="upload-empty">Os arquivos aparecerão aqui e continuarão disponíveis depois da importação.</p>'}</div>${queued.length ? `<button class="btn btn-primary upload-confirm" data-open-import ${state.importBusy || state.readingFiles || !chosen.length ? "disabled" : ""}>${icon("up", 18)} ${state.readingFiles ? "Lendo arquivos…" : state.importBusy ? "Importando…" : `Conferir e confirmar (${chosen.length} abas)`}</button><p class="upload-hint">Cada aba é uma fonte independente. Abas de resumo ficam desmarcadas quando há detalhamento; confira antes de incluir.</p>` : ""}</div>`;
+    const visibleImports=imports.filter(l=>!l.deleted);
+    const queued=state.uploadQueue.filter(p=>!p.lotId);
+    const statuses={reading:"Lendo arquivo",analyzing:"IA identificando colunas",
+      uploading:"Salvando na nuvem",ready:"Processando",skipped:"Resumo identificado e não somado",
+      error:"Erro no arquivo",duplicate:"Já importado"};
+    const storage=S.cloud?"Os originais e os dados processados são armazenados na nuvem e permanecem disponíveis até serem excluídos.":"Os originais e dados desta versão ainda são guardados somente neste navegador.";
+    return `<div class="dropzone" id="dropzone">
+      <div class="upload-prompt">
+        <div class="drop-symbol">${icon("up",25)}</div>
+        <h3>Envie suas planilhas</h3>
+        <p>Escolha um ou vários arquivos. O Copiloto identifica as fontes, importa os dados e sinaliza qualquer problema automaticamente.</p>
+        <p class="upload-formats">XLSX, XLS e CSV · até 50 MB por arquivo</p>
+        <label for="file-upload" class="btn btn-primary">${icon("plus",18)} Selecionar arquivos</label>
+        <input class="file-input" type="file" id="file-upload" accept=".csv,.xlsx,.xls" multiple ${state.ready&&!state.readingFiles&&!state.importBusy?"":"disabled"}>
+        <p class="upload-hint">${storage}</p>
+        ${state.readingFiles?'<p class="upload-hint" role="status">Analisando e salvando os arquivos selecionados, sem confirmação adicional…</p>':""}
+      </div>
+      <div class="upload-file-list" aria-live="polite">
+        <div class="upload-list-heading"><strong>Arquivos e status de importação</strong><span>${queued.length+visibleImports.length}</span></div>
+        ${queued.map(p=>`<article class="upload-file ${p.status==="error"?"has-error":""}">
+          <span class="upload-file-icon">${icon(p.status==="error"?"alert":"files",20)}</span>
+          <div class="upload-file-info"><strong>${esc(p.name)}</strong>
+            <small>${esc(statuses[p.status]||p.status)}${p.sheet?" · "+esc(p.sheet):""}</small>
+            ${p.error?`<p class="upload-file-error">${esc(p.error)}</p>`:""}
+            ${p.aiWarning?`<p class="upload-hint">${esc(p.aiWarning)}</p>`:""}
+            ${p.status==="error"?`<div class="upload-file-actions"><button class="btn btn-quiet" data-remove-queued="${esc(p.queueId)}">Remover aviso</button></div>`:""}
+          </div>
+        </article>`).join("")}
+        ${[...visibleImports].reverse().map(l=>`<article class="upload-file is-imported">
+          <span class="upload-file-icon">${icon("check",20)}</span><div class="upload-file-info">
+          <strong>${esc(l.name)}</strong><small>${l.archived?"Arquivado":l.supersededBy?"Versão anterior":S.cloud?"Salvo na nuvem":"Importado e salvo"} · ${fmtNum(l.rows.length)} linhas · ${esc(D.types[l.type]||"Registros")} · ${esc(idSector(l.sector)?.name||l.sector)}</small>
+          <small>${esc(l.sheet)} · ${l.periodStart||l.periodEnd?`${fmtDate(l.periodStart)} a ${fmtDate(l.periodEnd)}`:"Sem data individual"}</small>
+          ${l.errors?.length?`<p class="upload-file-error">${l.errors.length} linha(s) com erro foram ignoradas. Consulte o histórico da fonte.</p>`:""}
+          <div class="upload-file-actions"><button class="btn" data-view-lot="${l.id}">Consultar dados</button>
+          <button class="btn btn-quiet" data-original="${l.fileId||""}" ${l.fileId?"":"disabled"}>${icon("down",15)} Original</button>
+          <button class="btn btn-quiet" data-delete-lot="${l.id}">Excluir arquivo</button></div>
+          </div></article>`).join("")}
+        ${queued.length||visibleImports.length?"":'<p class="upload-empty">Nenhum arquivo importado.</p>'}
+      </div>
+    </div>`;
   }
   function deletedFiles() {
     const deleted = imports.filter(l => l.deleted);
@@ -549,10 +570,10 @@
     return `<section class="data-next-actions"><h3>Dados prontos. Escolha o resultado</h3><p class="panel-sub">O dashboard deste sistema abre imediatamente com os dados importados. Para um relatório nativo do Microsoft Power BI, conecte um relatório publicado pelo botão no dashboard. A importação local não cria um arquivo PBIX.</p><div><button class="btn btn-primary" data-quick-report ${enabled ? "" : "disabled"}>${icon("report", 18)} Gerar relatório</button><button class="btn" data-nav="dashboard" ${enabled ? "" : "disabled"}>${icon("grid", 18)} Visualizar dashboard</button><button class="btn" data-create-presentation ${enabled ? "" : "disabled"}>${icon("plus", 18)} Gerar e criar apresentação</button></div></section>`;
   }
   function importGuide() {
-    return `<section class="import-journey" aria-label="Como usar o painel"><div class="import-journey-head"><span>${icon("brand", 19)}</span><div><strong>Da planilha ao painel em 4 passos</strong><small>Sem configurar datas ou fórmulas para começar</small></div></div><ol><li><b>1. Selecione</b><span>Envie um ou vários arquivos Excel/CSV.</span></li><li><b>2. Confira</b><span>Veja a fonte, aba, colunas e quantidade identificadas.</span></li><li><b>3. Confirme</b><span>O arquivo é salvo e alimenta os indicadores.</span></li><li><b>4. Visualize</b><span>Abra o dashboard, aplique filtros e exporte o resultado.</span></li></ol><p>Para corrigir a base, use <b>Excluir arquivo</b> na lista abaixo. O painel deixa de considerar esse arquivo e permite restaurá-lo em <b>Arquivos excluídos</b>.</p></section>`;
+    return '<section class="import-journey" aria-label="Como usar o painel"><div class="import-journey-head"><span>'+icon("brand",19)+'</span><div><strong>Da planilha ao painel, automaticamente</strong><small>Sem configurar abas, períodos ou confirmações</small></div></div><ol><li><b>1. Selecione</b><span>Escolha um ou vários arquivos Excel/CSV.</span></li><li><b>2. O Copiloto analisa</b><span>Identifica arquivos, abas, colunas e possíveis problemas.</span></li><li><b>3. Visualize</b><span>Os arquivos válidos alimentam os indicadores; erros individuais aparecem acima.</span></li></ol></section>';
   }
   function pageData() {
-    return header(state.importSector === "coi" ? "Importar planilhas · COI" : "Importar planilhas", "Selecione, confira a leitura automática e confirme.") + `<section class="card panel data-import-panel">${importGuide()}${uploadBox()}${dataNextActions()}<details class="section-space"><summary>Backup e histórico</summary><p class="panel-sub">Seus arquivos e dados ficam neste navegador. Exporte um backup para transferir a base.</p><div class="backup-actions"><button class="btn" data-backup>Exportar backup completo</button><label class="btn">Restaurar backup<input type="file" id="restore-backup" accept=".json" hidden></label><button class="btn" data-export="geral" ${getAll().length ? "" : "disabled"}>Exportar Excel (.xlsx)</button></div><div class="file-list">${imports.filter(l => !l.deleted).reverse().map(l => `<div class="file-row"><div><strong>${esc(l.name)}</strong><small>${l.rows.length} linhas · ${l.archived ? "Arquivado" : l.supersededBy ? "Versão anterior" : "Ativo"}</small></div><button class="btn" data-view-lot="${l.id}">Consultar</button>${!l.supersededBy ? `<button class="btn" data-archive-lot="${l.id}">${l.archived ? "Reativar" : "Arquivar"}</button>` : ""}</div>`).join("")}</div></details>${deletedFiles()}</section>${state.viewLot ? `<section id="lot-preview" class="card panel section-space"><h3>Dados do arquivo importado</h3>${table(D.allRows(imports.filter(l => l.id === state.viewLot)), 100)}</section>` : ""}`;
+    return header(state.importSector === "coi" ? "Importar planilhas · COI" : "Importar planilhas", "Selecione os arquivos: leitura, classificação e envio são automáticos.") + `<section class="card panel data-import-panel">${importGuide()}${uploadBox()}${dataNextActions()}<details class="section-space"><summary>Backup e histórico</summary><p class="panel-sub">${S.cloud?"Os arquivos enviados são mantidos na nuvem. O backup também pode incluir apresentações e configurações deste dispositivo.":"Seus arquivos e dados ficam neste navegador. Exporte um backup para transferir a base."}</p><div class="backup-actions"><button class="btn" data-backup>Exportar backup completo</button><label class="btn">Restaurar backup<input type="file" id="restore-backup" accept=".json" hidden></label><button class="btn" data-export="geral" ${getAll().length ? "" : "disabled"}>Exportar Excel (.xlsx)</button></div><div class="file-list">${imports.filter(l => !l.deleted).reverse().map(l => `<div class="file-row"><div><strong>${esc(l.name)}</strong><small>${l.rows.length} linhas · ${l.archived ? "Arquivado" : l.supersededBy ? "Versão anterior" : "Ativo"}</small></div><button class="btn" data-view-lot="${l.id}">Consultar</button>${!l.supersededBy ? `<button class="btn" data-archive-lot="${l.id}">${l.archived ? "Reativar" : "Arquivar"}</button>` : ""}</div>`).join("")}</div></details>${deletedFiles()}</section>${state.viewLot ? `<section id="lot-preview" class="card panel section-space"><h3>Dados do arquivo importado</h3>${table(D.allRows(imports.filter(l => l.id === state.viewLot)), 100)}</section>` : ""}`;
   }
   function importReview() {
     if (!state.importReviewOpen) return "";
@@ -648,7 +669,7 @@
         "Configurações",
         "Personalize metas, identificação e preferências do seu painel.",
       ) +
-      `<section class="mc-install-panel"><div><strong>Instalar Painel Michelle</strong><p data-install-status>Suporte varia conforme o navegador. Seus dados permanecem neste navegador e não são sincronizados com outros dispositivos.</p><p id="mc-install-guide" hidden></p></div><button type="button" class="install-shortcut" data-mc-install>Instalar aplicativo</button></section><section class="mc-ai-import-help"><strong>✦ Aprendizado do Copiloto</strong><p>Os assuntos mais consultados são lembrados apenas neste navegador. As análises automáticas enviam ao DeepSeek totais, períodos, nomes de arquivos/abas, cabeçalhos e categorias agregadas. Linhas originais não são enviadas.</p><label><input type="checkbox" data-ai-auto ${window.MCAI?.consent() ? "checked" : ""}> Sugerir insights via IA após novas importações</label> <button type="button" class="btn" data-ai-clear-memory>Limpar preferências do Copiloto</button> <button type="button" class="btn btn-primary" data-ai-check ${state.aiCheckBusy ? "disabled" : ""}>${state.aiCheckBusy ? "Verificando…" : "✦ Testar conexão DeepSeek"}</button>${state.aiCheckStatus ? `<p role="status" class="mc-ai-status">${esc(state.aiCheckStatus)}</p>` : ""}</section><div class="mc-analysis-notes"><strong>Memória de interpretação de planilhas</strong><p>Correções feitas nos campos e confirmadas ficam salvas por modelo de planilha, apenas neste navegador. Você pode apagá-las sem excluir suas importações.</p><button type="button" class="btn" data-mc-reset-mappings>Apagar correções salvas</button></div><div class="page-grid"><section class="card panel"><div class="panel-head"><div><h3 class="panel-title">Identidade do painel</h3><p class="panel-sub">Informações desta operação</p></div>${icon("settings", 19)}</div><div class="field appearance-field"><label for="appearance-select">Aparência do aplicativo</label><select id="appearance-select" class="control"><option value="light" ${appearance() === "light" ? "selected" : ""}>Claro · cinza e grafite</option><option value="dark" ${appearance() === "dark" ? "selected" : ""}>Escuro · grafite</option></select><p class="panel-sub">A preferência fica salva. Os temas dos slides são configurados no Estúdio.</p></div><div class="field"><label>Nome da operação</label><input class="control" id="operation" value="${esc(settings.operation)}" /></div><button class="btn btn-primary section-space" data-save="1">Salvar configurações</button><div class="info-box section-space"><strong>Seus dados operacionais</strong><p>Exporte as planilhas do sistema de origem e importe por Enviar Dados Excel. O painel preserva os arquivos originais e o histórico de atualização.</p></div></section><section class="card panel"><div class="panel-head"><div><h3 class="panel-title">Metas por departamento</h3><p class="panel-sub">Percentual de conclusão desejado</p></div>${icon("target", 18)}</div><div class="settings-list section-space">${sectors.map((s) => `<div class="settings-item"><div><strong>${s.name}</strong><small>Meta de conclusão (percentual)</small><div class="progress"><div style="width:${settings.goals?.[s.id] ?? 0}%"></div></div></div><div class="row" style="gap:4px"><input class="control" type="number" min="0" max="100" step="1" data-goal="${s.id}" value="${settings.goals?.[s.id] ?? ""}" placeholder="Sem meta"/><span>%</span></div></div>`).join("")}</div><button class="btn btn-primary section-space" data-save="1">${icon("check", 14)} Aplicar metas</button></section></div>`
+      `<section class="mc-install-panel"><div><strong>Instalar Painel Michelle</strong><p data-install-status>Suporte varia conforme o navegador. ${S.cloud?"Os arquivos operacionais são armazenados na nuvem e acessíveis após autenticação.":"Seus dados permanecem neste navegador e não são sincronizados com outros dispositivos."}</p><p id="mc-install-guide" hidden></p></div><button type="button" class="install-shortcut" data-mc-install>Instalar aplicativo</button></section><section class="mc-ai-import-help"><strong>✦ Aprendizado do Copiloto</strong><p>Os assuntos mais consultados são lembrados apenas neste navegador. As análises automáticas enviam ao DeepSeek totais, períodos, nomes de arquivos/abas, cabeçalhos e categorias agregadas. Linhas originais não são enviadas.</p><label><input type="checkbox" data-ai-auto ${window.MCAI?.consent() ? "checked" : ""}> Sugerir insights via IA após novas importações</label> <button type="button" class="btn" data-ai-clear-memory>Limpar preferências do Copiloto</button> <button type="button" class="btn btn-primary" data-ai-check ${state.aiCheckBusy ? "disabled" : ""}>${state.aiCheckBusy ? "Verificando…" : "✦ Testar conexão DeepSeek"}</button>${state.aiCheckStatus ? `<p role="status" class="mc-ai-status">${esc(state.aiCheckStatus)}</p>` : ""}</section><div class="mc-analysis-notes"><strong>Memória de interpretação de planilhas</strong><p>Correções feitas nos campos e confirmadas ficam salvas por modelo de planilha, apenas neste navegador. Você pode apagá-las sem excluir suas importações.</p><button type="button" class="btn" data-mc-reset-mappings>Apagar correções salvas</button></div><div class="page-grid"><section class="card panel"><div class="panel-head"><div><h3 class="panel-title">Identidade do painel</h3><p class="panel-sub">Informações desta operação</p></div>${icon("settings", 19)}</div><div class="field appearance-field"><label for="appearance-select">Aparência do aplicativo</label><select id="appearance-select" class="control"><option value="light" ${appearance() === "light" ? "selected" : ""}>Claro · cinza e grafite</option><option value="dark" ${appearance() === "dark" ? "selected" : ""}>Escuro · grafite</option></select><p class="panel-sub">A preferência fica salva. Os temas dos slides são configurados no Estúdio.</p></div><div class="field"><label>Nome da operação</label><input class="control" id="operation" value="${esc(settings.operation)}" /></div><button class="btn btn-primary section-space" data-save="1">Salvar configurações</button><div class="info-box section-space"><strong>Seus dados operacionais</strong><p>Exporte as planilhas do sistema de origem e importe por Enviar Dados Excel. O painel preserva os arquivos originais e o histórico de atualização.</p></div></section><section class="card panel"><div class="panel-head"><div><h3 class="panel-title">Metas por departamento</h3><p class="panel-sub">Percentual de conclusão desejado</p></div>${icon("target", 18)}</div><div class="settings-list section-space">${sectors.map((s) => `<div class="settings-item"><div><strong>${s.name}</strong><small>Meta de conclusão (percentual)</small><div class="progress"><div style="width:${settings.goals?.[s.id] ?? 0}%"></div></div></div><div class="row" style="gap:4px"><input class="control" type="number" min="0" max="100" step="1" data-goal="${s.id}" value="${settings.goals?.[s.id] ?? ""}" placeholder="Sem meta"/><span>%</span></div></div>`).join("")}</div><button class="btn btn-primary section-space" data-save="1">${icon("check", 14)} Aplicar metas</button></section></div>`
     );
   }
   function pageSectorDirectory() {
@@ -988,52 +1009,123 @@
     return handleFiles(file ? [file] : []);
   }
   async function handleFiles(files) {
-    if (state.readingFiles || state.importBusy) return;
-    state.readingFiles = true;
-    for (const file of Array.from(files || [])) {
-      const placeholder={queueId:crypto.randomUUID(),name:file.name,size:file.size,status:"reading"};
-      state.uploadQueue.push(placeholder);
-      render();
-      try {
-        if(!/\.(xlsx|xls|csv)$/i.test(file.name))throw Error("Selecione um arquivo XLSX, XLS ou CSV.");
-        if(file.size>50*1024*1024)throw Error("Limite de 50 MB por arquivo.");
-        const bytes=await file.arrayBuffer();
-        const digest=await crypto.subtle.digest("SHA-256",bytes);
-        const hash=Array.from(new Uint8Array(digest)).map(n=>n.toString(16).padStart(2,"0")).join("");
-        const wb=XLSX.read(bytes,{type:"array",cellDates:false});
-        const inspected=window.MCWorkbookSheets?.inspect(wb,XLSX,D.detect,file.name) ||
-          wb.SheetNames.map(name=>{
-            const sheet=wb.Sheets[name],ref=sheet?.["!ref"];
-            if(!ref)return null;
-            const bounds=XLSX.utils.decode_range(ref);
-            const sample=XLSX.utils.sheet_to_json(sheet,{header:1,raw:false,defval:"",
-              range:{s:{r:0,c:0},e:{r:Math.min(49,bounds.e.r),c:bounds.e.c}}});
-            return {name,score:D.detect(sample,{filename:file.name,sheet:name}).score,summary:false,selected:true};
-          }).filter(Boolean).sort((a,b)=>b.score-a.score).slice(0,1);
-        if(!inspected.length)throw Error("Nenhuma aba com cabeçalhos e linhas de dados foi encontrada.");
-        state.uploadQueue=state.uploadQueue.filter(p=>p!==placeholder);
-        let first=true;
-        for(const info of inspected) {
-          const item={
-            queueId:first?placeholder.queueId:crypto.randomUUID(),name:file.name,size:file.size,
-            hash,bytes,wb,sheet:info.name,autoSheet:inspected.length>1,
-            summarySheet:info.summary,selected:info.selected,estimatedRows:info.estimatedRows,
-            sector:"coi",type:"geral",periodStart:"",periodEnd:"",policy:"reject",status:"ready"
-          };
-          state.uploadQueue.push(item);
-          const old=state.pending;
-          state.pending=item;
-          try { selectImportSheet(); } finally { state.pending=old; }
-          if(first)first=false;
+    const selection=Array.from(files||[]);
+    if(!selection.length)return;
+    if(state.readingFiles||state.importBusy){notify("Já existe um envio em andamento. Aguarde sua conclusão.",true);return;}
+    const batchId=crypto.randomUUID();
+    state.readingFiles=true;
+    try{
+      for(const file of selection){
+        const placeholder={queueId:crypto.randomUUID(),batchId,name:file.name,size:file.size,status:"reading"};
+        state.uploadQueue.push(placeholder);
+        render();
+        try{
+          if(!/\.(xlsx|xls|csv)$/i.test(file.name))throw Error("Formato não permitido. Use XLSX, XLS ou CSV.");
+          if(file.size>50*1024*1024)throw Error("O arquivo excede o limite de 50 MB.");
+          const bytes=await file.arrayBuffer();
+          const digest=await crypto.subtle.digest("SHA-256",bytes);
+          const hash=Array.from(new Uint8Array(digest)).map(n=>n.toString(16).padStart(2,"0")).join("");
+          const wb=XLSX.read(bytes,{type:"array",cellDates:false});
+          const inspected=window.MCWorkbookSheets?.inspect(wb,XLSX,D.detect,file.name) ||
+            wb.SheetNames.map(name=>{
+              const sheet=wb.Sheets[name],ref=sheet?.["!ref"];
+              if(!ref)return null;
+              const bounds=XLSX.utils.decode_range(ref);
+              const sample=XLSX.utils.sheet_to_json(sheet,{header:1,raw:false,defval:"",
+                range:{s:{r:0,c:0},e:{r:Math.min(49,bounds.e.r),c:bounds.e.c}}});
+              return {name,score:D.detect(sample,{filename:file.name,sheet:name}).score,summary:false,selected:true};
+            }).filter(Boolean).sort((a,b)=>b.score-a.score).slice(0,1);
+          if(!inspected.length)throw Error("Nenhuma aba com cabeçalhos e registros foi encontrada.");
+          state.uploadQueue=state.uploadQueue.filter(p=>p!==placeholder);
+          let first=true;
+          for(const info of inspected){
+            const item={
+              queueId:first?placeholder.queueId:crypto.randomUUID(),batchId,
+              name:file.name,size:file.size,hash,bytes,wb,sheet:info.name,
+              autoSheet:inspected.length>1,summarySheet:info.summary,
+              selected:info.selected,estimatedRows:info.estimatedRows,
+              sector:"coi",type:"geral",periodStart:"",periodEnd:"",
+              policy:"append",acceptInvalid:true,status:info.selected?"analyzing":"skipped"
+            };
+            state.uploadQueue.push(item);
+            state.pending=item;
+            selectImportSheet();
+            if(first)first=false;
+          }
+        }catch(error){
+          placeholder.status="error";
+          placeholder.error="Não foi possível ler "+file.name+": "+error.message;
         }
-      }catch(e){
-        placeholder.status="error";placeholder.error="Não foi possível ler a planilha: "+e.message;
+      }
+      const selected=state.uploadQueue.filter(p=>p.batchId===batchId&&p.grid&&p.selected!==false);
+      await automaticInterpret(selected);
+      for(const p of selected){
+        if(p.lotId)continue;
+        p.status="uploading";
+        state.pending=p;
+        render();
+        await confirmImport(p);
+      }
+      const failed=state.uploadQueue.filter(p=>p.batchId===batchId&&p.status==="error");
+      const saved=selected.filter(p=>p.lotId).length;
+      state.importReviewOpen=false;
+      notify(saved+" aba(s) importadas automaticamente"+(failed.length?
+        "; "+failed.length+" item(ns) com erro, confira a lista.":"."),
+        failed.length>0);
+    }finally{
+      state.readingFiles=false;
+      state.pending=null;
+      state.importReviewOpen=false;
+      render();
+    }
+  }
+  async function automaticInterpret(items){
+    if(!items.length||!window.MCAI?.request)return;
+    const allowedFields=Object.keys(D.labels);
+    for(let i=0;i<items.length;i+=10){
+      const group=items.slice(i,i+10);
+      for(const p of group)p.status="analyzing";
+      render();
+      try{
+        const sources=group.map(p=>{
+          const columns=p.grid[p.headerRow]||[];
+          const ctx=window.MCAI.interpretationContext(p,columns,sectors,allowedFields);
+          return {id:p.queueId,name:ctx.name,sheet:ctx.sheet,
+            headers:ctx.headers.slice(0,18),columnShapes:ctx.columnShapes.slice(0,18).map(a=>a.slice(0,2)),
+            headerRow:ctx.headerRow,localDetection:ctx.localDetection};
+        });
+        const response=await window.MCAI.request("interpret-batch",{context:{sources,allowedFields}});
+        const byId=new Map((response.sources||[]).map(p=>[p.id,p]));
+        for(const p of group){
+          const proposal=byId.get(p.queueId);
+          if(!proposal||proposal.confidence==="Baixa")continue;
+          if(!Object.hasOwn(D.types,proposal.type)||!sectors.some(x=>x.id===proposal.sector))continue;
+          if(Number.isInteger(proposal.headerRow)&&proposal.headerRow>=0&&proposal.headerRow<p.grid.length){
+            p.headerRow=proposal.headerRow;
+          }
+          const heads=p.grid[p.headerRow]||[];
+          const mapping=Object.fromEntries(Object.entries(proposal.mapping||{}).filter(([key,pos])=>
+            Object.hasOwn(D.labels,key)&&Number.isInteger(pos)&&pos>=0&&pos<heads.length));
+          p.type=proposal.type;p.sector=proposal.sector;
+          p.mapping={...D.suggest(heads),...mapping};
+          p.aiProposal=proposal;
+          p.validationKey=null;
+        }
+      }catch(error){
+        // A classificação determinística permanece disponível; não bloquear importações por indisponibilidade da IA.
+        group.forEach(p=>{p.aiWarning="IA temporariamente indisponível: "+error.message;});
       }
     }
-    state.readingFiles = false;
-    state.importReviewOpen = true;
-    state.pending ||= state.uploadQueue.find((p) => p.grid && !p.lotId && p.selected !== false) || null;
-    render();
+    // Conflitos não resolvidos pela IA preservam registros brutos como dados gerais.
+    for(const p of items){
+      if(p.detectInfo?.conflict&&!p.aiProposal){
+        p.type="geral";
+        p.mapping=D.suggest(p.grid[p.headerRow]||[]);
+        p.aiWarning=(p.aiWarning?p.aiWarning+" ":"")+"Identificação incerta; registros preservados sem classificação específica.";
+        p.validationKey=null;
+      }
+      p.status="ready";
+    }
   }
   async function saveImports() {
     await S.batch(imports.map((value) => ({ store: "lots", value })));
@@ -1044,12 +1136,7 @@
     state.importBusy = true;
     try {
       const result = validatePending(p);
-      if (p.detectInfo?.conflict && !p.manualReview)
-        throw Error("Há um conflito entre nome do arquivo e colunas. Confirme a identificação antes de importar.");
-      if (result.errors.length && !p.acceptInvalid)
-        throw Error(
-          "Confira as linhas inválidas e marque a opção para importar somente as válidas.",
-        );
+      if (!result.rows.length) throw Error("Nenhuma linha válida encontrada. Verifique os cabeçalhos e os valores deste arquivo.");
       const dates = result.rows
           .flatMap((r) => [r.date, r.periodStart, r.periodEnd].filter(Boolean))
           .sort(),
@@ -1095,12 +1182,12 @@
           "Este arquivo e destino já estão no histórico. Nenhuma linha foi duplicada.";
         state.pending =
           state.uploadQueue.find((x) => x.grid && !x.lotId && x.selected !== false && x !== p) || null;
-        state.importReviewOpen = !!state.pending;
+        state.importReviewOpen = false;
         return;
       }
       await S.batch([
-        ...next.lots.map((value) => ({ store: "lots", value })),
         { store: "files", value: { id: p.hash, name: p.name, bytes: p.bytes } },
+        ...next.lots.filter(value => value.id === lot.id || (imports.find(old => old.id === value.id)?.supersededBy !== value.supersededBy)).map(value => ({ store: "lots", value })),
       ]);
       imports = next.lots;
       state.aiInsightText = "";
@@ -1110,7 +1197,7 @@
       p.error = "";
       state.pending =
         state.uploadQueue.find((x) => x.grid && !x.lotId && x.selected !== false && x !== p) || null;
-      state.importReviewOpen = !!state.pending;
+      state.importReviewOpen = false;
       state.report = null;
       state.tablePage = 0;
       notify(
@@ -1121,7 +1208,7 @@
     } catch (e) {
       p.status = "error";
       p.error = e.message;
-      notify(e.message, true);
+      notify(p.name + ": " + e.message, true);
     } finally {
       state.importBusy = false;
       render();
