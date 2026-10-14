@@ -1143,12 +1143,7 @@
     state.importBusy = true;
     try {
       const result = validatePending(p);
-      if (p.detectInfo?.conflict && !p.manualReview)
-        throw Error("Há um conflito entre nome do arquivo e colunas. Confirme a identificação antes de importar.");
-      if (result.errors.length && !p.acceptInvalid)
-        throw Error(
-          "Confira as linhas inválidas e marque a opção para importar somente as válidas.",
-        );
+      if(!result.rows.length)throw Error("Nenhuma linha válida encontrada no arquivo. Verifique cabeçalhos e valores.");
       const dates = result.rows
           .flatMap((r) => [r.date, r.periodStart, r.periodEnd].filter(Boolean))
           .sort(),
@@ -1194,11 +1189,11 @@
           "Este arquivo e destino já estão no histórico. Nenhuma linha foi duplicada.";
         state.pending =
           state.uploadQueue.find((x) => x.grid && !x.lotId && x.selected !== false && x !== p) || null;
-        state.importReviewOpen = !!state.pending;
+        state.importReviewOpen = false;
         return;
       }
       await S.batch([
-        ...next.lots.map((value) => ({ store: "lots", value })),
+        ...next.lots.filter(value => value.id === lot.id || (imports.find(old=>old.id===value.id)?.supersededBy !== value.supersededBy)).map((value) => ({ store: "lots", value })),
         { store: "files", value: { id: p.hash, name: p.name, bytes: p.bytes } },
       ]);
       imports = next.lots;
@@ -1209,7 +1204,7 @@
       p.error = "";
       state.pending =
         state.uploadQueue.find((x) => x.grid && !x.lotId && x.selected !== false && x !== p) || null;
-      state.importReviewOpen = !!state.pending;
+      state.importReviewOpen = false;
       state.report = null;
       state.tablePage = 0;
       notify(
@@ -1220,7 +1215,7 @@
     } catch (e) {
       p.status = "error";
       p.error = e.message;
-      notify(e.message, true);
+      notify(p.name + ": " + e.message, true);
     } finally {
       state.importBusy = false;
       render();
