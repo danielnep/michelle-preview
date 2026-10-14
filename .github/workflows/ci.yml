@@ -3,7 +3,7 @@ on:
   push:
     branches: [main, railway-power-bi-michelle]
   pull_request:
-    branches: [main]
+    branches: [main, railway-power-bi-michelle]
   workflow_dispatch:
 permissions:
   contents: read
