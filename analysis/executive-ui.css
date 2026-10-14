@@ -1,4 +1,4 @@
-/* MC Executive UI — 5.0
+/* MC Executive UI — 5.0.2
    Camada de apresentação isolada. Não altera contratos, cálculos, importação nem armazenamento.
    Identidade exclusiva Michelle Cândido; adaptações estruturais mobile-first. */
 :root {
@@ -9,19 +9,19 @@
   --ink:#182533;
   --muted:#54677b;
   --line:#dfe6ee;
-  --brand:#0f5676;
-  --blue:#0f5676;
-  --blue2:#0b4763;
-  --tint:#e8f3f8;
+  --brand:#38bdf8;
+  --blue:#38bdf8;
+  --blue2:#61ccff;
+  --tint:#ddf5ff;
   --chrome:#111923;
   --on-chrome:#f4f7fc;
-  --action:#0f5676;
-  --action-hover:#09445e;
-  --on-action:#ffffff;
+  --action:#38bdf8;
+  --action-hover:#61ccff;
+  --on-action:#182533;
   --control-line:#9eaebb;
   --shadow:0 4px 20px rgba(23,38,54,.045);
-  --mc-accent:#69b4cb;
-  --mc-focus:#2d779f;
+  --mc-accent:#8adbff;
+  --mc-focus:#182533;
   --mc-radius:12px;
 }
 :root[data-theme="dark"] {
@@ -32,18 +32,18 @@
   --ink:#edf4fa;
   --muted:#adbac8;
   --line:#344253;
-  --brand:#77bbcf;
-  --blue:#77bbcf;
-  --blue2:#8ac4d3;
+  --brand:#38bdf8;
+  --blue:#38bdf8;
+  --blue2:#61ccff;
   --tint:#1d3546;
   --chrome:#0f1721;
   --on-chrome:#f4f8fe;
-  --action:#77bbcf;
-  --action-hover:#98c7d5;
+  --action:#38bdf8;
+  --action-hover:#61ccff;
   --on-action:#0b202e;
   --control-line:#5c7083;
   --shadow:0 4px 22px rgba(0,0,0,.13);
-  --mc-focus:#77bbcf;
+  --mc-focus:#38bdf8;
 }
 html {scroll-padding-top:88px}
 body {font-family:"Plus Jakarta Sans",Inter,system-ui,sans-serif;font-size:13.5px;line-height:1.52;letter-spacing:-.008em}
