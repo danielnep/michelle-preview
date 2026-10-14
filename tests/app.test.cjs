@@ -638,6 +638,7 @@ test("persistência falha sem contabilizar uma importação como salva", async (
   await b.handleFile(file(t.w, "operacao.xlsx", workbook()));
   assert.equal(b.getAll().length, 0);
   assert.ok(b.getState().uploadQueue.some(p=>p.status==="error"));
+  b.navigate("data");
   assert.match(t.w.document.querySelector("#dropzone").textContent, /Sem espaço/);
   t.w.MCStore.batch = batch;
   t.w.close();
