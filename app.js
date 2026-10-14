@@ -1015,52 +1015,124 @@
     return handleFiles(file ? [file] : []);
   }
   async function handleFiles(files) {
-    if (state.readingFiles || state.importBusy) return;
-    state.readingFiles = true;
-    for (const file of Array.from(files || [])) {
-      const placeholder={queueId:crypto.randomUUID(),name:file.name,size:file.size,status:"reading"};
-      state.uploadQueue.push(placeholder);
-      render();
-      try {
-        if(!/\.(xlsx|xls|csv)$/i.test(file.name))throw Error("Selecione um arquivo XLSX, XLS ou CSV.");
-        if(file.size>50*1024*1024)throw Error("Limite de 50 MB por arquivo.");
-        const bytes=await file.arrayBuffer();
-        const digest=await crypto.subtle.digest("SHA-256",bytes);
-        const hash=Array.from(new Uint8Array(digest)).map(n=>n.toString(16).padStart(2,"0")).join("");
-        const wb=XLSX.read(bytes,{type:"array",cellDates:false});
-        const inspected=window.MCWorkbookSheets?.inspect(wb,XLSX,D.detect,file.name) ||
-          wb.SheetNames.map(name=>{
-            const sheet=wb.Sheets[name],ref=sheet?.["!ref"];
-            if(!ref)return null;
-            const bounds=XLSX.utils.decode_range(ref);
-            const sample=XLSX.utils.sheet_to_json(sheet,{header:1,raw:false,defval:"",
-              range:{s:{r:0,c:0},e:{r:Math.min(49,bounds.e.r),c:bounds.e.c}}});
-            return {name,score:D.detect(sample,{filename:file.name,sheet:name}).score,summary:false,selected:true};
-          }).filter(Boolean).sort((a,b)=>b.score-a.score).slice(0,1);
-        if(!inspected.length)throw Error("Nenhuma aba com cabeçalhos e linhas de dados foi encontrada.");
-        state.uploadQueue=state.uploadQueue.filter(p=>p!==placeholder);
-        let first=true;
-        for(const info of inspected) {
-          const item={
-            queueId:first?placeholder.queueId:crypto.randomUUID(),name:file.name,size:file.size,
-            hash,bytes,wb,sheet:info.name,autoSheet:inspected.length>1,
-            summarySheet:info.summary,selected:info.selected,estimatedRows:info.estimatedRows,
-            sector:"coi",type:"geral",periodStart:"",periodEnd:"",policy:"reject",status:"ready"
-          };
-          state.uploadQueue.push(item);
-          const old=state.pending;
-          state.pending=item;
-          try { selectImportSheet(); } finally { state.pending=old; }
-          if(first)first=false;
+    const selection=Array.from(files||[]);
+    if(!selection.length)return;
+    if(state.readingFiles||state.importBusy){notify("Já existe um envio em andamento. Aguarde sua conclusão.",true);return;}
+    const batchId=crypto.randomUUID();
+    state.readingFiles=true;
+    try{
+      for(const file of selection){
+        const placeholder={queueId:crypto.randomUUID(),batchId,name:file.name,size:file.size,status:"reading"};
+        state.uploadQueue.push(placeholder);
+        render();
+        try{
+          if(!/\.(xlsx|xls|csv)$/i.test(file.name))throw Error("Formato não permitido. Use XLSX, XLS ou CSV.");
+          if(file.size>50*1024*1024)throw Error("O arquivo excede o limite de 50 MB.");
+          const bytes=await file.arrayBuffer();
+          const digest=await crypto.subtle.digest("SHA-256",bytes);
+          const hash=Array.from(new Uint8Array(digest)).map(n=>n.toString(16).padStart(2,"0")).join("");
+          const wb=XLSX.read(bytes,{type:"array",cellDates:false});
+          const inspected=window.MCWorkbookSheets?.inspect(wb,XLSX,D.detect,file.name) ||
+            wb.SheetNames.map(name=>{
+              const sheet=wb.Sheets[name],ref=sheet?.["!ref"];
+              if(!ref)return null;
+              const bounds=XLSX.utils.decode_range(ref);
+              const sample=XLSX.utils.sheet_to_json(sheet,{header:1,raw:false,defval:"",
+                range:{s:{r:0,c:0},e:{r:Math.min(49,bounds.e.r),c:bounds.e.c}}});
+              return {name,score:D.detect(sample,{filename:file.name,sheet:name}).score,summary:false,selected:true};
+            }).filter(Boolean).sort((a,b)=>b.score-a.score).slice(0,1);
+          if(!inspected.length)throw Error("Nenhuma aba com cabeçalhos e registros foi encontrada.");
+          state.uploadQueue=state.uploadQueue.filter(p=>p!==placeholder);
+          let first=true;
+          for(const info of inspected){
+            const item={
+              queueId:first?placeholder.queueId:crypto.randomUUID(),batchId,
+              name:file.name,size:file.size,hash,bytes,wb,sheet:info.name,
+              autoSheet:inspected.length>1,summarySheet:info.summary,
+              selected:info.selected,estimatedRows:info.estimatedRows,
+              sector:"coi",type:"geral",periodStart:"",periodEnd:"",
+              policy:"append",acceptInvalid:true,status:info.selected?"analyzing":"skipped"
+            };
+            state.uploadQueue.push(item);
+            state.pending=item;
+            selectImportSheet();
+            if(first)first=false;
+          }
+        }catch(error){
+          placeholder.status="error";
+          placeholder.error="Não foi possível ler "+file.name+": "+error.message;
         }
-      }catch(e){
-        placeholder.status="error";placeholder.error="Não foi possível ler a planilha: "+e.message;
+      }
+      const selected=state.uploadQueue.filter(p=>p.batchId===batchId&&p.grid&&p.selected!==false);
+      await automaticInterpret(selected);
+      for(const p of selected){
+        if(p.lotId)continue;
+        p.status="uploading";
+        state.pending=p;
+        render();
+        await confirmImport(p,{deferAnalysis:true});
+      }
+      const failed=state.uploadQueue.filter(p=>p.batchId===batchId&&p.status==="error");
+      const saved=selected.filter(p=>p.lotId).length;
+      state.importReviewOpen=false;
+      if(selected.some(p=>p.status==="saved"))window.MCAutoReview?.schedule(true);
+      notify(saved+" aba(s) importadas automaticamente"+(failed.length?
+        "; "+failed.length+" item(ns) com erro, confira a lista.":"."),
+        failed.length>0);
+    }finally{
+      state.readingFiles=false;
+      state.pending=null;
+      state.importReviewOpen=false;
+      render();
+    }
+  }
+  async function automaticInterpret(items){
+    if(!items.length||!window.MCAI?.request)return;
+    const allowedFields=Object.keys(D.labels);
+    for(let i=0;i<items.length;i+=10){
+      const group=items.slice(i,i+10);
+      for(const p of group)p.status="analyzing";
+      render();
+      try{
+        const sources=group.map(p=>{
+          const columns=p.grid[p.headerRow]||[];
+          const ctx=window.MCAI.interpretationContext(p,columns,sectors,allowedFields);
+          return {id:p.queueId,name:ctx.name,sheet:ctx.sheet,
+            headers:ctx.headers.slice(0,18),columnShapes:ctx.columnShapes.slice(0,18).map(a=>a.slice(0,2)),
+            headerRow:ctx.headerRow,localDetection:ctx.localDetection};
+        });
+        const response=await window.MCAI.request("interpret-batch",{context:{sources,allowedFields}});
+        const byId=new Map((response.sources||[]).map(p=>[p.id,p]));
+        for(const p of group){
+          const proposal=byId.get(p.queueId);
+          if(!proposal||proposal.confidence==="Baixa")continue;
+          if(!Object.hasOwn(D.types,proposal.type)||!sectors.some(x=>x.id===proposal.sector))continue;
+          if(Number.isInteger(proposal.headerRow)&&proposal.headerRow>=0&&proposal.headerRow<p.grid.length){
+            p.headerRow=proposal.headerRow;
+          }
+          const heads=p.grid[p.headerRow]||[];
+          const mapping=Object.fromEntries(Object.entries(proposal.mapping||{}).filter(([key,pos])=>
+            Object.hasOwn(D.labels,key)&&Number.isInteger(pos)&&pos>=0&&pos<heads.length));
+          p.type=proposal.type;p.sector=proposal.sector;
+          p.mapping={...D.suggest(heads),...mapping};
+          p.aiProposal=proposal;
+          p.validationKey=null;
+        }
+      }catch(error){
+        // A classificação determinística permanece disponível; não bloquear importações por indisponibilidade da IA.
+        group.forEach(p=>{p.aiWarning="IA temporariamente indisponível: "+error.message;});
       }
     }
-    state.readingFiles = false;
-    state.importReviewOpen = true;
-    state.pending ||= state.uploadQueue.find((p) => p.grid && !p.lotId && p.selected !== false) || null;
-    render();
+    // Conflitos não resolvidos pela IA preservam registros brutos como dados gerais.
+    for(const p of items){
+      if(p.detectInfo?.conflict&&!p.aiProposal){
+        p.type="geral";
+        p.mapping=D.suggest(p.grid[p.headerRow]||[]);
+        p.aiWarning=(p.aiWarning?p.aiWarning+" ":"")+"Identificação incerta; registros preservados sem classificação específica.";
+        p.validationKey=null;
+      }
+      p.status="ready";
+    }
   }
   async function saveImports() {
     await S.batch(imports.map((value) => ({ store: "lots", value })));
