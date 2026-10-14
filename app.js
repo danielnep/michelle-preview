@@ -163,10 +163,12 @@
     report: null,
     tablePage: 0,
     sidebar: false,
+    navSectorsExpanded: false,
   };
   function saveChats() { /* Sem memória persistente de conversas. */ }
 
   const idSector = (id) => sectors.find((s) => s.id === id);
+  const visibleSectors = () => sectors.filter((s) => window.MCAccess?.owner || window.MCAccess?.sectors?.includes(s.id));
   const esc = (v) =>
     String(v ?? "").replace(
       /[&<>"']/g,
@@ -236,9 +238,9 @@
     return actions.join("");
   }
   function sidebarUtilities(){
-    return '<div class="nav-group"><div class="side-label">APLICATIVO</div>'+
+    return '<div class="nav-group mc-nav-group-resources"><div class="side-label">RECURSOS</div>'+
       '<button type="button" class="nav install-shortcut" data-mc-install>'+icon("down",18)+'<span>Instalar aplicativo</span></button>'+
-      ((!window.MCAccess||window.MCAccess.owner||window.MCAccess.rights?.ai)?'<button type="button" class="nav mc-nav-ai" data-assistant-open="1">'+icon("spark",22)+'<span>Inteligência artificial</span></button>':'')+'</div>';
+      ((!window.MCAccess||window.MCAccess.owner||window.MCAccess.rights?.ai)?'<button type="button" class="nav mc-nav-ai" data-assistant-open="1">'+icon("spark",22)+'<span>Abrir Copiloto</span></button>':'')+'</div>';
   }
   function headerUpload(){
     const access=window.MCAccess;
@@ -267,13 +269,13 @@
           dashboard: "Dashboard",
           sectors: "Setores",
           more: "Mais opções",
-          data: "Enviar Dados Excel",
+          data: "Importar planilhas",
           report: "Relatórios",
           insight: "Insights e análises",
           present: "Estúdio de apresentações",
           settings: "Configurações",
         }[state.page] || "Visão geral";
-    return `<div class="app"><div class="backdrop ${state.sidebar ? "open" : ""}" data-close="1"></div><aside id="panel-navigation" class="sidebar ${state.sidebar ? "open" : ""}" aria-label="Navegação do painel"><button type="button" class="sidebar-close small-icon-btn" data-close-nav aria-label="Fechar menu">${icon("close", 20)}</button><div class="brand"><span class="panel-logo" aria-hidden="true">${icon("brand", 26)}</span><strong class="panel-brand-title">PowerBI Completo MC</strong></div><label class="searchbox sidebar-search">${icon("search", 18)}<input aria-label="Pesquisar registros" id="global-search" placeholder="Buscar registros..." value="${esc(state.query)}" /></label><div class="nav-scroll"><div class="nav-group nav-group-primary"><div class="side-label">PRINCIPAL</div>${nav("geral", "Visão Geral")}${nav("sectors", "Setores")}${nav("dashboard", "Visualizar dashboard")}${nav("present", "Estúdio de Apresentações")}</div><div class="nav-group"><div class="side-label">DEPARTAMENTOS</div>${sectors.filter(s => window.MCAccess?.owner || window.MCAccess?.sectors?.includes(s.id)).map((s) => nav(s.id, s.name)).join("")}</div><div class="nav-group"><div class="side-label">GESTÃO E DADOS</div>${fileActions()}${nav("data", "Conferir importações")}${nav("report", "Relatórios")}${nav("insight", "Insights e análises")}${nav("settings", "Configurações")}</div>${sidebarUtilities()}</div><div class="side-bottom"><div class="side-credit">PowerBI Completo MC</div></div></aside><div class="main"><header class="topbar"><button aria-label="${state.sidebar ? "Fechar menu" : "Abrir menu"}" aria-expanded="${state.sidebar}" aria-controls="panel-navigation" class="small-icon-btn mob-toggle" data-toggle="1">${icon("menu", 20)}</button><div class="header-identity"><span class="panel-logo panel-logo-small" aria-hidden="true">${icon("brand", 19)}</span><div class="crumb"><strong class="app-title">PowerBI Completo MC</strong><span class="app-caption crumb-page">${esc(title)}</span></div>${headerUpload()}</div>${headerActions()}</header><main class="content"><div class="print-header">PowerBI Completo MC</div>${window.MCAutoReview?.status()||""}${body()}</main><footer class="footer"><span>PowerBI Completo MC</span></footer></div><nav class="mobile-nav" aria-label="Navegação principal">${[
+    return `<div class="app"><div class="backdrop ${state.sidebar ? "open" : ""}" data-close="1"></div><aside id="panel-navigation" class="sidebar ${state.sidebar ? "open" : ""}" aria-label="Navegação do painel"><button type="button" class="sidebar-close small-icon-btn" data-close-nav aria-label="Fechar menu">${icon("close", 20)}</button><div class="brand"><span class="panel-logo" aria-hidden="true">${icon("brand", 26)}</span><strong class="panel-brand-title">PowerBI Completo MC</strong></div><label class="searchbox sidebar-search">${icon("search", 18)}<input aria-label="Pesquisar registros" id="global-search" placeholder="Pesquisar dados..." value="${esc(state.query)}" /></label><div class="nav-scroll"><div class="nav-group nav-group-primary"><div class="side-label">VISÃO E DADOS</div>${nav("geral", "Início")}${nav("dashboard", "Dashboard")}${nav("sectors", "Setores")}</div><div class="nav-group mc-nav-group-data"><div class="side-label">ARQUIVOS</div>${nav("data", "Importar planilhas")}${fileActions()}</div><div class="nav-group mc-nav-group-intelligence"><div class="side-label">ANÁLISES E RESULTADOS</div>${nav("insight", "Insights e análises")}${nav("report", "Relatórios")}${nav("present", "Apresentações")}</div><div class="nav-group mc-nav-group-departments"><details class="mc-sector-tree" ${state.navSectorsExpanded || !!idSector(state.page) ? "open" : ""}><summary>${icon("sectors", 17)}<span>DEPARTAMENTOS</span><span class="mc-sector-count">${visibleSectors().length}</span><span class="mc-sector-chevron" aria-hidden="true">⌄</span></summary><div class="mc-department-list">${visibleSectors().map(s => nav(s.id, s.name)).join("")}</div></details></div><div class="nav-group mc-nav-group-tools"><div class="side-label">PREFERÊNCIAS</div>${nav("settings", "Configurações")}</div>${sidebarUtilities()}</div><div class="side-bottom"><div class="side-credit">PowerBI Completo MC</div></div></aside><div class="main"><header class="topbar"><button aria-label="${state.sidebar ? "Fechar menu" : "Abrir menu"}" aria-expanded="${state.sidebar}" aria-controls="panel-navigation" class="small-icon-btn mob-toggle" data-toggle="1">${icon("menu", 20)}</button><div class="header-identity"><span class="panel-logo panel-logo-small" aria-hidden="true">${icon("brand", 19)}</span><div class="crumb"><strong class="app-title">PowerBI Completo MC</strong><span class="app-caption crumb-page">${esc(title)}</span></div>${headerUpload()}</div>${headerActions()}</header><main class="content"><div class="print-header">PowerBI Completo MC</div>${window.MCAutoReview?.status()||""}${body()}</main><footer class="footer"><span>PowerBI Completo MC</span></footer></div><nav class="mobile-nav" aria-label="Navegação principal">${[
       ["geral", "Resumo", "grid"],
       ["sectors", "Setores", "coi"],
       ["data", "Dados", "up"],
@@ -292,7 +294,7 @@
     title,
     desc = "Visão centralizada dos seus indicadores e resultados.",
   ) =>
-    `<section class="overview-head"><div><div class="eyebrow">OPERAÇÕES</div><h1 class="title">${esc(title)}</h1><p class="subtitle">${esc(desc)}</p>${state.query ? `<div class="active-search">Busca nos registros: <strong>${esc(state.query)}</strong><button class="btn" data-clear-query>Limpar busca</button></div>` : ""}</div><div class="header-buttons">${state.page === "insight" || idSector(state.page) ? periodButtons() : ""}${["geral", ...sectors.map((s) => s.id)].includes(state.page) ? `<button class="btn" data-nav="report">${icon("report", 14)} Gerar relatório</button>${state.page !== "geral" ? `<button class="btn btn-primary" data-nav="data">${icon("up", 14)} Importar dados</button>` : ""}` : ""}</div></section>`;
+    `<section class="overview-head"><div><div class="eyebrow">${idSector(state.page) ? "DEPARTAMENTOS" : ({data:"ARQUIVOS",report:"RELATÓRIOS",insight:"INTELIGÊNCIA",settings:"PREFERÊNCIAS",sectors:"DEPARTAMENTOS",more:"FERRAMENTAS"})[state.page] || "VISÃO EXECUTIVA"}</div><h1 class="title">${esc(title)}</h1><p class="subtitle">${esc(desc)}</p>${state.query ? `<div class="active-search">Busca nos registros: <strong>${esc(state.query)}</strong><button class="btn" data-clear-query>Limpar busca</button></div>` : ""}</div><div class="header-buttons">${state.page === "insight" || idSector(state.page) ? periodButtons() : ""}${["geral", ...sectors.map((s) => s.id)].includes(state.page) ? `<button class="btn" data-nav="report">${icon("report", 14)} Gerar relatório</button>${state.page !== "geral" ? `<button class="btn btn-primary" data-nav="data">${icon("up", 14)} Importar dados</button>` : ""}` : ""}</div></section>`;
   function sourceHint(metric, rows) {
     const selected = Object.hasOwn(D.types, metric.id) ? rows.filter(r => r.type === metric.id) : rows;
     const allFiles = [...new Set(selected.map(r => r.source).filter(Boolean))];
@@ -470,7 +472,7 @@
       '</section>';
   }
   function homeSectors(rs) {
-    return '<section class="mc-home-section" aria-label="Setores da operação"><div class="mc-home-section-head"><h2>Setores</h2><button class="btn btn-quiet" data-nav="sectors">Ver todos</button></div><div class="sector-grid">' + sectors
+    return '<section class="mc-home-section" aria-label="Setores da operação"><div class="mc-home-section-head"><h2>Departamentos</h2><button class="btn btn-quiet" data-nav="sectors">Ver todos</button></div><div class="sector-grid">' + visibleSectors()
       .map(sec => {
         const count = rs.filter(r => r.sector === sec.id).length;
         return '<button class="sector-tile" data-nav="' + esc(sec.id) + '"><div class="tile-top">' +
@@ -691,7 +693,7 @@
   }
   function pageSectorDirectory() {
     return header("Setores", "Abra os indicadores do setor desejado.") +
-      '<section class="sector-grid">' + sectors.map(sec => {
+      '<section class="sector-grid">' + visibleSectors().map(sec => {
         const n = recordsFor(sec.id).length;
         return '<button class="sector-tile" data-nav="' + esc(sec.id) + '"><div class="tile-top">' + icon(sec.id, 18) + ' ' + esc(sec.name) + '</div><div class="tile-bottom"><strong>' + fmtNum(n) + '</strong><small>linhas disponíveis · ver setor</small></div></button>';
       }).join("") + '</section>';
@@ -1364,6 +1366,9 @@
     document
       .querySelectorAll("[data-assistant-root]")
       .forEach(wireAssistantChat);
+    document.querySelector(".mc-sector-tree")?.addEventListener("toggle", (event) => {
+      state.navSectorsExpanded = event.currentTarget.open;
+    });
     document.querySelectorAll("[data-nav]").forEach(
       (el) =>
         (el.onclick = () => {
