@@ -8,9 +8,10 @@ test("visual executivo vinculado ao documento e PWA",()=>{
  const html=read("index.html");
  const sw=read("service-worker.js");
  const css=read("analysis/executive-ui.css");
- assert.match(html,/analysis\/executive-ui\.css\?v=5\.0\.0/);
- assert.match(html,/name="app-version" content="5\.0\.0"/);
- assert.match(sw,/michelle-shell-v5\.0\.0-executive-ui/);
+ const version=html.match(/name="app-version" content="(\\d+\\.\\d+\\.\\d+)"/)?.[1];
+ assert.ok(version,"a versão semântica deve estar declarada no HTML");
+ assert.ok(html.includes("analysis/executive-ui.css?v="+version),"CSS e versão pública devem coincidir");
+ assert.ok(sw.includes("michelle-shell-v"+version+"-executive-ui"),"cache do PWA deve usar a versão pública");
  assert.match(sw,/\.\/analysis\/executive-ui\.css/);
  assert.ok(css.length>12000,"camada visual com regras completas");
 });
