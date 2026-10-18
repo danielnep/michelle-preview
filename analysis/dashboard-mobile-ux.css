@@ -1,0 +1,12 @@
+/* Painel Michelle: filtros ativos junto ao conteúdo, sem nova navegação inferior. */
+.dash-mobile-strip{position:sticky;top:70px;z-index:8;display:flex;align-items:center;gap:7px;padding:7px 0;background:var(--body);border-bottom:1px solid var(--line);min-width:0}
+.dash-mobile-strip button{min-height:44px;flex:none;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:8px 12px;font:inherit;font-size:12px;font-weight:600}
+.dash-mobile-strip button:focus-visible,.dash-chart-download:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
+.dash-mobile-strip .dash-mobile-chips{display:flex;gap:6px;flex:1;min-width:0;overflow-x:auto;scrollbar-width:thin;overscroll-behavior-x:contain}
+.dash-mobile-strip .dash-mobile-chips button{white-space:nowrap;border-color:var(--brand);color:var(--ink)}
+.dash-mobile-strip .dash-mobile-empty{color:var(--muted);font-size:12px;padding:0 8px;white-space:nowrap}
+.dash-mobile-strip .dash-mobile-clear{color:var(--brand)}
+.dash-chart-download{min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center}
+@media(max-width:700px){.dash-mobile-strip{top:calc(112px + env(safe-area-inset-top));padding:6px 0}.dash-mobile-strip button{padding:8px 10px}.dash-mobile-strip .dash-mobile-clear{font-size:11px}}
+.dashboard-expanded .dash-mobile-strip{top:0}
+@media print{.dash-mobile-strip,.dash-chart-download{display:none!important}}
