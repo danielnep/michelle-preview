@@ -3,6 +3,7 @@
   "use strict";
   let queued = false;
   function refresh() {
+    if (!root.document?.body) return;
     root.MCDashboardMobileUX?.render();
     root.MCDashboardChartExport?.render();
   }
