@@ -1,4 +1,4 @@
-/* Painel Michelle: funções de filtros mobile. */
+/* Painel Michelle: filtros compactos e acessíveis. */
 (function (root) {
   "use strict";
   function resetFilter(key) {
