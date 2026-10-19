@@ -1,8 +1,8 @@
 /* Módulo robusto de parsing XLSX/CSV para exportações Sigware de formato variável (cabeçalhos deslocados, múltiplas abas, tipos mistos) */
-(function(root,factory){
+const parserApi=(function(root,factory){
   const api=factory();
-  if(typeof module==="object"&&module.exports)module.exports=api;
-  else root.MCSigwareParser=api;
+  root.MCSigwareParser=api;
+  return api;
 })(typeof window!=="undefined"?window:globalThis,function(){
   "use strict";
 
@@ -123,3 +123,5 @@
     parseSheetMatrix
   };
 });
+// Node ESM/CommonJS interop: expose the same implementation as named exports.
+export const {scoreHeaderRow,detectHeaderRow,slugifyHeader,parseSheetMatrix}=parserApi;
