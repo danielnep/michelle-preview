@@ -319,7 +319,7 @@ app.post("/api/michelle-ai", protectedRoute, requireRight("ai"), async(req,res,n
   res.send(await out.text());
  }catch(err){next(err)}
 });
-app.get("/api/michelle-ai", protectedRoute, requireRight("ai"), async(_req,res)=>res.json({service:"Copiloto",backend:"Railway",keyConfigured:!!(process.env.POWER_BI_MICHELLE_IA||process.env.DEEPSEEK_API_KEY||process.env.API_IA_GROQ||process.env.GROQ_API_KEY)}));
+app.get("/api/michelle-ai", protectedRoute, requireRight("ai"), async(_req,res)=>res.json({service:"Copiloto",backend:"Railway",keyConfigured:!!(process.env.API_IA_GROQ||process.env.GROQ_API_KEY)}));
 
 // Private source files and internal docs must never be served as static assets.
 app.use((req,res,next)=>{
