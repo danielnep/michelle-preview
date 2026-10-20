@@ -3,8 +3,8 @@ const assert=require("node:assert/strict");
 
 test("agente planeja cada fonte e descarta IDs, colunas e cruzamentos inventados",async()=>{
   const {default:handler}=await import("../netlify/functions/michelle-ai.mjs");
-  const before=process.env.POWER_BI_MICHELLE_IA,old=process.env.DEEPSEEK_API_KEY,fetch0=global.fetch;
-  process.env.POWER_BI_MICHELLE_IA="chave-para-teste";delete process.env.DEEPSEEK_API_KEY;
+  const before=process.env.API_IA_GROQ,old=process.env.GROQ_API_KEY,fetch0=global.fetch;
+  process.env.API_IA_GROQ="chave-para-teste";delete process.env.GROQ_API_KEY;
   let sent;
   global.fetch=async(url,options)=>{
     sent=JSON.parse(options.body);
@@ -37,7 +37,7 @@ test("agente planeja cada fonte e descarta IDs, colunas e cruzamentos inventados
     assert.equal(sent.messages[1].content.includes("ferias.csv"),true);
   } finally {
     global.fetch=fetch0;
-    if(before===undefined)delete process.env.POWER_BI_MICHELLE_IA;else process.env.POWER_BI_MICHELLE_IA=before;
-    if(old===undefined)delete process.env.DEEPSEEK_API_KEY;else process.env.DEEPSEEK_API_KEY=old;
+    if(before===undefined)delete process.env.API_IA_GROQ;else process.env.API_IA_GROQ=before;
+    if(old===undefined)delete process.env.GROQ_API_KEY;else process.env.GROQ_API_KEY=old;
   }
 });
