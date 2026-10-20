@@ -54,7 +54,7 @@ test('comparação exige a mesma definição, unidade e períodos observados sep
   b.metrics[0].unit='registros';b.metrics[0].periodStart='2026-08-15';assert.equal(validateReview(source(a,b),{sources:[a,b]}).insights.length,0);
 });
 test('backend Railway aplica protocolo de revisão e limpa Markdown nas respostas do chat',async()=>{
- const {default:handler}=await import('../server/michelle-ai.mjs');const old=process.env.POWER_BI_MICHELLE_IA,fetch0=global.fetch;process.env.POWER_BI_MICHELLE_IA='segredo-apenas-teste';let sent;
+ const {default:handler}=await import('../server/michelle-ai.mjs');const old=process.env.API_IA_GROQ,fetch0=global.fetch;process.env.API_IA_GROQ='segredo-apenas-teste';let sent;
  const sources=R.batches(R.profiles([lot('a')],lot('a').rows))[0];
  global.fetch=async(_url,opts)=>{sent=JSON.parse(opts.body);return new Response(JSON.stringify({choices:[{message:{content:sent.response_format?JSON.stringify({sources:sources.map(s=>({id:s.id,partId:s.partId,title:'Ordens',description:'Atendimento'})),dashboard:{title:'Operação',metrics:[]},insights:[]}):'**Resposta** sem Markdown'}}]}),{status:200});};
  try{
@@ -62,7 +62,7 @@ test('backend Railway aplica protocolo de revisão e limpa Markdown nas resposta
   const review=await call({mode:'review',context:{sources}});assert.equal(review.status,200);assert.equal((await review.json()).review.sources.length,sources.length);
   assert.match(sent.messages[0].content,/NÃO entregue uma transcrição/);assert.equal(sent.response_format.type,'json_object');
   const chat=await call({mode:'chat',message:'Resumo'});assert.equal((await chat.json()).answer,'Resposta sem Markdown');
- }finally{global.fetch=fetch0;if(old===undefined)delete process.env.POWER_BI_MICHELLE_IA;else process.env.POWER_BI_MICHELLE_IA=old;}
+ }finally{global.fetch=fetch0;if(old===undefined)delete process.env.API_IA_GROQ;else process.env.API_IA_GROQ=old;}
 });
 test('revisão persistida é por usuário e perde acesso quando um setor é revogado',async()=>{
   const {readReview,writeReview}=await import('../server/review-store.mjs');const calls=[];

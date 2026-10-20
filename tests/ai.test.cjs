@@ -14,25 +14,25 @@ test("a página carrega o Copiloto e mantém scripts antes do app",()=>{
 test("Netlify function exige segredo e não expõe a chave",async()=>{
  const { default: handler, config }=await import("../netlify/functions/michelle-ai.mjs");
  assert.equal(config.path,"/api/michelle-ai");
- const prior=process.env.DEEPSEEK_API_KEY, priorMichelle=process.env.POWER_BI_MICHELLE_IA;
- delete process.env.DEEPSEEK_API_KEY;
- delete process.env.POWER_BI_MICHELLE_IA;
+ const prior=process.env.GROQ_API_KEY, priorMichelle=process.env.API_IA_GROQ;
+ delete process.env.GROQ_API_KEY;
+ delete process.env.API_IA_GROQ;
  try {
    const req=new Request("https://example.netlify.app/api/michelle-ai",{
      method:"POST",headers:{"Content-Type":"application/json"},
      body:JSON.stringify({mode:"chat",channel:"geral",message:"Olá"})
    });
    const out=await handler(req);assert.equal(out.status,503);
-   assert.match((await out.json()).error,/POWER_BI_MICHELLE_IA/);
+   assert.match((await out.json()).error,/temporariamente indisponível/);
  } finally {
-   if(prior===undefined)delete process.env.DEEPSEEK_API_KEY;else process.env.DEEPSEEK_API_KEY=prior;
-   if(priorMichelle===undefined)delete process.env.POWER_BI_MICHELLE_IA;else process.env.POWER_BI_MICHELLE_IA=priorMichelle;
+   if(prior===undefined)delete process.env.GROQ_API_KEY;else process.env.GROQ_API_KEY=prior;
+   if(priorMichelle===undefined)delete process.env.API_IA_GROQ;else process.env.API_IA_GROQ=priorMichelle;
  }
 });
-test("função chama o DeepSeek em servidor e interpreta sem inventar campos",async()=>{
+test("função chama o Groq em servidor e interpreta sem inventar campos",async()=>{
  const { default: handler }=await import("../netlify/functions/michelle-ai.mjs");
- const oldFetch=global.fetch,oldSecret=process.env.DEEPSEEK_API_KEY;
- process.env.DEEPSEEK_API_KEY="test-somente-no-servidor";
+ const oldFetch=global.fetch,oldSecret=process.env.GROQ_API_KEY;
+ process.env.GROQ_API_KEY="test-somente-no-servidor";
  let sent;
  global.fetch=async(url,opts)=>{
    sent={url,opts};
@@ -47,25 +47,25 @@ test("função chama o DeepSeek em servidor e interpreta sem inventar campos",as
    const response=await out.json();
    assert.deepEqual(response.interpretation.mapping,{date:2});
    assert.equal(response.interpretation.type,"ordens");
-   assert.ok(sent.url.includes("deepseek.com"));
+   assert.ok(sent.url.includes("groq.com"));
    assert.equal(sent.opts.headers.Authorization,"Bearer test-somente-no-servidor");
    assert.ok(!JSON.stringify(response).includes("test-somente-no-servidor"));
  } finally {
    global.fetch=oldFetch;
-   if(oldSecret===undefined)delete process.env.DEEPSEEK_API_KEY;else process.env.DEEPSEEK_API_KEY=oldSecret;
+   if(oldSecret===undefined)delete process.env.GROQ_API_KEY;else process.env.GROQ_API_KEY=oldSecret;
  }
 });
 
-test("diagnóstico informa variável disponível e autentica com o DeepSeek sem vazar chave", async()=>{
+test("diagnóstico informa variável disponível e autentica com o Groq sem vazar chave", async()=>{
  const {default:handler}=await import("../netlify/functions/michelle-ai.mjs");
- const prior=process.env.DEEPSEEK_API_KEY, fetch0=global.fetch;
- process.env.DEEPSEEK_API_KEY="chave-teste-nao-publicar";
+ const prior=process.env.GROQ_API_KEY, fetch0=global.fetch;
+ process.env.GROQ_API_KEY="chave-teste-nao-publicar";
  let calls=0;
  global.fetch=async (url,options)=>{
-   assert.equal(url,"https://api.deepseek.com/models");
+   assert.equal(url,"https://api.groq.com/openai/v1/models");
    assert.equal(options.headers.Authorization,"Bearer chave-teste-nao-publicar");
    calls++;
-   return new Response(JSON.stringify({data:[{id:"deepseek-flash"}]}),{status:200});
+   return new Response(JSON.stringify({data:[{id:"llama-3.3-70b-versatile"}]}),{status:200});
  };
  try{
    const publicStatus=await handler(new Request("https://example.test/api/michelle-ai",{method:"GET"}));
@@ -81,7 +81,7 @@ test("diagnóstico informa variável disponível e autentica com o DeepSeek sem 
    assert.equal(calls,1);
  } finally {
    global.fetch=fetch0;
-   if(prior===undefined)delete process.env.DEEPSEEK_API_KEY; else process.env.DEEPSEEK_API_KEY=prior;
+   if(prior===undefined)delete process.env.GROQ_API_KEY; else process.env.GROQ_API_KEY=prior;
  }
 });
 test("o carregador usa o Copiloto lateral e não carrega o posicionador de bolinha",()=>{
@@ -92,16 +92,16 @@ test("o carregador usa o Copiloto lateral e não carrega o posicionador de bolin
  assert.equal(src.includes('class="assistant-fab'),false);
 });
 
-test("função lê POWER_BI_MICHELLE_IA antes da variável antiga, sem expor valor", async()=>{
+test("função lê API_IA_GROQ antes da variável antiga, sem expor valor", async()=>{
  const {default:handler}=await import("../netlify/functions/michelle-ai.mjs");
- const previous=process.env.POWER_BI_MICHELLE_IA;
- const originalOld=process.env.DEEPSEEK_API_KEY;
+ const previous=process.env.API_IA_GROQ;
+ const originalOld=process.env.GROQ_API_KEY;
  const previousFetch=global.fetch;
- process.env.POWER_BI_MICHELLE_IA="chave-michelle-teste";
- process.env.DEEPSEEK_API_KEY="chave-antiga-teste";
+ process.env.API_IA_GROQ="chave-michelle-teste";
+ process.env.GROQ_API_KEY="chave-antiga-teste";
  let auth;
  global.fetch=async(url,opts)=>{
-   assert.equal(url,"https://api.deepseek.com/models");
+   assert.equal(url,"https://api.groq.com/openai/v1/models");
    auth=opts.headers.Authorization;
    return new Response(JSON.stringify({data:[]}),{status:200});
  };
@@ -119,15 +119,15 @@ test("função lê POWER_BI_MICHELLE_IA antes da variável antiga, sem expor val
    assert.ok(!checkBody.includes("chave-michelle-teste"));
  } finally {
    global.fetch=previousFetch;
-   if(previous===undefined)delete process.env.POWER_BI_MICHELLE_IA;else process.env.POWER_BI_MICHELLE_IA=previous;
-   if(originalOld===undefined)delete process.env.DEEPSEEK_API_KEY;else process.env.DEEPSEEK_API_KEY=originalOld;
+   if(previous===undefined)delete process.env.API_IA_GROQ;else process.env.API_IA_GROQ=previous;
+   if(originalOld===undefined)delete process.env.GROQ_API_KEY;else process.env.GROQ_API_KEY=originalOld;
  }
 });
 
 test("Railway interpreta múltiplas fontes em uma solicitação sem aceitar campos inventados",async()=>{
   const {default:handler}=await import("../server/michelle-ai.mjs");
-  const oldFetch=global.fetch,oldKey=process.env.POWER_BI_MICHELLE_IA;
-  process.env.POWER_BI_MICHELLE_IA="chave-de-teste";
+  const oldFetch=global.fetch,oldKey=process.env.API_IA_GROQ;
+  process.env.API_IA_GROQ="chave-de-teste";
   global.fetch=async()=>new Response(JSON.stringify({choices:[{message:{content:JSON.stringify({
     sources:[{id:"aba-01",type:"ordens",sector:"tec",headerRow:0,mapping:{date:0,campoInventado:1},confidence:"Alta",reason:"Data reconhecida"},
       {id:"fonte-fantasma",type:"geral",sector:"coi",mapping:{}}]
@@ -144,5 +144,5 @@ test("Railway interpreta múltiplas fontes em uma solicitação sem aceitar camp
     assert.equal(result.sources.length,1);
     assert.equal(result.sources[0].type,"ordens");
     assert.deepEqual(result.sources[0].mapping,{date:0});
-  }finally{global.fetch=oldFetch;if(oldKey===undefined)delete process.env.POWER_BI_MICHELLE_IA;else process.env.POWER_BI_MICHELLE_IA=oldKey;}
+  }finally{global.fetch=oldFetch;if(oldKey===undefined)delete process.env.API_IA_GROQ;else process.env.API_IA_GROQ=oldKey;}
 });

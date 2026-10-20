@@ -34,8 +34,8 @@ test("chat e insights recebem o mesmo catálogo completo de arquivos, com o reco
 });
 test("backend orienta respostas diretas sem fórmulas e reconhece diferenças de escopo",async()=>{
   const {default:handler}=await import("../netlify/functions/michelle-ai.mjs");
-  const old=process.env.POWER_BI_MICHELLE_IA, priorFetch=global.fetch;
-  process.env.POWER_BI_MICHELLE_IA="secret-for-test";
+  const old=process.env.API_IA_GROQ, priorFetch=global.fetch;
+  process.env.API_IA_GROQ="secret-for-test";
   let requestBody;
   global.fetch=async(_url,options)=>{
     requestBody=JSON.parse(options.body);
@@ -50,10 +50,10 @@ test("backend orienta respostas diretas sem fórmulas e reconhece diferenças de
     assert.match((await res.json()).answer,/50%/);
     assert.match(requestBody.messages[0].content,/RESULTADO pronto/);
     assert.match(requestBody.messages[0].content,/selectedData/);
-    assert.equal(requestBody.max_tokens,340);
+    assert.equal(requestBody.max_completion_tokens,340);
   }finally{
     global.fetch=priorFetch;
-    if(old===undefined)delete process.env.POWER_BI_MICHELLE_IA;else process.env.POWER_BI_MICHELLE_IA=old;
+    if(old===undefined)delete process.env.API_IA_GROQ;else process.env.API_IA_GROQ=old;
   }
 });
 test("títulos e explicações de origem são contextuais, sem exibir fórmula como título",()=>{
