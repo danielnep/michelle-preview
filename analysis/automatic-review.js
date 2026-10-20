@@ -157,7 +157,7 @@
       });
     }
     return {
-      summary:"Indicadores apurados por algoritmos locais e regras de consistência.",
+      localMode:true,summary:"Indicadores apurados por algoritmos locais e regras de consistência.",
       sources:catalog.map(source=>({id:source.id,title:source.titleHint,partId:source.id+"/local"})),
       insights,dashboard:{
         title:"Indicadores calculados automaticamente",
