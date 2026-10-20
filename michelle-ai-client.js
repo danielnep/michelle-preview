@@ -197,14 +197,14 @@
   function home(rows=[],imports=[],esc=(x)=>String(x??"")) {
     if(!rows.length)return "";
     const review=root.MCAutoReview?.current();
-    if(review?.insights?.length)return '<section class="mc-ai-home" aria-label="Percepções do Copiloto"><div class="mc-ai-home-title"><strong>Copiloto</strong><span>Leitura inteligente</span></div>'+
+    if(review?.insights?.length)return '<section class="mc-ai-home" aria-label="'+(review.localMode?'Indicadores locais':'Percepções do Copiloto')+'"><div class="mc-ai-home-title"><strong>'+(review.localMode?'Análises do painel':'Copiloto')+'</strong><span>'+(review.localMode?'Algoritmos locais':'Leitura inteligente')+'</span></div>'+
       review.insights.slice(0,2).map(i=>'<p><b>'+esc(i.title)+'</b> · '+esc(i.interpretation)+'</p>').join('')+
       '<button type="button" class="btn" data-nav="insight">Ver percepções e evidências</button></section>';
 
     const latest=(root.MCAnalysis?.analyze(rows,imports)||[]).find(x=>["attention","comparison","concentration"].includes(x.kind));
     const top=Object.entries(memory().topics||{}).sort((a,b)=>b[1]-a[1])[0];
     if(!latest && !(top&&top[1]>=2))return "";
-    return '<section class="mc-ai-home" aria-label="Copiloto"><div class="mc-ai-home-title"><span aria-hidden="true">✦</span><strong>Copiloto</strong><span>Prioridades do painel</span></div>'+
+    return '<section class="mc-ai-home" aria-label="Indicadores locais"><div class="mc-ai-home-title"><span aria-hidden="true">✦</span><strong>Análises do painel</strong><span>Prioridades calculadas</span></div>'+
       (latest?'<p><b>'+esc(latest.title)+'</b> · '+esc(latest.text)+'</p><small>Conclusão calculada localmente; confira a fonte e os limites em Análises.</small>':"")+
       (top&&top[1]>=2?'<p>Você costuma acompanhar <b>'+esc(top[0])+'</b>. <button type="button" class="btn" data-ai-favorite="'+esc(top[0])+'">Abrir esse assunto</button></p>':"")+
       '</section>';
