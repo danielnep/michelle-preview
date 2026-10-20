@@ -23,7 +23,13 @@
      openLibrary:()=>root.MCFileLibrary?.open(),
      deleteFiles:async(ids)=>{
        const valid=new Set(ids.filter(id=>catalog.some(file=>file.id===id)));
-       if(valid.size)await local.batch([...valid].map(id=>({store:"files",id,remove:true})));
+       if(valid.size){
+         const lots=await local.all("lots");
+         await local.batch([
+           ...[...valid].map(id=>({store:"files",id,remove:true})),
+           ...lots.filter(lot=>valid.has(lot.fileId)).map(lot=>({store:"lots",id:lot.id,remove:true}))
+         ]);
+       }
        await refreshFiles();
        return {deletedIds:[...valid]};
      }
