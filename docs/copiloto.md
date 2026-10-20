@@ -17,31 +17,31 @@ Ao receber planilhas, os nomes e títulos são pistas: considere nome do arquivo
 Seja proativa quando houver uma descoberta real, sem criar alertas decorativos. Recomende próximos passos; alterações importantes precisam de aprovação da usuária. Nunca modifique planilhas originais silenciosamente.
 
 ## 2. Instruções técnicas de atuação dentro do painel
-- **Arquitetura:** GitHub (código e GitHub Pages para interface) → Netlify Functions (API e segredo) → DeepSeek (resposta). A versão Netlify da interface continua funcionando.
-- **Chave:** `Netlify.env.get("POWER_BI_MICHELLE_IA")` (com suporte ao nome anterior `DEEPSEEK_API_KEY`) somente na função `netlify/functions/michelle-ai.mjs`, jamais no HTML ou JavaScript público.
+- **Arquitetura:** GitHub (código e GitHub Pages para interface) → backend protegido no Railway (ou Netlify Functions legado) → Groq (resposta). A versão Netlify da interface continua funcionando.
+- **Chave:** `Netlify.env.get("API_IA_GROQ")` (com suporte ao nome anterior `GROQ_API_KEY`) somente na função `netlify/functions/michelle-ai.mjs`, jamais no HTML ou JavaScript público.
 - **Endpoint interno:** `POST /api/michelle-ai`. Modos de trabalho: `chat`, `insights`, `interpret`.
-- **Modelo inicial:** `deepseek-flash`. Opcional: variável `DEEPSEEK_MODEL` para substituir.
+- **Modelo padrão configurável:** `openai/gpt-oss-120b` via Groq (provisório até escolha final); use a variável `GROQ_MODEL` para alterar.
 - **Entrada analítica:** `MCAI.context()` manda totais, unidades, recortes, lista de fontes e evidências do motor local, não o arquivo bruto.
 - **Decifrar planilhas:** `MCAI.interpretationContext()` manda nomes e formatos, não valores originais; resultado passa por validação de tipos, nomes de campo e índices. A sugestão só é aplicada quando usuária clicar em "Aplicar sugestão (revisar)"; confirmar importação continua separado.
-- **Exatidão:** o DeepSeek explica e sugere. Todos os números oficiais dos gráficos continuam calculados por `MCData`, `MCAnalysis` e `MCIntelligence`; qualquer futura fórmula sugerida pela IA deverá passar por regra determinística e teste antes de alimentar gráfico.
+- **Exatidão:** o Groq explica e sugere. Todos os números oficiais dos gráficos continuam calculados por `MCData`, `MCAnalysis` e `MCIntelligence`; qualquer futura fórmula sugerida pela IA deverá passar por regra determinística e teste antes de alimentar gráfico.
 - **Pró-atividade:** novidades locais podem aparecer na tela inicial; análises remotas após importação somente se o usuário habilitar o ajuste de consentimento.
 - **Memória:** temas mais consultados são contados em armazenamento do navegador, podem sugerir atalhos e ser apagados nas configurações. Isto não é treinamento de modelo nem sincronização entre aparelhos.
 - **Chat desktop:** botão flutuante arrastável, encaixe magnético nas bordas, janela que pode ser movida pelo cabeçalho e botão "Barra lateral".
 - **Chat celular:** bolinha menor arrastável; ao arrastá-la até a parte inferior ela se oculta e aparece uma bolinha para reativar o chat.
 - **Segurança:** atualmente os perfis são modos visuais, NÃO autenticação. O endpoint tem limitação de taxa por IP mas não substitui autenticação. Para liberar dados corporativos reais em produção, criar autenticação server-side. A variável opcional `MICHELLE_AI_ACCESS_TOKEN` protege a função mas exige adaptação de um fluxo de sessão seguro antes de usá-la com vários usuários; jamais publicar esse token no frontend.
 - **API externa:** verifique finalidade e compartilhamento de dados, obrigações contratuais e LGPD antes de importar documentos confidenciais.
-- **Falhas:** se o DeepSeek falhar no modo dados, exibir explicitamente a resposta local (não atribuí-la à IA online). Na conversa geral, exibir erro recuperável.
+- **Falhas:** se o Groq falhar no modo dados, exibir explicitamente a resposta local (não atribuí-la à IA online). Na conversa geral, exibir erro recuperável.
 
 ## 3. Instalação no Netlify (sem servidor separado)
 1. Conectar repositório `danielnep/michelle-preview` à plataforma Netlify.
-2. Criar variável de ambiente com **nome exato** `POWER_BI_MICHELLE_IA`, valor igual à chave da DeepSeek (não compartilhar nem commitar).
+2. Criar variável de ambiente com **nome exato** `API_IA_GROQ`, valor igual à chave da Groq (não compartilhar nem commitar).
 3. Publicar nova implantação do commit da versão principal. O Netlify faz deploy da função automaticamente em `netlify/functions`.
 4. Abrir site do Netlify e testar o modo "Conversa geral" com a pergunta "Olá, quem é você?". Abrir "Análises do painel" com dados de teste.
 5. Abrir importação de planilha sintética e clicar "Analisar identificação com IA" para obter e conferir uma proposta de mapeamento.
 6. Testar botões, histórico, arraste e barra lateral em desktop, bolinha e reativação em celular.
 7. Conferir logs da função no Netlify em caso de resposta 503 (chave ausente), 429 (limite) ou 502 (erro do serviço).
 
-**Configuração confirmada:** o código procura primeiro `POWER_BI_MICHELLE_IA`, nome já cadastrado no Netlify. `DEEPSEEK_API_KEY` permanece apenas como alternativa de compatibilidade. Não é necessário duplicar a chave. Confirme que o escopo inclui Functions e republique após alterações.
+**Configuração confirmada:** o código procura primeiro `API_IA_GROQ`, nome já cadastrado no Netlify. `GROQ_API_KEY` é uma alternativa de nomenclatura. Não é necessário duplicar a chave. Confirme que o escopo inclui Functions e republique após alterações.
 
 ## 4. Limitações conscientemente preservadas
 O painel armazena planilhas no IndexedDB por navegador e origem. A migração de GitHub Pages para domínio Netlify **não** copia esses arquivos; utilize a exportação/restauração de backup.
@@ -54,14 +54,14 @@ A versão pública em **https://danielnep.github.io/michelle-preview/** chama
 É o mesmo backend Netlify que atende o site Netlify, mas por URL absoluta
 quando a interface está no GitHub Pages.
 
-- O frontend **não contém** o segredo DeepSeek e não chama a DeepSeek diretamente.
+- O frontend **não contém** o segredo Groq e não chama a Groq diretamente.
 - A função aceita requisições CORS somente das origens dos sites aprovados,
   incluindo a pré-verificação `OPTIONS`. Isso habilita o navegador, mas **não
   equivale a autenticação**. A função continua com limite de taxa; para dados
   confidenciais, exigir autenticação real antes de liberar o sistema.
-- A chave `POWER_BI_MICHELLE_IA` continua sendo configurada exclusivamente
-  no Netlify, nunca em GitHub Actions, JavaScript ou repositório público.
-- Se o Netlify Functions ou a DeepSeek estiverem fora do ar, o Copiloto
+- A chave `API_IA_GROQ` continua sendo configurada exclusivamente
+  no backend, nunca no frontend ou GitHub Pages, JavaScript ou repositório público.
+- Se o Netlify Functions ou a Groq estiverem fora do ar, o Copiloto
   remoto também ficará indisponível no GitHub Pages.
 - O IndexedDB é separado por origem: arquivos importados no endereço
   do Netlify não aparecem automaticamente no endereço do GitHub Pages.
