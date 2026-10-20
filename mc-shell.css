@@ -213,3 +213,18 @@
   .topbar .mc-header-ai > svg { width: 17px; height: 17px; }
 }
 @media print { .topbar { display: none !important; } }
+
+/* Identificação discreta da prévia isolada; não aparece no servidor do cliente. */
+.mc-preview-label {
+  display: inline-flex;
+  align-items: center;
+  margin-inline-start: 6px;
+  color: var(--mc-chrome-cyan, #38bdf8);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: .045em;
+  vertical-align: middle;
+}
+@media (max-width: 480px) {
+  .mc-preview-label { display: block; margin-inline-start: 0; font-size: 9px; }
+}
