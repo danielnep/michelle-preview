@@ -47,7 +47,7 @@ Esta branch usa autenticação individual no servidor, PostgreSQL para registros
 
 ## Limites explícitos
 
-O Copiloto pode usar DeepSeek por função serverless do Netlify, com chave somente no ambiente do servidor. Sem a variável POWER_BI_MICHELLE_IA (ou o nome antigo DEEPSEEK_API_KEY) ou sem a função publicada, a conversa geral indica erro; consultas operacionais podem usar o motor local, claramente identificado. Interpretações de planilhas geradas por IA exigem confirmação. Veja [manual completo do Copiloto](docs/copiloto.md) para configuração, prompt, privacidade e limites.
+O Copiloto usa exclusivamente a API Groq, pela API do Railway (ou função Netlify legada), com chave somente no servidor. Sem `API_IA_GROQ` ou backend publicado, a conversa geral indica indisponibilidade; consultas operacionais podem usar o motor local, claramente identificado. Interpretações de planilhas geradas por IA exigem confirmação. Veja [manual completo do Copiloto](docs/copiloto.md) para configuração, prompt, privacidade e limites.
 
 O dashboard de planilhas é uma implementação deste aplicativo; ele não cria arquivos PBIX nem envia dados ao Microsoft Power BI. O modo nativo depende do link de um relatório publicado no serviço, das permissões e do licenciamento do usuário. O layout interno no celular depende do relatório original. A incorporação segue a [documentação oficial da Microsoft](https://learn.microsoft.com/en-us/power-bi/collaborate-share/service-embed-secure); não recebe tokens de acesso no formulário e não amplia permissões de visualização.
 
@@ -87,8 +87,8 @@ A suíte de testes cobre leitura semântica, unidades de tempo, dados sem datas,
 O painel também funciona em https://danielnep.github.io/michelle-preview/.
 Nesse endereço estático, o Copiloto envia solicitações à função segura
 `https://powerbicompleto.netlify.app/api/michelle-ai`, no Netlify, via CORS.
-**O GitHub Pages não executa a função nem armazena a chave DeepSeek.**
-A chave `POWER_BI_MICHELLE_IA` permanece somente no ambiente Netlify.
+**O GitHub Pages não executa a função nem armazena a chave Groq.**
+A chave `API_IA_GROQ` permanece somente no ambiente Netlify.
 
 Se a função Netlify ficar indisponível, a conversa remota também ficará.
 Os dados importados ficam no navegador/origem, separados entre os dois domínios.
@@ -99,7 +99,7 @@ Mais detalhes: [manual do Copiloto](docs/copiloto.md).
 
 O bloco **Entendimento das planilhas** do dashboard apresenta um inventário separado por arquivo e aba, com tipos de colunas, período e origem, antes de qualquer comparação. O botão **Planejar dashboard com IA** envia somente metadados de até 12 fontes ativas para o Copiloto, sem valores originais. O modo \`plan\` da função Netlify sugere indicadores, gráficos, independência, complementaridade e sobreposição, sempre como hipóteses revisáveis. Após confirmação, o aplicativo pode aplicar a **ordem dos blocos existentes** e exibir **indicadores calculados individualmente por fonte** (contagem, soma, média e distintos, quando colunas e unidades permitirem), sem fusão de dados ou publicação no Microsoft Power BI.
 
-A seleção de arquivos XLSX/XLS agora enumera suas abas separadamente. Cada aba de dados é tratada como fonte independente, com revisão e confirmação antes de salvar. Abas chamadas **Resumo**, **Consolidado** ou equivalentes ficam inicialmente desmarcadas quando existem abas detalhadas, mas podem ser incluídas manualmente após conferência. CSV permanece com uma única aba. A importação não executa relações ou somas entre abas. Para arquivos acima do limite da prévia do agente, analisar em lotes. O planejamento remoto requer nova publicação da função Netlify, com \`POWER_BI_MICHELLE_IA\` configurada. Sem essa publicação, o botão informa indisponibilidade. O aplicativo ainda não cria PBIX nem faz treinamento/fine-tuning de modelo.
+A seleção de arquivos XLSX/XLS agora enumera suas abas separadamente. Cada aba de dados é tratada como fonte independente, com revisão e confirmação antes de salvar. Abas chamadas **Resumo**, **Consolidado** ou equivalentes ficam inicialmente desmarcadas quando existem abas detalhadas, mas podem ser incluídas manualmente após conferência. CSV permanece com uma única aba. A importação não executa relações ou somas entre abas. Para arquivos acima do limite da prévia do agente, analisar em lotes. O planejamento remoto requer nova publicação da função Netlify, com \`API_IA_GROQ\` configurada. Sem essa publicação, o botão informa indisponibilidade. O aplicativo ainda não cria PBIX nem faz treinamento/fine-tuning de modelo.
 
 
 ### Visualização tipo BI para múltiplas fontes
