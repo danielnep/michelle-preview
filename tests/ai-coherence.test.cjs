@@ -50,7 +50,7 @@ test("backend orienta respostas diretas sem fórmulas e reconhece diferenças de
     assert.match((await res.json()).answer,/50%/);
     assert.match(requestBody.messages[0].content,/RESULTADO pronto/);
     assert.match(requestBody.messages[0].content,/selectedData/);
-    assert.equal(requestBody.max_tokens,340);
+    assert.equal(requestBody.max_completion_tokens,340);
   }finally{
     global.fetch=priorFetch;
     if(old===undefined)delete process.env.API_IA_GROQ;else process.env.API_IA_GROQ=old;
