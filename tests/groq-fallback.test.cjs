@@ -32,8 +32,10 @@ test("Groq atende o chat com o segredo apenas no servidor",async()=>{
     assert.equal(url,"https://api.groq.com/openai/v1/chat/completions");
     assert.equal(opts.headers.Authorization,"Bearer groq-teste");
     const payload=JSON.parse(opts.body);
-    assert.equal(payload.model,"llama-3.3-70b-versatile");
-    assert.equal(payload.reasoning_effort,undefined);
+    assert.equal(payload.model,"openai/gpt-oss-120b");
+    assert.equal(payload.reasoning_effort,"low");
+    assert.equal(payload.include_reasoning,false);
+    assert.equal(payload.max_completion_tokens,1240);
     assert.equal(payload.thinking,undefined);
     assert.equal(payload.reasoning_format,undefined);
     return reply("A interpretação está disponível.");
@@ -69,6 +71,9 @@ test("Groq preserva JSON estruturado e valida os campos permitidos da planilha",
     const data=JSON.parse(opts.body);
     assert.equal(data.model,"openai/gpt-oss-20b");
     assert.deepEqual(data.response_format,{type:"json_object"});
+    assert.equal(data.reasoning_effort,"low");
+    assert.equal(data.include_reasoning,false);
+    assert.equal(data.max_completion_tokens,1850);
     return reply(JSON.stringify({type:"ordens",sector:"tec",headerRow:0,
       mapping:{date:1,inventado:2},confidence:"Alta",reason:"Coluna data"}));
   },async(handler)=>{
