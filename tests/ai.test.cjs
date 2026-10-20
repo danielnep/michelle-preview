@@ -11,14 +11,14 @@ test("a página carrega o Copiloto e mantém scripts antes do app",()=>{
  assert.ok(html.indexOf("michelle-ai-client.js") < html.indexOf("app.js"));
  assert.ok(html.indexOf("michelle-ai-dock.js") < html.indexOf("app.js"));
 });
-test("Netlify function exige segredo e não expõe a chave",async()=>{
- const { default: handler, config }=await import("../netlify/functions/michelle-ai.mjs");
+test("API do servidor exige segredo e não expõe a chave",async()=>{
+ const { default: handler, config }=await import("../server/michelle-ai.mjs");
  assert.equal(config.path,"/api/michelle-ai");
  const prior=process.env.GROQ_API_KEY, priorMichelle=process.env.API_IA_GROQ;
  delete process.env.GROQ_API_KEY;
  delete process.env.API_IA_GROQ;
  try {
-   const req=new Request("https://example.netlify.app/api/michelle-ai",{
+   const req=new Request("http://localhost/api/michelle-ai",{
      method:"POST",headers:{"Content-Type":"application/json"},
      body:JSON.stringify({mode:"chat",channel:"geral",message:"Olá"})
    });
@@ -29,8 +29,8 @@ test("Netlify function exige segredo e não expõe a chave",async()=>{
    if(priorMichelle===undefined)delete process.env.API_IA_GROQ;else process.env.API_IA_GROQ=priorMichelle;
  }
 });
-test("função chama o Groq em servidor e interpreta sem inventar campos",async()=>{
- const { default: handler }=await import("../netlify/functions/michelle-ai.mjs");
+test("servidor chama a Groq e interpreta sem inventar campos",async()=>{
+ const { default: handler }=await import("../server/michelle-ai.mjs");
  const oldFetch=global.fetch,oldSecret=process.env.GROQ_API_KEY;
  process.env.GROQ_API_KEY="test-somente-no-servidor";
  let sent;
@@ -39,7 +39,7 @@ test("função chama o Groq em servidor e interpreta sem inventar campos",async(
    return new Response(JSON.stringify({choices:[{message:{content:JSON.stringify({type:"ordens",sector:"tec",headerRow:0,mapping:{date:2,unsafe:5},confidence:"Alta",reason:"Coluna indica data"})}}]}),{status:200});
  };
  try {
-   const req=new Request("https://example.netlify.app/api/michelle-ai",{
+   const req=new Request("http://localhost/api/michelle-ai",{
      method:"POST",headers:{"Content-Type":"application/json"},
      body:JSON.stringify({mode:"interpret",context:{headers:["ID","Setor","Data"],allowedFields:["date"]}})
    });
@@ -57,7 +57,7 @@ test("função chama o Groq em servidor e interpreta sem inventar campos",async(
 });
 
 test("diagnóstico informa variável disponível e autentica com o Groq sem vazar chave", async()=>{
- const {default:handler}=await import("../netlify/functions/michelle-ai.mjs");
+ const {default:handler}=await import("../server/michelle-ai.mjs");
  const prior=process.env.GROQ_API_KEY, fetch0=global.fetch;
  process.env.GROQ_API_KEY="chave-teste-nao-publicar";
  let calls=0;
@@ -68,12 +68,12 @@ test("diagnóstico informa variável disponível e autentica com o Groq sem vaza
    return new Response(JSON.stringify({data:[{id:"openai/gpt-oss-120b"}]}),{status:200});
  };
  try{
-   const publicStatus=await handler(new Request("https://example.test/api/michelle-ai",{method:"GET"}));
+   const publicStatus=await handler(new Request("http://localhost/api/michelle-ai",{method:"GET"}));
    assert.equal(publicStatus.status,200);
    const status=await publicStatus.json();
    assert.equal(status.keyConfigured,true);
    assert.ok(!JSON.stringify(status).includes("chave-teste-nao-publicar"));
-   const diag=await handler(new Request("https://example.test/api/michelle-ai",{
+   const diag=await handler(new Request("http://localhost/api/michelle-ai",{
      method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({mode:"diagnostic"})
    }));
    assert.equal(diag.status,200);
@@ -93,7 +93,7 @@ test("o carregador usa o Copiloto lateral e não carrega o posicionador de bolin
 });
 
 test("função lê API_IA_GROQ antes da variável antiga, sem expor valor", async()=>{
- const {default:handler}=await import("../netlify/functions/michelle-ai.mjs");
+ const {default:handler}=await import("../server/michelle-ai.mjs");
  const previous=process.env.API_IA_GROQ;
  const originalOld=process.env.GROQ_API_KEY;
  const previousFetch=global.fetch;
@@ -106,14 +106,14 @@ test("função lê API_IA_GROQ antes da variável antiga, sem expor valor", asyn
    return new Response(JSON.stringify({data:[]}),{status:200});
  };
  try {
-   const req=new Request("https://example.netlify.app/api/michelle-ai",{
+   const req=new Request("http://localhost/api/michelle-ai",{
      method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({mode:"diagnostic"})
    });
    const answer=await handler(req);
    assert.equal(answer.status,200);
    assert.equal((await answer.json()).ok,true);
    assert.equal(auth,"Bearer chave-michelle-teste");
-   const check=await handler(new Request("https://example.netlify.app/api/michelle-ai"));
+   const check=await handler(new Request("http://localhost/api/michelle-ai"));
    const checkBody=await check.text();
    assert.equal(JSON.parse(checkBody).keyConfigured,true);
    assert.ok(!checkBody.includes("chave-michelle-teste"));
