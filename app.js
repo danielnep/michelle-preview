@@ -531,7 +531,7 @@
   function uploadBox() {
     const visibleImports=imports.filter(l=>!l.deleted);
     const queued=state.uploadQueue.filter(p=>!p.lotId);
-    const statuses={reading:"Lendo arquivo",analyzing:"IA identificando colunas",
+    const statuses={reading:"Lendo arquivo",analyzing:"Identificando colunas",
       uploading:"Salvando na nuvem",ready:"Processando",skipped:"Resumo identificado e não somado",
       error:"Erro no arquivo",duplicate:"Já importado"};
     const storage=S.cloud?"Os originais e os dados processados são armazenados na nuvem e permanecem disponíveis até serem excluídos.":"Os originais e dados desta versão ainda são guardados somente neste navegador.";
@@ -539,7 +539,7 @@
       <div class="upload-prompt">
         <div class="drop-symbol">${icon("up",25)}</div>
         <h3>Envie suas planilhas</h3>
-        <p>Escolha um ou vários arquivos. O Copiloto identifica as fontes, importa os dados e sinaliza qualquer problema automaticamente.</p>
+        <p>Escolha um ou vários arquivos. O sistema identifica as fontes, importa os dados e sinaliza qualquer problema automaticamente.</p>
         <p class="upload-formats">XLSX, XLS e CSV · até 50 MB por arquivo</p>
         <label for="file-upload" class="btn btn-primary">${icon("plus",18)} Selecionar arquivos</label>
         <input class="file-input" type="file" id="file-upload" accept=".csv,.xlsx,.xls" multiple ${state.ready&&!state.readingFiles&&!state.importBusy?"":"disabled"}>
@@ -651,14 +651,17 @@
   }
   function assistantChat(full = false) {
     const messages = state.chatModes[state.assistantMode] || [];
-    return `<div class="assistant-modes" role="tablist" aria-label="Tipo de assistente"><button type="button" role="tab" aria-selected="${state.assistantMode === "dados"}" class="assistant-mode ${state.assistantMode === "dados" ? "is-current" : ""}" data-assistant-mode="dados">${icon("chart", 16)}<span>Análises do painel</span></button><button type="button" role="tab" aria-selected="${state.assistantMode === "geral"}" class="assistant-mode ${state.assistantMode === "geral" ? "is-current" : ""}" data-assistant-mode="geral">${icon("spark", 16)}<span>Conversa geral</span></button></div><p class="assistant-context" role="status">${state.assistantMode === "dados" ? icon("check", 14) + " Respostas baseadas nos registros do painel" : '<span class="assistant-context-dot"></span> IA online via DeepSeek (conexão necessária)'}</p>${state.aiInsightText && !full ? `<aside class="mc-ai-insight-callout" role="status"><span><strong>✦ Insight novo</strong><br>Uma análise está pronta para revisão.</span><button type="button" data-assistant-expand="1">Ver análise</button></aside>` : ""}<div class="assistant-messages" data-assistant-messages="1" role="log" aria-live="polite" aria-label="Conversa">${messages.map((m, i) => `<div class="assistant-line ${m.role}" style="--message-delay:${Math.min(i, 5) * 35}ms"><div class="assistant-mini-avatar">${m.role === "user" ? "M" : icon("spark", 15)}</div><div class="assistant-bubble">${esc(m.text)}</div></div>`).join("")}</div><div class="assistant-bottom"><div class="assistant-quick">${assistantSuggestions()
+    const offline = !window.MCAI || window.MCAI.available === false;
+    const offlineNotice = window.MCAI?.unavailableMessage ||
+      "Pedimos desculpas. Devido a problemas técnicos, a inteligência artificial está temporariamente indisponível. Já estamos trabalhando na correção e em melhorias para restabelecer o atendimento o quanto antes. Seu sistema continua funcionando com algoritmos e diretrizes automáticas. Apenas o chat com inteligência artificial permanece indisponível.";
+    return `<div class="assistant-modes" role="tablist" aria-label="Tipo de assistente"><button type="button" role="tab" aria-selected="${state.assistantMode === "dados"}" class="assistant-mode ${state.assistantMode === "dados" ? "is-current" : ""}" data-assistant-mode="dados">${icon("chart", 16)}<span>Análises do painel</span></button><button type="button" role="tab" aria-selected="${state.assistantMode === "geral"}" class="assistant-mode ${state.assistantMode === "geral" ? "is-current" : ""}" data-assistant-mode="geral">${icon("spark", 16)}<span>Conversa geral</span></button></div><p class="assistant-context" role="status">${state.assistantMode === "dados" ? icon("check", 14) + " Respostas baseadas nos registros do painel" : '<span class="assistant-context-dot"></span> Chat com inteligência artificial'}</p>${state.aiInsightText && !full ? `<aside class="mc-ai-insight-callout" role="status"><span><strong>✦ Insight novo</strong><br>Uma análise está pronta para revisão.</span><button type="button" data-assistant-expand="1">Ver análise</button></aside>` : ""}<div class="assistant-messages" data-assistant-messages="1" role="log" aria-live="polite" aria-label="Conversa">${offline ? `<div class="assistant-context" role="status">${esc(offlineNotice)}</div>` : ""}${messages.map((m, i) => `<div class="assistant-line ${m.role}" style="--message-delay:${Math.min(i, 5) * 35}ms"><div class="assistant-mini-avatar">${m.role === "user" ? "M" : icon("spark", 15)}</div><div class="assistant-bubble">${esc(m.text)}</div></div>`).join("")}</div><div class="assistant-bottom"><div class="assistant-quick">${assistantSuggestions()
       .map(
         (q) =>
-          `<button type="button" data-assistant-suggest="${esc(q)}">${esc(q)}</button>`,
+          `<button type="button" data-assistant-suggest="${esc(q)}" ${offline ? "disabled" : ""}>${esc(q)}</button>`,
       )
       .join(
         "",
-      )}</div><form class="assistant-form" data-assistant-form="1"><label class="sr-only" for="${full ? "assistant-text-full" : "assistant-text-dock"}">Mensagem ao assistente</label><textarea id="${full ? "assistant-text-full" : "assistant-text-dock"}" data-assistant-input="1" rows="1" maxlength="1800" placeholder="${state.assistantMode === "dados" ? "Pergunte sobre seus indicadores..." : "Escreva sua mensagem..."}" aria-label="Mensagem ao assistente"></textarea><button type="submit" aria-label="Enviar mensagem">${icon("arrow", 18)}</button></form><p class="assistant-disclaimer">${state.assistantBusy ? "✦ Copiloto analisando… " : ""}${state.assistantMode === "dados" ? "IA com resumos dos arquivos ativos e cálculos do painel. Dados agregados enviados ao DeepSeek." : "Conversa com o Copiloto conectada quando a API estiver disponível."}</p></div>`;
+      )}</div><form class="assistant-form" data-assistant-form="1"><label class="sr-only" for="${full ? "assistant-text-full" : "assistant-text-dock"}">Mensagem ao assistente</label><textarea id="${full ? "assistant-text-full" : "assistant-text-dock"}" data-assistant-input="1" rows="1" maxlength="1800" ${offline ? "disabled" : ""} placeholder="${state.assistantMode === "dados" ? "Pergunte sobre seus indicadores..." : "Escreva sua mensagem..."}" aria-label="Mensagem ao assistente"></textarea><button type="submit" aria-label="Enviar mensagem" ${offline ? "disabled" : ""}>${icon("arrow", 18)}</button></form><p class="assistant-disclaimer">${state.assistantBusy ? "✦ Copiloto analisando… " : ""}${offline ? "Os indicadores e gráficos seguem disponíveis por algoritmos locais." : state.assistantMode === "dados" ? "Cálculos do painel com interpretações complementares quando disponíveis." : "Conversa com inteligência artificial quando disponível."}</p></div>`;
   }
   function assistantDock() {
     if(window.MCAccess&&!window.MCAccess.owner&&!window.MCAccess.rights?.ai)return "";
@@ -679,7 +682,7 @@
       (window.MCAutoReview?.insightsHTML()||"") +
       managerialHighlights(recordsFor()) +
       insightsPanel(recordsFor(), null, true) +
-      `<div class="insight-actions"><button class="btn btn-primary" data-refresh-insights>Atualizar cálculos</button><button class="btn btn-primary" data-ai-generate-insights ${state.aiInsightBusy ? "disabled" : ""}>${state.aiInsightBusy ? "Copiloto analisando…" : "✦ Gerar análise inteligente"}</button><button class="btn" data-nav="data">Importar Novos Dados</button><button class="btn" data-nav="report">Gerar Relatório</button></div>${state.aiInsightText ? `<section class="mc-ai-insight" aria-label="Insights produzidos pelo Copiloto"><strong>✦ Descobertas do Copiloto · ${esc(state.aiInsightScope || "Recorte atual")}</strong><p>${esc(state.aiInsightText).replace(/\n/g,"<br>")}</p></section>` : ""}<section class="card panel assistant-full-card section-space"><div class="panel-head"><div><h3>Copiloto</h3><p class="panel-sub">Consultas locais ao painel. IA online via DeepSeek (conexão necessária).</p></div><button class="btn" data-assistant-clear>Limpar conversa</button></div><div class="assistant-chat-root assistant-chat-full" data-assistant-root="full">${assistantChat(true)}</div></section>`
+      `<div class="insight-actions"><button class="btn btn-primary" data-refresh-insights>Atualizar cálculos</button><button class="btn btn-primary" data-ai-generate-insights ${state.aiInsightBusy || window.MCAI?.available === false ? "disabled" : ""}>${state.aiInsightBusy ? "Copiloto analisando…" : "✦ Gerar análise inteligente"}</button><button class="btn" data-nav="data">Importar Novos Dados</button><button class="btn" data-nav="report">Gerar Relatório</button></div>${state.aiInsightText ? `<section class="mc-ai-insight" aria-label="Insights produzidos pelo Copiloto"><strong>✦ Descobertas do Copiloto · ${esc(state.aiInsightScope || "Recorte atual")}</strong><p>${esc(state.aiInsightText).replace(/\n/g,"<br>")}</p></section>` : ""}<section class="card panel assistant-full-card section-space"><div class="panel-head"><div><h3>Copiloto</h3><p class="panel-sub">Consultas locais ao painel. Análises por algoritmos locais disponíveis mesmo sem inteligência artificial.</p></div><button class="btn" data-assistant-clear>Limpar conversa</button></div><div class="assistant-chat-root assistant-chat-full" data-assistant-root="full">${assistantChat(true)}</div></section>`
     );
   }
   function pageSettings() {
@@ -688,7 +691,7 @@
         "Configurações",
         "Personalize metas, identificação e preferências do seu painel.",
       ) +
-      `<section class="mc-install-panel"><div><strong>Instalar Painel Michelle</strong><p data-install-status>A instalação depende do navegador e do sistema.</p><p>Os arquivos enviados são mantidos na nuvem do Power BI MC até serem excluídos. Acesse sua conta para consultar os arquivos em outros dispositivos.</p><p id="mc-install-guide" hidden></p></div><button type="button" class="install-shortcut" data-mc-install>Instalar aplicativo</button></section><section class="mc-ai-import-help"><strong>✦ Aprendizado do Copiloto</strong><p>Limpar as preferências do Copiloto não exclui os arquivos enviados. As análises automáticas enviam ao DeepSeek totais, períodos, nomes de arquivos/abas, cabeçalhos e categorias agregadas. Todas as linhas são percorridas no sistema. Células pessoais originais não são enviadas. A IA organiza títulos e indicadores, sem alterar os dados.</p><label><input type="checkbox" data-ai-auto ${window.MCAI?.consent() ? "checked" : ""}> Conferir todos os arquivos e configurar o painel após cada importação</label> <button type="button" class="btn" data-ai-clear-memory>Limpar preferências do Copiloto</button> <button type="button" class="btn btn-primary" data-ai-check ${state.aiCheckBusy ? "disabled" : ""}>${state.aiCheckBusy ? "Verificando…" : "✦ Testar conexão DeepSeek"}</button>${state.aiCheckStatus ? `<p role="status" class="mc-ai-status">${esc(state.aiCheckStatus)}</p>` : ""}</section><div class="mc-analysis-notes"><strong>Memória de interpretação de planilhas</strong><p>Correções confirmadas são lembradas por modelo de planilha. Você pode apagar essas preferências de identificação sem excluir os arquivos enviados.</p><button type="button" class="btn" data-mc-reset-mappings>Apagar correções salvas</button></div><div class="page-grid"><section class="card panel"><div class="panel-head"><div><h3 class="panel-title">Identidade do painel</h3><p class="panel-sub">Informações desta operação</p></div>${icon("settings", 19)}</div><div class="field appearance-field"><label for="appearance-select">Aparência do aplicativo</label><select id="appearance-select" class="control"><option value="light" ${appearance() === "light" ? "selected" : ""}>Claro · cinza e grafite</option><option value="dark" ${appearance() === "dark" ? "selected" : ""}>Escuro · grafite</option></select><p class="panel-sub">A preferência fica salva. Os temas dos slides são configurados no Estúdio.</p></div><div class="field"><label>Nome da operação</label><input class="control" id="operation" value="${esc(settings.operation)}" /></div><button class="btn btn-primary section-space" data-save="1">Salvar configurações</button><div class="info-box section-space"><strong>Seus dados operacionais</strong><p>Exporte as planilhas do sistema de origem e importe por Enviar Dados Excel. O painel preserva os arquivos originais e o histórico de atualização.</p></div></section><section class="card panel"><div class="panel-head"><div><h3 class="panel-title">Metas por departamento</h3><p class="panel-sub">Percentual de conclusão desejado</p></div>${icon("target", 18)}</div><div class="settings-list section-space">${sectors.map((s) => `<div class="settings-item"><div><strong>${s.name}</strong><small>Meta de conclusão (percentual)</small><div class="progress"><div style="width:${settings.goals?.[s.id] ?? 0}%"></div></div></div><div class="row" style="gap:4px"><input class="control" type="number" min="0" max="100" step="1" data-goal="${s.id}" value="${settings.goals?.[s.id] ?? ""}" placeholder="Sem meta"/><span>%</span></div></div>`).join("")}</div><button class="btn btn-primary section-space" data-save="1">${icon("check", 14)} Aplicar metas</button></section></div>`
+      `<section class="mc-install-panel"><div><strong>Instalar Painel Michelle</strong><p data-install-status>A instalação depende do navegador e do sistema.</p><p>Os arquivos enviados são mantidos na nuvem do Power BI MC até serem excluídos. Acesse sua conta para consultar os arquivos em outros dispositivos.</p><p id="mc-install-guide" hidden></p></div><button type="button" class="install-shortcut" data-mc-install>Instalar aplicativo</button></section><section class="mc-ai-import-help"><strong>✦ Análises automáticas</strong><p>Os indicadores, conferências de qualidade e relatórios continuam funcionando com algoritmos locais, mesmo quando a inteligência artificial estiver indisponível. Quando disponível, ela pode complementar a interpretação usando dados agregados, sem alterar os registros originais.</p><label><input type="checkbox" data-ai-auto ${window.MCAI?.consent() ? "checked" : ""}> Conferir todos os arquivos e configurar o painel após cada importação</label> <button type="button" class="btn" data-ai-clear-memory>Limpar preferências do Copiloto</button> <button type="button" class="btn btn-primary" data-ai-check ${state.aiCheckBusy ? "disabled" : ""}>${state.aiCheckBusy ? "Verificando…" : "Verificar disponibilidade da IA"}</button>${state.aiCheckStatus ? `<p role="status" class="mc-ai-status">${esc(state.aiCheckStatus)}</p>` : ""}</section><div class="mc-analysis-notes"><strong>Memória de interpretação de planilhas</strong><p>Correções confirmadas são lembradas por modelo de planilha. Você pode apagar essas preferências de identificação sem excluir os arquivos enviados.</p><button type="button" class="btn" data-mc-reset-mappings>Apagar correções salvas</button></div><div class="page-grid"><section class="card panel"><div class="panel-head"><div><h3 class="panel-title">Identidade do painel</h3><p class="panel-sub">Informações desta operação</p></div>${icon("settings", 19)}</div><div class="field appearance-field"><label for="appearance-select">Aparência do aplicativo</label><select id="appearance-select" class="control"><option value="light" ${appearance() === "light" ? "selected" : ""}>Claro · cinza e grafite</option><option value="dark" ${appearance() === "dark" ? "selected" : ""}>Escuro · grafite</option></select><p class="panel-sub">A preferência fica salva. Os temas dos slides são configurados no Estúdio.</p></div><div class="field"><label>Nome da operação</label><input class="control" id="operation" value="${esc(settings.operation)}" /></div><button class="btn btn-primary section-space" data-save="1">Salvar configurações</button><div class="info-box section-space"><strong>Seus dados operacionais</strong><p>Exporte as planilhas do sistema de origem e importe por Enviar Dados Excel. O painel preserva os arquivos originais e o histórico de atualização.</p></div></section><section class="card panel"><div class="panel-head"><div><h3 class="panel-title">Metas por departamento</h3><p class="panel-sub">Percentual de conclusão desejado</p></div>${icon("target", 18)}</div><div class="settings-list section-space">${sectors.map((s) => `<div class="settings-item"><div><strong>${s.name}</strong><small>Meta de conclusão (percentual)</small><div class="progress"><div style="width:${settings.goals?.[s.id] ?? 0}%"></div></div></div><div class="row" style="gap:4px"><input class="control" type="number" min="0" max="100" step="1" data-goal="${s.id}" value="${settings.goals?.[s.id] ?? ""}" placeholder="Sem meta"/><span>%</span></div></div>`).join("")}</div><button class="btn btn-primary section-space" data-save="1">${icon("check", 14)} Aplicar metas</button></section></div>`
     );
   }
   function pageSectorDirectory() {
@@ -967,9 +970,9 @@
     const history = state.chatModes[mode].filter(m=>m.role==="user" || m.role==="bot")
       .slice(-8).map(m=>({role:m.role==="user"?"user":"assistant",content:m.text}));
     state.chatModes[mode].push({role:"user",text:question});
-    // A demonstração local continua disponível se não houver cliente remoto.
-    if (!window.MCAI || typeof window.fetch !== "function") {
-      state.chatModes[mode].push({role:"bot",text:mode==="dados"?answer(question):generalAnswer(question)});
+    // O chat não se apresenta como IA quando não há serviço remoto.
+    if (!window.MCAI || typeof window.fetch !== "function" || window.MCAI.available === false) {
+      state.chatModes[mode].push({role:"bot",text:window.MCAI?.unavailableMessage || "Desculpe. A inteligência artificial está temporariamente indisponível. O painel segue funcionando com algoritmos locais."});
       state.chatModes[mode] = state.chatModes[mode].slice(-60);
       saveChats();refreshAssistantChats();return;
     }
@@ -983,11 +986,9 @@
       state.chatModes[mode].push({role:"bot",text:reply.answer});
       window.MCAI.rememberQuestion(question);
     } catch (error) {
-      const fallback = mode === "dados" ? answer(question) : "";
       state.chatModes[mode].push({
         role:"bot",
-        text: "Não consegui acessar a IA online: "+error.message+
-          (fallback ? "\\n\\nConsulta local (sem IA generativa):\\n"+fallback : "")
+        text:window.MCAI?.unavailableMessage || "Pedimos desculpas. A inteligência artificial está temporariamente indisponível. Os indicadores continuam funcionando normalmente."
       });
     } finally {
       state.assistantBusy = false;
@@ -1144,7 +1145,7 @@
         }
       }catch(error){
         // A classificação determinística permanece disponível; não bloquear importações por indisponibilidade da IA.
-        group.forEach(p=>{p.aiWarning="IA temporariamente indisponível: "+error.message;});
+        group.forEach(p=>{p.aiWarning="Leitura concluída por algoritmos. Inteligência artificial temporariamente indisponível.";});
       }
     }
     // Conflitos não resolvidos pela IA preservam registros brutos como dados gerais.
@@ -1478,12 +1479,12 @@
     document.querySelector("[data-ai-generate-insights]")?.addEventListener("click", () => generateAIInsights());
     document.querySelector("[data-ai-check]")?.addEventListener("click", async () => {
       if (state.aiCheckBusy || !window.MCAI) return;
-      state.aiCheckBusy = true; state.aiCheckStatus = "Consultando conexão do DeepSeek…"; render();
+      state.aiCheckBusy = true; state.aiCheckStatus = "Verificando disponibilidade da inteligência artificial…"; render();
       try {
         const result = await window.MCAI.request("diagnostic");
-        state.aiCheckStatus = "✓ "+(result.message || "Conexão válida.");
+        state.aiCheckStatus = "✓ Inteligência artificial disponível.";
       } catch (error) {
-        state.aiCheckStatus = "Não conectado: "+error.message;
+        state.aiCheckStatus = window.MCAI?.unavailableMessage || "Inteligência artificial temporariamente indisponível.";
       } finally {
         state.aiCheckBusy = false; render();
       }
