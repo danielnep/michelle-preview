@@ -25,7 +25,7 @@ async function isolated(variables,remote,run){
   }
 }
 
-test("Groq assume o chat quando não há chave DeepSeek, sem expor segredo",async()=>{
+test("Groq atende o chat com o segredo apenas no servidor",async()=>{
   let called=0;
   await isolated({API_IA_GROQ:"groq-teste"},async(url,opts)=>{
     called++;
@@ -48,27 +48,26 @@ test("Groq assume o chat quando não há chave DeepSeek, sem expor segredo",asyn
   assert.equal(called,1);
 });
 
-test("se DeepSeek negar saldo, o Copiloto tenta Groq mantendo o contexto",async()=>{
-  const called=[];
-  await isolated({POWER_BI_MICHELLE_IA:"deepseek-teste",API_IA_GROQ:"groq-teste"},async(url,opts)=>{
-    called.push({url,body:JSON.parse(opts.body)});
-    if(url.startsWith("https://api.deepseek.com/"))return new Response("sem saldo",{status:402});
-    return reply("Plano B funcionando.");
+test("API desativada não é utilizada mesmo com variáveis antigas definidas",async()=>{
+  let called=0;
+  await isolated({DEEPSEEK_API_KEY:"chave-legada",POWER_BI_MICHELLE_IA:"chave-anterior"},async()=>{
+    called++;
+    throw Error("Nenhum acesso remoto deve acontecer");
   },async(handler)=>{
-    const result=await handler(request("chat",{context:{allData:{totalRows:4}}}));
-    assert.equal(result.status,200);
-    assert.match((await result.json()).answer,/Plano B/);
+    const status=await handler(new Request("https://railway.example/api/michelle-ai"));
+    assert.equal((await status.json()).keyConfigured,false);
+    const result=await handler(request());
+    assert.equal(result.status,503);
   });
-  assert.equal(called.length,2);
-  assert.match(called[0].url,/deepseek/);
-  assert.match(called[1].url,/groq/);
-  assert.deepEqual(called[0].body.messages,called[1].body.messages);
+  assert.equal(called,0);
 });
 
-test("Groq preserva JSON estruturado e a validação dos campos de planilha",async()=>{
-  await isolated({API_IA_GROQ:"groq-teste",GROQ_MODEL:"openai/gpt-oss-20b"},async(_url,opts)=>{
-    assert.equal(JSON.parse(opts.body).model,"openai/gpt-oss-20b");
-    assert.deepEqual(JSON.parse(opts.body).response_format,{type:"json_object"});
+test("Groq preserva JSON estruturado e valida os campos permitidos da planilha",async()=>{
+  await isolated({API_IA_GROQ:"groq-teste",GROQ_MODEL:"openai/gpt-oss-20b"},async(url,opts)=>{
+    assert.equal(url,"https://api.groq.com/openai/v1/chat/completions");
+    const data=JSON.parse(opts.body);
+    assert.equal(data.model,"openai/gpt-oss-20b");
+    assert.deepEqual(data.response_format,{type:"json_object"});
     return reply(JSON.stringify({type:"ordens",sector:"tec",headerRow:0,
       mapping:{date:1,inventado:2},confidence:"Alta",reason:"Coluna data"}));
   },async(handler)=>{
@@ -82,37 +81,23 @@ test("Groq preserva JSON estruturado e a validação dos campos de planilha",asy
   });
 });
 
-test("resposta inválida do DeepSeek também ativa a alternativa",async()=>{
-  let n=0;
-  await isolated({POWER_BI_MICHELLE_IA:"deepseek-teste",API_IA_GROQ:"groq-teste"},async(url)=>{
-    n++;
-    return url.includes("deepseek")
-      ? reply("não é JSON")
-      : reply(JSON.stringify({type:"geral",sector:"coi",mapping:{},confidence:"Baixa"}));
-  },async(handler)=>{
-    const result=await handler(request("interpret",{context:{headers:[],allowedFields:[]}}));
-    assert.equal(result.status,200);
-    assert.equal((await result.json()).interpretation.type,"geral");
-  });
-  assert.equal(n,2);
-});
-
-test("quando os dois provedores falham, informa indisponibilidade sem expor erro ou segredo",async()=>{
-  await isolated({POWER_BI_MICHELLE_IA:"deepseek-teste",API_IA_GROQ:"groq-teste"},
-    async()=>new Response("upstream internals",{status:429}),async(handler)=>{
+test("Falhas remotas não divulgam erro interno nem segredo",async()=>{
+  await isolated({API_IA_GROQ:"groq-teste"},async()=>
+    new Response("internals da API",{status:429}),async(handler)=>{
       const result=await handler(request());
       assert.equal(result.status,503);
       const body=await result.json();
       assert.match(body.error,/temporariamente indisponível/);
-      assert.doesNotMatch(JSON.stringify(body),/upstream internals|groq-teste|deepseek-teste/);
+      assert.doesNotMatch(JSON.stringify(body),/internals|groq-teste/);
     });
 });
 
-test("diagnóstico consulta Groq quando DeepSeek não responde",async()=>{
+test("Diagnóstico valida somente a Groq",async()=>{
   const targets=[];
-  await isolated({POWER_BI_MICHELLE_IA:"deepseek-teste",API_IA_GROQ:"groq-teste"},async(url)=>{
+  await isolated({API_IA_GROQ:"groq-teste",DEEPSEEK_API_KEY:"legado"},async(url,opts)=>{
     targets.push(url);
-    return new Response("{}",{status:url.includes("deepseek")?401:200});
+    assert.equal(opts.headers.Authorization,"Bearer groq-teste");
+    return new Response("{}",{status:200});
   },async(handler)=>{
     const result=await handler(request("diagnostic"));
     assert.equal(result.status,200);
@@ -120,5 +105,5 @@ test("diagnóstico consulta Groq quando DeepSeek não responde",async()=>{
     assert.equal(body.ok,true);
     assert.equal(body.provider,"Groq");
   });
-  assert.deepEqual(targets,["https://api.deepseek.com/models","https://api.groq.com/openai/v1/models"]);
+  assert.deepEqual(targets,["https://api.groq.com/openai/v1/models"]);
 });
