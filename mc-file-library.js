@@ -26,7 +26,9 @@
           (deleted ? '<span class="mc-library-pending">Será excluído ao salvar</span>' : '') + '</div>' +
           '<div class="mc-library-row-actions">' +
           (!deleted && access("filesDownload") ? '<button type="button" class="btn" data-library-preview="' + file.id + '" aria-label="Abrir ' + esc(file.name) + '">' + icon("files") + '<span>Abrir</span></button>' +
-            '<a class="btn" href="/api/files/' + file.id + '?mode=download" download aria-label="Baixar ' + esc(file.name) + '">' + icon("down") + '<span>Baixar</span></a>' : '') +
+            (root.MCPreview?.enabled
+              ? '<button type="button" class="btn" data-library-download="' + esc(file.id) + '" aria-label="Baixar ' + esc(file.name) + '">' + icon("down") + '<span>Baixar</span></button>'
+              : '<a class="btn" href="/api/files/' + file.id + '?mode=download" download aria-label="Baixar ' + esc(file.name) + '">' + icon("down") + '<span>Baixar</span></a>') : '') +
           (removable(file) ? '<button type="button" class="btn ' + (deleted ? '' : 'mc-library-danger') + '" data-library-remove="' + file.id + '" aria-label="' + (deleted ? 'Desfazer exclusão de ' : 'Excluir ') + esc(file.name) + '">' + icon(deleted ? "arrow" : "trash") + '<span>' + (deleted ? 'Desfazer' : 'Excluir') + '</span></button>' : '') +
           '</div></li>';
       }).join("");
@@ -107,6 +109,21 @@
       }
       if (event.target.closest("[data-library-save]")) { void save(); return; }
       if (event.target.closest("[data-library-preview-close]")) { current.querySelector("[data-library-preview-space]").hidden = true; return; }
+      const download = event.target.closest("[data-library-download]");
+      if (download && root.MCPreview?.enabled) {
+        const id=download.dataset.libraryDownload;
+        const file=files.find(f=>f.id===id);
+        if(!file)return;
+        void root.MCStore.read("files",id).then(record=>{
+          if(!record?.bytes)throw Error("Arquivo local indisponível.");
+          const blob=new Blob([record.bytes],{type:"application/octet-stream"});
+          const url=URL.createObjectURL(blob),link=document.createElement("a");
+          link.href=url;link.download=file.name;link.hidden=true;
+          document.body.append(link);link.click();link.remove();
+          root.setTimeout(()=>URL.revokeObjectURL(url),10000);
+        }).catch(err=>message("Falha ao baixar: "+err.message,true));
+        return;
+      }
       const view = event.target.closest("[data-library-preview]"); if (view) void preview(view.dataset.libraryPreview);
     });
     paint(); current.showModal(); current.querySelector("h2").focus();

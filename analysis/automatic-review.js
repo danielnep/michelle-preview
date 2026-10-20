@@ -124,7 +124,7 @@
   const allowed=()=>!root.MCAccess||root.MCAccess.owner||root.MCAccess.rights?.ai;
   function refresh(){bridge()?.render();}
   async function persist(){
-    if(!root.MCAccess || !root.fetch)return;
+    if(root.MCPreview?.enabled || !root.MCAccess || !root.fetch)return;
     try{
       const res=await root.fetch("/api/analysis-review",{method:"PUT",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({signature:state.signature,result:state.result,registry:state.registry})});
       if(!res.ok)throw Error("Não foi possível guardar a revisão.");state.persistenceError="";
@@ -132,6 +132,7 @@
   }
   async function run(){
     if(running){pending=true;return;}
+    if(root.MCPreview?.enabled)return;
     if(!allowed()||!root.MCAI?.request||!bridge()?.getState().ready||(!root.MCAI.consent()&&!manualRequested))return;
     manualRequested=false;
     const lots=active(bridge().getImports());
@@ -188,6 +189,7 @@
     finally{running=false;if(pending){pending=false;timer=root.setTimeout(()=>void run(),400);}}
   }
   function schedule(force=false){
+    if(root.MCPreview?.enabled)return;
     if(force)manualRequested=true;
     state.generation++;state.phase="queued";state.completed=0;state.total=active(bridge()?.getImports()||[]).length;state.error="";state.result=null;
     if(timer)root.clearTimeout(timer);pending=running;timer=root.setTimeout(()=>void run(),650);
@@ -223,6 +225,7 @@
   }
   function textSummary(){if(!current())return "";return state.result.insights.map(i=>[i.title,i.interpretation,i.action].filter(Boolean).join('\n')).join('\n\n');}
   async function restore(){
+    if(root.MCPreview?.enabled)return;
     if(restored||!bridge()?.getState().ready)return;restored=true;
     if(root.MCAccess&&allowed()&&root.fetch){try{
       const res=await root.fetch('/api/analysis-review',{credentials:'same-origin',cache:'no-store'});
