@@ -33,7 +33,7 @@ test("chat e insights recebem o mesmo catálogo completo de arquivos, com o reco
   assert.ok(JSON.stringify(context).length<18000);
 });
 test("backend orienta respostas diretas sem fórmulas e reconhece diferenças de escopo",async()=>{
-  const {default:handler}=await import("../netlify/functions/michelle-ai.mjs");
+  const {default:handler}=await import("../server/michelle-ai.mjs");
   const old=process.env.API_IA_GROQ, priorFetch=global.fetch;
   process.env.API_IA_GROQ="secret-for-test";
   let requestBody;
@@ -42,7 +42,7 @@ test("backend orienta respostas diretas sem fórmulas e reconhece diferenças de
     return new Response(JSON.stringify({choices:[{message:{content:"Foram 50% de ligações recebidas. 📞"}}]}),{status:200});
   };
   try{
-    const res=await handler(new Request("https://example.netlify.app/api/michelle-ai",{
+    const res=await handler(new Request("http://localhost/api/michelle-ai",{
       method:"POST",headers:{"content-type":"application/json"},
       body:JSON.stringify({mode:"chat",channel:"dados",message:"Qual o percentual?",context:{allData:{totalRows:2},selectedData:{totalRows:2},files:[]}})
     }));
@@ -70,7 +70,7 @@ test("títulos e explicações de origem são contextuais, sem exibir fórmula c
 test("Copiloto usa somente a API da mesma origem quando há backend",async()=>{
   for(const [hostname,expected] of [
     ["powerbi-completo-mc.up.railway.app","/api/michelle-ai"],
-    ["powerbicompleto.netlify.app","/api/michelle-ai"]
+    ["localhost","/api/michelle-ai"]
   ]){
     let called="";
     const root={location:{hostname}};
@@ -90,28 +90,13 @@ test("Copiloto usa somente a API da mesma origem quando há backend",async()=>{
   }
 });
 
-test("CORS aceita GitHub Pages com preflight e protege outras origens no navegador",async()=>{
-  const {default:handler}=await import("../netlify/functions/michelle-ai.mjs");
-  const preflight=await handler(new Request("https://powerbicompleto.netlify.app/api/michelle-ai",{
-    method:"OPTIONS",headers:{
-      origin:"https://danielnep.github.io",
-      "access-control-request-method":"POST",
-      "access-control-request-headers":"content-type"
-    }
-  }));
-  assert.equal(preflight.status,204);
-  assert.equal(preflight.headers.get("access-control-allow-origin"),"https://danielnep.github.io");
-  assert.match(preflight.headers.get("access-control-allow-methods"),/POST/);
-  assert.match(preflight.headers.get("access-control-allow-headers"),/Content-Type/i);
-  const status=await handler(new Request("https://powerbicompleto.netlify.app/api/michelle-ai",{
-    method:"GET",headers:{origin:"https://danielnep.github.io"}
-  }));
-  assert.equal(status.headers.get("access-control-allow-origin"),"https://danielnep.github.io");
-  const blocked=await handler(new Request("https://powerbicompleto.netlify.app/api/michelle-ai",{
-    method:"OPTIONS",headers:{origin:"https://outro-site.example"}
-  }));
-  assert.equal(blocked.status,403);
-  assert.equal(blocked.headers.get("access-control-allow-origin"),null);
+test("Produção protege a API no Express e mantém a chave no servidor",()=>{
+  const backend=fs.readFileSync(path.join(__dirname,"../server/index.mjs"),"utf8");
+  const handler=fs.readFileSync(path.join(__dirname,"../server/michelle-ai.mjs"),"utf8");
+  assert.match(backend,/app\.post\("\/api\/michelle-ai", protectedRoute, requireRight\("ai"\)/);
+  assert.match(backend,/app\.get\("\/api\/michelle-ai", protectedRoute, requireRight\("ai"\)/);
+  assert.match(handler,/https:\/\/api\.groq\.com\/openai\/v1/);
+  assert.doesNotMatch(handler,/api\.deepseek\.com|api\.openai\.com|netlify\.app/i);
 });
 
 // O GitHub Pages é uma prévia independente: sem redirect e sem POST estático.

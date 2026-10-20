@@ -2,7 +2,7 @@ const {test}=require("node:test");
 const assert=require("node:assert/strict");
 
 test("agente planeja cada fonte e descarta IDs, colunas e cruzamentos inventados",async()=>{
-  const {default:handler}=await import("../netlify/functions/michelle-ai.mjs");
+  const {default:handler}=await import("../server/michelle-ai.mjs");
   const before=process.env.API_IA_GROQ,old=process.env.GROQ_API_KEY,fetch0=global.fetch;
   process.env.API_IA_GROQ="chave-para-teste";delete process.env.GROQ_API_KEY;
   let sent;
