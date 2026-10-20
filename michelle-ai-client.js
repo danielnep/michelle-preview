@@ -8,9 +8,14 @@
   const save = data => { try { localStorage.setItem(SETTINGS, JSON.stringify(data)); } catch (_) {} };
   const consent = () => memory().automaticInsights !== false;
   function setConsent(yes) { const m=memory();m.automaticInsights=!!yes;save(m); }
-  // O Copiloto usa a API protegida da mesma hospedagem Railway.
+  // Mensagem pública: diagnóstico e fornecedores ficam exclusivamente nos logs internos.
+  const unavailableMessage="Pedimos desculpas. Devido a problemas técnicos, a inteligência artificial está temporariamente indisponível. Já estamos trabalhando na correção e em melhorias para restabelecer o atendimento o quanto antes. Seu sistema continua funcionando com algoritmos e diretrizes automáticas. Apenas o chat com inteligência artificial permanece indisponível.";
+  let availability="unknown";
   function apiUrl() {return "/api/michelle-ai";}
   async function request(mode, data={}) {
+    if(availability==="unavailable" && mode!=="diagnostic"){
+      const error=Error(unavailableMessage);error.status=503;error.temporary=true;throw error;
+    }
     const ctrl=new AbortController();
     const timer=setTimeout(()=>ctrl.abort(),mode==="review"?60000:mode==="interpret-batch"?44000:27000);
     try {
@@ -20,11 +25,21 @@
         body:JSON.stringify({mode,...data})
       });
       const body=await response.json().catch(()=>({}));
-      if(!response.ok) { const error=Error(body.error || "A IA está indisponível ("+response.status+").");error.status=response.status;throw error; }
+      if(!response.ok) {
+        const error=Error(body.error || "Solicitação não concluída.");
+        error.status=response.status;
+        throw error;
+      }
+      availability="online";
       return body;
     } catch(error) {
-      if(error?.name==="AbortError") throw Error("A IA demorou demais. Tente novamente.");
-      throw error;
+      // O detalhe técnico jamais é exibido para quem utiliza o painel.
+      if(error?.status===400 || error?.status===413 || error?.status===415)throw error;
+      availability="unavailable";
+      const unavailable=Error(unavailableMessage);
+      unavailable.status=error?.status||503;
+      unavailable.temporary=true;
+      throw unavailable;
     } finally { clearTimeout(timer); }
   }
   // Uma única fotografia dos dados alimenta o chat e os insights. Não envia linhas brutas.
@@ -194,5 +209,6 @@
       (top&&top[1]>=2?'<p>Você costuma acompanhar <b>'+esc(top[0])+'</b>. <button type="button" class="btn" data-ai-favorite="'+esc(top[0])+'">Abrir esse assunto</button></p>':"")+
       '</section>';
   }
-  root.MCAI={request,context,interpretationContext,rememberQuestion,home,consent,setConsent};
+  root.MCAI={request,context,interpretationContext,rememberQuestion,home,consent,setConsent,unavailableMessage,
+    get available(){return availability==="online"?true:availability==="unavailable"?false:null;}};
 })(window);
