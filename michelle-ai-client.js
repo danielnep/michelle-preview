@@ -10,8 +10,8 @@
   function setConsent(yes) { const m=memory();m.automaticInsights=!!yes;save(m); }
   // O Copiloto usa a rota autenticada do próprio Railway, sem expor cookies ou chaves.
   function apiUrl() {
-    if (root.location?.hostname === "danielnep.github.io") {
-      throw new Error("Abra o Copiloto no painel oficial: https://powerbi-completo-mc.up.railway.app/");
+    if (root.MCPreview?.enabled || root.location?.hostname === "danielnep.github.io") {
+      throw new Error("IA online indisponível na prévia do GitHub. As análises locais continuam funcionando.");
     }
     return "/api/michelle-ai";
   }
