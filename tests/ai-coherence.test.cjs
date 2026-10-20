@@ -114,25 +114,31 @@ test("CORS aceita GitHub Pages com preflight e protege outras origens no navegad
   assert.equal(blocked.headers.get("access-control-allow-origin"),null);
 });
 
-// Regressão: GitHub Pages não suporta POST na rota /api/michelle-ai (405).
-test("GitHub Pages encaminha para o Railway e não tenta POST no servidor estático",async()=>{
+// O GitHub Pages é uma prévia independente: sem redirect e sem POST estático.
+test("GitHub Pages carrega localmente, sem redirecionar ao servidor",async()=>{
   const html=fs.readFileSync(path.join(__dirname,"../index.html"),"utf8");
-  const client=fs.readFileSync(path.join(__dirname,"../michelle-ai-client.js"),"utf8");
-  let redirectUrl,called=0;
-  const location={hostname:"danielnep.github.io",hash:"#/insight",replace:url=>{redirectUrl=url;}};
-  assert.match(html,/location\.hostname === "danielnep\.github\.io"/);
-  assert.match(html,/location\.replace\("https:\/\/powerbi-completo-mc\.up\.railway\.app\/" \+ location\.hash\)/);
-  const window={location};
-  vm.runInNewContext(client,{
+  const script=html.split("<script>")[1]?.split("</script>")[0];
+  assert.ok(script);
+  assert.ok(!script.includes("location.replace") && !script.includes("location.assign"));
+  for(const [hostname,pathname,expected] of [
+    ["danielnep.github.io","/michelle-preview/",true],
+    ["danielnep.github.io","/outro-projeto/",false],
+    ["powerbi-completo-mc.up.railway.app","/",false]
+  ]){
+    const location={hostname,pathname,hash:"#/insight",replace:()=>{throw Error("redirecionamento indevido")}};
+    const window={};
+    vm.runInNewContext(script,{window,location});
+    assert.equal(window.MCPreview.enabled,expected);
+  }
+  let calls=0;
+  const window={location:{hostname:"danielnep.github.io",pathname:"/michelle-preview/"},MCPreview:{enabled:true}};
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname,"../michelle-ai-client.js"),"utf8"),{
     window,localStorage:{getItem:()=>null,setItem:()=>{}},
-    fetch:async()=>{called++;return {ok:true,json:async()=>({})}},
+    fetch:async()=>{calls++;return {ok:true,json:async()=>({})}},
     AbortController,setTimeout,clearTimeout
   });
-  await assert.rejects(window.MCAI.request("chat",{message:"Olá"}),/painel oficial/);
-  assert.equal(called,0);
-  // Também protege usuários que ainda têm a versão antiga da página em cache.
-  assert.equal(location.hostname,"danielnep.github.io");
-  assert.equal(redirectUrl,undefined);
+  await assert.rejects(window.MCAI.request("chat",{message:"Olá"}),/prévia do GitHub/);
+  assert.equal(calls,0);
 });
 test("interface do Copiloto não cita DeepSeek e usa quebras de linha reais",()=>{
   const app=fs.readFileSync(path.join(__dirname,"../app.js"),"utf8");

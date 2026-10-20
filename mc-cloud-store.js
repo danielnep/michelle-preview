@@ -1,6 +1,42 @@
 /* Store compartilhado no Railway: API PostgreSQL + arquivos originais em bucket privado. */
 (function(root){
  "use strict";
+ // GitHub Pages é prévia isolada. IndexedDB local vem de data-core.js.
+ if(root.MCPreview?.enabled){
+   const local=root.MCStore;
+   if(!local?.open || !local?.all || !local?.read || !local?.batch){
+     throw Error("Armazenamento local da prévia não foi inicializado.");
+   }
+   let catalog=[];
+   root.MCAccess={owner:true,rights:{ai:true,filesView:true,filesUpload:true,
+     filesDownload:true,filesDelete:true,reportsExport:true},sectors:[]};
+   async function refreshFiles(){
+     const items=await local.all("files");
+     catalog=items.map(f=>({
+       id:f.id,name:f.name||"Planilha",size:f.size||f.bytes?.byteLength||0,
+       created:f.created||null,canDelete:true
+     }));
+     return catalog.slice();
+   }
+   root.MCCloudFiles={
+     list:()=>catalog.slice(),refresh:refreshFiles,
+     openLibrary:()=>root.MCFileLibrary?.open(),
+     deleteFiles:async(ids)=>{
+       const valid=new Set(ids.filter(id=>catalog.some(file=>file.id===id)));
+       if(valid.size){
+         const lots=await local.all("lots");
+         await local.batch([
+           ...[...valid].map(id=>({store:"files",id,remove:true})),
+           ...lots.filter(lot=>valid.has(lot.fileId)).map(lot=>({store:"lots",id:lot.id,remove:true}))
+         ]);
+       }
+       await refreshFiles();
+       return {deletedIds:[...valid]};
+     }
+   };
+   // Nunca troca MCStore pelo cliente HTTP, nem lê a conta do servidor.
+   return;
+ }
  let catalog=[];
  async function request(url,opts={}){
    const res=await fetch(url,{credentials:"same-origin",cache:"no-store",...opts});

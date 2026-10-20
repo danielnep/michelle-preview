@@ -47,31 +47,13 @@ Seja proativa quando houver uma descoberta real, sem criar alertas decorativos. 
 O painel armazena planilhas no IndexedDB por navegador e origem. A migração de GitHub Pages para domínio Netlify **não** copia esses arquivos; utilize a exportação/restauração de backup.
 A inclusão de IA não adiciona login real, banco compartilhado nem notificações push do sistema operacional. Os avisos proativos previstos são dentro da interface ao usar o app.
 
-## 5. GitHub Pages: Copiloto conectado
+## 5. GitHub Pages: prévia independente do cliente
 
-A versão pública em **https://danielnep.github.io/michelle-preview/** chama
-`https://powerbicompleto.netlify.app/api/michelle-ai` para conversar com a IA.
-É o mesmo backend Netlify que atende o site Netlify, mas por URL absoluta
-quando a interface está no GitHub Pages.
+A prévia em **https://danielnep.github.io/michelle-preview/** funciona sem redirecionar ao servidor. O código pode exibir a interface, importar planilhas e calcular indicadores pelo IndexedDB do próprio navegador. Não consulta contas, arquivos, API ou banco do cliente. Testes na prévia não modificam dados de produção.
 
-- O frontend **não contém** o segredo Groq e não chama a Groq diretamente.
-- A função aceita requisições CORS somente das origens dos sites aprovados,
-  incluindo a pré-verificação `OPTIONS`. Isso habilita o navegador, mas **não
-  equivale a autenticação**. A função continua com limite de taxa; para dados
-  confidenciais, exigir autenticação real antes de liberar o sistema.
-- A chave `API_IA_GROQ` continua sendo configurada exclusivamente
-  no backend, nunca no frontend ou GitHub Pages, JavaScript ou repositório público.
-- Se o Netlify Functions ou a Groq estiverem fora do ar, o Copiloto
-  remoto também ficará indisponível no GitHub Pages.
-- O IndexedDB é separado por origem: arquivos importados no endereço
-  do Netlify não aparecem automaticamente no endereço do GitHub Pages.
-  Para transferir, use backup e restauração.
+O Copiloto remoto está **indisponível na prévia estática**: GitHub Pages não executa Node nem guarda segredos. O chat pode oferecer resposta calculada localmente, identificada como tal. Não existe ligação direta do Pages com a chave Groq ou com a hospedagem do cliente. Para testar a IA real, use o ambiente do backend autenticado ou testes automatizados com credenciais seguras no GitHub Actions.
 
-Teste recomendado: no GitHub Pages, abra o Copiloto e faça uma pergunta em
-"Conversa geral"; em "Análises do painel", use uma planilha fictícia para
-verificar os dados enviados e a resposta. A rota `GET /api/michelle-ai`
-no Netlify é somente diagnóstico de infraestrutura.
-
+O servidor de produção é independente e possui autenticação, PostgreSQL, armazenamento privado e API Groq com segredo `API_IA_GROQ`. Publicar a prévia no GitHub não comprova que o servidor foi atualizado. Enquanto a hospedagem estiver indisponível, a prévia continua acessível. Caso o servidor esteja vinculado à mesma branch com deploy automático, **novos commits nessa branch podem disparar deploy quando o servidor se recuperar**; para releases totalmente independentes, configure fonte de produção em uma branch de release distinta.
 
 ## Agente de planejamento por fontes independentes
 
