@@ -33,3 +33,4 @@ jobs:
           node --check michelle-ai-dock.js
           node --check server/index.mjs
           node --check server/michelle-ai.mjs
+          node --check server/groq-self-test.mjs
