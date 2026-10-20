@@ -47,7 +47,7 @@ Esta branch usa autenticação individual no servidor, PostgreSQL para registros
 
 ## Limites explícitos
 
-O Copiloto usa exclusivamente a API Groq, pela API do Railway (ou função Netlify legada), com chave somente no servidor. Sem `API_IA_GROQ` ou backend publicado, a conversa geral indica indisponibilidade; consultas operacionais podem usar o motor local, claramente identificado. Interpretações de planilhas geradas por IA exigem confirmação. Veja [manual completo do Copiloto](docs/copiloto.md) para configuração, prompt, privacidade e limites.
+O Copiloto usa exclusivamente a API Groq, pela API do Railway (ou função Netlify legada), com chave somente no servidor. O modelo padrão é `openai/gpt-oss-120b` (Groq); a chave é `API_IA_GROQ` e o nome pode ser personalizado com `GROQ_MODEL`. Sem `API_IA_GROQ` ou backend publicado, a conversa geral indica indisponibilidade; consultas operacionais podem usar o motor local, claramente identificado. Interpretações de planilhas geradas por IA exigem confirmação. Veja [manual completo do Copiloto](docs/copiloto.md) para configuração, prompt, privacidade e limites.
 
 O dashboard de planilhas é uma implementação deste aplicativo; ele não cria arquivos PBIX nem envia dados ao Microsoft Power BI. O modo nativo depende do link de um relatório publicado no serviço, das permissões e do licenciamento do usuário. O layout interno no celular depende do relatório original. A incorporação segue a [documentação oficial da Microsoft](https://learn.microsoft.com/en-us/power-bi/collaborate-share/service-embed-secure); não recebe tokens de acesso no formulário e não amplia permissões de visualização.
 

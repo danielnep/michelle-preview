@@ -20,7 +20,7 @@ Seja proativa quando houver uma descoberta real, sem criar alertas decorativos. 
 - **Arquitetura:** GitHub (código e GitHub Pages para interface) → backend protegido no Railway (ou Netlify Functions legado) → Groq (resposta). A versão Netlify da interface continua funcionando.
 - **Chave:** `Netlify.env.get("API_IA_GROQ")` (com suporte ao nome anterior `GROQ_API_KEY`) somente na função `netlify/functions/michelle-ai.mjs`, jamais no HTML ou JavaScript público.
 - **Endpoint interno:** `POST /api/michelle-ai`. Modos de trabalho: `chat`, `insights`, `interpret`.
-- **Modelo selecionado:** `llama-3.3-70b-versatile` via Groq. A variável `GROQ_MODEL` permite ajustes futuros.
+- **Modelo selecionado:** `openai/gpt-oss-120b` via Groq, sem API da OpenAI. A variável `GROQ_MODEL` permite ajustes futuros. Os modos simples usam raciocínio baixo, planejamento/revisão usam médio; respostas estruturadas continuam em JSON, sem expor o raciocínio nem credenciais.
 - **Entrada analítica:** `MCAI.context()` manda totais, unidades, recortes, lista de fontes e evidências do motor local, não o arquivo bruto.
 - **Decifrar planilhas:** `MCAI.interpretationContext()` manda nomes e formatos, não valores originais; resultado passa por validação de tipos, nomes de campo e índices. A sugestão só é aplicada quando usuária clicar em "Aplicar sugestão (revisar)"; confirmar importação continua separado.
 - **Exatidão:** o Groq explica e sugere. Todos os números oficiais dos gráficos continuam calculados por `MCData`, `MCAnalysis` e `MCIntelligence`; qualquer futura fórmula sugerida pela IA deverá passar por regra determinística e teste antes de alimentar gráfico.

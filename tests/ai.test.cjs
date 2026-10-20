@@ -65,7 +65,7 @@ test("diagnóstico informa variável disponível e autentica com o Groq sem vaza
    assert.equal(url,"https://api.groq.com/openai/v1/models");
    assert.equal(options.headers.Authorization,"Bearer chave-teste-nao-publicar");
    calls++;
-   return new Response(JSON.stringify({data:[{id:"llama-3.3-70b-versatile"}]}),{status:200});
+   return new Response(JSON.stringify({data:[{id:"openai/gpt-oss-120b"}]}),{status:200});
  };
  try{
    const publicStatus=await handler(new Request("https://example.test/api/michelle-ai",{method:"GET"}));
