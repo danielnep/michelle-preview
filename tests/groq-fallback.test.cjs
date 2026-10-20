@@ -32,9 +32,10 @@ test("Groq atende o chat com o segredo apenas no servidor",async()=>{
     assert.equal(url,"https://api.groq.com/openai/v1/chat/completions");
     assert.equal(opts.headers.Authorization,"Bearer groq-teste");
     const payload=JSON.parse(opts.body);
-    assert.equal(payload.model,"openai/gpt-oss-120b");
-    assert.equal(payload.reasoning_effort,"low");
+    assert.equal(payload.model,"llama-3.3-70b-versatile");
+    assert.equal(payload.reasoning_effort,undefined);
     assert.equal(payload.thinking,undefined);
+    assert.equal(payload.reasoning_format,undefined);
     return reply("A interpretação está disponível.");
   },async(handler)=>{
     const status=await handler(new Request("https://railway.example/api/michelle-ai"));
