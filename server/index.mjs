@@ -1,4 +1,5 @@
 import {readReview,writeReview} from "./review-store.mjs";
+import {checkGroqConnection} from "./groq-self-test.mjs";
 import express from "express";
 import { Pool } from "pg";
 import { betterAuth } from "better-auth";
@@ -369,6 +370,9 @@ async function boot() {
    console.log("Primeira conta de acesso criada. Defina uma rotina segura de troca de senha.");
   }
  }
- app.listen(port,"0.0.0.0",()=>console.log("PowerBI Completo MC ouvindo na porta "+port));
+ app.listen(port,"0.0.0.0",()=>{
+  console.log("PowerBI Completo MC ouvindo na porta "+port);
+  void checkGroqConnection(); // assíncrono e não bloqueia o serviço
+ });
 }
 boot().catch(error=>{console.error("Falha ao iniciar:",error?.message||error);process.exit(1)});
