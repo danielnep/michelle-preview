@@ -93,10 +93,11 @@ test("PWA não armazena páginas privadas ou respostas das APIs no cache",()=>{
   assert.ok(!sw.includes("cache.put("), "nenhum arquivo autenticado pode ser persistido em cache");
 });
 
-test("prompt da IA reside em biblioteca, sem endpoint Netlify desnecessário",()=>{
+test("prompt da IA reside no backend autenticado, sem função Netlify",()=>{
   const base=path.join(__dirname,"..");
-  const fn=fs.readFileSync(path.join(base,"netlify/functions/michelle-ai.mjs"),"utf8");
-  assert.match(fn,/\.\.\/lib\/planilha-agent-prompt\.mjs/);
-  assert.ok(fs.existsSync(path.join(base,"netlify/lib/planilha-agent-prompt.mjs")));
-  assert.ok(!fs.existsSync(path.join(base,"netlify/functions/planilha-agent-prompt.mjs")));
+  const handler=fs.readFileSync(path.join(base,"server/michelle-ai.mjs"),"utf8");
+  assert.match(handler,/from "\.\/planilha-agent-prompt\.mjs"/);
+  assert.ok(fs.existsSync(path.join(base,"server/planilha-agent-prompt.mjs")));
+  assert.ok(!fs.existsSync(path.join(base,"netlify/functions/michelle-ai.mjs")));
+  assert.ok(!fs.existsSync(path.join(base,"netlify/lib/planilha-agent-prompt.mjs")));
 });
