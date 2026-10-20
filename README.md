@@ -82,18 +82,14 @@ A suíte de testes cobre leitura semântica, unidades de tempo, dados sem datas,
 
 `tests/responsive.html` exibe o aplicativo real em janelas de 390 × 844 e 1280 × 900, com seletores de largura entre 320 e 1600 px para conferência visual. Reabrir essa página carrega a versão atual do painel nos quadros de teste. A apresentação de teste não contém dados de clientes. As planilhas operacionais usadas na reconciliação permanecem fora deste repositório público.
 
-## GitHub Pages com IA
+## GitHub Pages independente (prévia e testes)
 
-O painel também funciona em https://danielnep.github.io/michelle-preview/.
-Nesse endereço estático, o Copiloto envia solicitações à função segura
-`https://powerbicompleto.netlify.app/api/michelle-ai`, no Netlify, via CORS.
-**O GitHub Pages não executa a função nem armazena a chave Groq.**
-A chave `API_IA_GROQ` permanece somente no ambiente Netlify.
-
-Se a função Netlify ficar indisponível, a conversa remota também ficará.
-Os dados importados ficam no navegador/origem, separados entre os dois domínios.
-Mais detalhes: [manual do Copiloto](docs/copiloto.md).
-
+- **Ambiente de desenvolvimento:** https://danielnep.github.io/michelle-preview/ apresenta a interface atual da `main`, sem redirecionamento para o servidor de produção.
+- **Ambiente entregue ao cliente:** o servidor Railway/serviço conectado pode continuar na versão implantada anterior até uma publicação autorizada e bem-sucedida. Deploys, domínio e autenticação do cliente são independentes do Pages.
+- Na prévia, `MCStore` usa somente IndexedDB do navegador, com importação local de planilhas, cálculos, gráficos e testes de UI. **Não acessa contas, arquivos nem API privada de produção**, nem compartilha os dados importados com o cliente.
+- A IA generativa não roda no GitHub Pages sem um backend próprio: o chat informa indisponibilidade e as respostas operacionais podem recorrer aos cálculos locais. Nenhuma credencial Groq é exposta ao navegador; o Copiloto do servidor usa a chave `API_IA_GROQ`.
+- A biblioteca da prévia lista, abre, baixa e remove apenas arquivos do próprio navegador. Limpar os dados do site apaga esse armazenamento local.
+- Mudanças na `main` publicam a prévia pelo GitHub Pages, sem obrigar novo deploy de produção.
 
 ## Agente de planilhas independentes (prévia em revisão)
 
