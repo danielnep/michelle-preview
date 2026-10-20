@@ -50,7 +50,7 @@ export default async function handler(request) {
     ...headers,"Access-Control-Max-Age":"600"}});
   // API Groq no servidor, sem enviar credenciais ao navegador.
   const key = env("API_IA_GROQ") || env("GROQ_API_KEY");
-  const model = env("GROQ_MODEL") || "llama-3.3-70b-versatile";
+  const model = env("GROQ_MODEL") || "openai/gpt-oss-120b";
   const endpoint = "https://api.groq.com/openai/v1";
   // Esta rota não revela o segredo, apenas informa se a função pode encontrá-lo.
   if (request.method === "GET") return reply({
@@ -123,7 +123,12 @@ export default async function handler(request) {
         headers:{"Authorization":"Bearer "+key,"Content-Type":"application/json"},
         body:JSON.stringify({
           model,messages,temperature:mode==="chat"?0.6:["plan","review"].includes(mode)?0.2:0.35,
-          max_completion_tokens:maxTokens,
+          // Tokens de raciocínio contam no teto de saída do GPT-OSS.
+          max_completion_tokens:maxTokens+(model.startsWith("openai/gpt-oss-")?(structured?1200:900):0),
+          ...(model.startsWith("openai/gpt-oss-")?{
+            reasoning_effort:["plan","review"].includes(mode)?"medium":"low",
+            include_reasoning:false
+          }:{}),
           ...(structured?{response_format:{type:"json_object"}}:{})
         })
       });
