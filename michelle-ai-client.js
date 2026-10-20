@@ -11,10 +11,15 @@
   // Mensagem pública: diagnóstico e fornecedores ficam exclusivamente nos logs internos.
   const unavailableMessage="Pedimos desculpas. Devido a problemas técnicos, a inteligência artificial está temporariamente indisponível. Já estamos trabalhando na correção e em melhorias para restabelecer o atendimento o quanto antes. Seu sistema continua funcionando com algoritmos e diretrizes automáticas. Apenas o chat com inteligência artificial permanece indisponível.";
   let availability="unknown";
+  let unavailableSince=0;
+  const retryAfterMs=60000;
   function apiUrl() {return "/api/michelle-ai";}
   async function request(mode, data={}) {
     if(availability==="unavailable" && mode!=="diagnostic"){
-      const error=Error(unavailableMessage);error.status=503;error.temporary=true;throw error;
+      if(Date.now()-unavailableSince<retryAfterMs){
+        const error=Error(unavailableMessage);error.status=503;error.temporary=true;throw error;
+      }
+      availability="unknown";
     }
     const ctrl=new AbortController();
     const timer=setTimeout(()=>ctrl.abort(),mode==="review"?60000:mode==="interpret-batch"?44000:27000);
@@ -31,11 +36,13 @@
         throw error;
       }
       availability="online";
+      unavailableSince=0;
       return body;
     } catch(error) {
       // O detalhe técnico jamais é exibido para quem utiliza o painel.
       if(error?.status===400 || error?.status===413 || error?.status===415)throw error;
       availability="unavailable";
+      unavailableSince=Date.now();
       const unavailable=Error(unavailableMessage);
       unavailable.status=error?.status||503;
       unavailable.temporary=true;
@@ -210,5 +217,5 @@
       '</section>';
   }
   root.MCAI={request,context,interpretationContext,rememberQuestion,home,consent,setConsent,unavailableMessage,
-    get available(){return availability==="online"?true:availability==="unavailable"?false:null;}};
+    get available(){return availability==="online"?true:availability==="unavailable"&&Date.now()-unavailableSince<retryAfterMs?false:null;}};
 })(window);
