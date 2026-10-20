@@ -1,6 +1,6 @@
 import {PLANILHA_AGENT_SYSTEM} from "./planilha-agent-prompt.mjs";
 import {AUTOMATIC_REVIEW_SYSTEM, validateReview, plainText} from "./automatic-review.mjs";
-// Railway: Copiloto com DeepSeek primária e Groq alternativa. Segredos só no servidor.
+// Copiloto: a Groq é a única API de IA; segredo somente no servidor.
 const SYSTEM = `Você é o Copiloto, a inteligência integrada ao Power BI | Painel Completo / Michelle Cândido.
 IDENTIDADE: profissional, muito carismática, bem-humorada sem exagero, calorosa e espontânea; português brasileiro, textos objetivos, sem formalismo robótico. Não simule relações íntimas nem assuma sentimentos ou fatos não informados. Não se apresente como ChatGPT ou como uma pessoa humana; você é uma assistente de IA.
 MISSÃO: ajudar no uso do software, interpretar planilhas difíceis e evidências operacionais, explicar indicadores e orientar a tomar decisões. Proponha atalhos e ações úteis, mas nunca execute mudança de dados, layout ou preferências sem confirmação explícita.
@@ -48,28 +48,23 @@ export default async function handler(request) {
   if(!allowed)return reply({error:"Origem não autorizada."},403);
   if(request.method==="OPTIONS")return new Response(null,{status:204,headers:{
     ...headers,"Access-Control-Max-Age":"600"}});
-  // Chaves configuradas no Railway; nenhuma delas é enviada ao navegador.
-  const deepseekKey = env("POWER_BI_MICHELLE_IA") || env("DEEPSEEK_API_KEY");
-  const groqKey = env("API_IA_GROQ") || env("GROQ_API_KEY");
-  const providers = [
-    ...(deepseekKey ? [{name:"DeepSeek",key:deepseekKey,base:"https://api.deepseek.com",
-      model:env("DEEPSEEK_MODEL") || "deepseek-flash"}] : []),
-    ...(groqKey ? [{name:"Groq",key:groqKey,base:"https://api.groq.com/openai/v1",
-      model:env("GROQ_MODEL") || "openai/gpt-oss-120b"}] : [])
-  ];
+  // API Groq no servidor, sem enviar credenciais ao navegador.
+  const key = env("API_IA_GROQ") || env("GROQ_API_KEY");
+  const model = env("GROQ_MODEL") || "openai/gpt-oss-120b";
+  const endpoint = "https://api.groq.com/openai/v1";
   // Esta rota não revela o segredo, apenas informa se a função pode encontrá-lo.
   if (request.method === "GET") return reply({
     service:"Copiloto",
     backend:"online",
-    keyConfigured:providers.length>0,
-    note:providers.length ? "Ao menos uma chave de IA está configurada no servidor." :
-      "Configure POWER_BI_MICHELLE_IA ou API_IA_GROQ no serviço Railway."
+    keyConfigured:!!key,
+    note:key ? "Chave Groq encontrada no ambiente do servidor." :
+      "Configure API_IA_GROQ no serviço Railway."
   });
   if (request.method !== "POST") return reply({error:"Método não permitido."},405);
   const type = request.headers.get("content-type") || "";
   if (!type.includes("application/json")) return reply({error:"Envie JSON."},415);
   if (Number(request.headers.get("content-length") || 0) > 48000) return reply({error:"Solicitação muito grande."},413);
-  if (!providers.length) return reply({error:"Nenhum provedor de IA está configurado no Railway."},503);
+  if (!key) return reply({error:"A inteligência artificial está temporariamente indisponível. O painel continua funcionando normalmente."},503);
   // Autenticação opcional para ambiente privado. Recomendado em produção, especialmente com arquivos de clientes.
   const access = env("MICHELLE_AI_ACCESS_TOKEN");
   if (access && request.headers.get("x-michelle-ai-token") !== access)
@@ -77,21 +72,17 @@ export default async function handler(request) {
   try {
     const input = await request.json();
     if (input?.mode === "diagnostic") {
-      // Diagnóstico autenticado com a API de modelos; não envia planilhas.
-      for (const provider of providers) {
-        const ctrl = new AbortController();
-        const timer = setTimeout(() => ctrl.abort(), 7000);
-        try {
-          const remote = await fetch(provider.base+"/models",{
-            method:"GET",headers:{Authorization:"Bearer "+provider.key},signal:ctrl.signal
-          });
-          if (remote.ok) return reply({ok:true,provider:provider.name,
-            message:"Autenticação de "+provider.name+" confirmada. Faça uma pergunta para testar a geração."});
-        } catch (_) {
-          // Se a primária falhar, tente a alternativa sem expor erros internos.
-        } finally {clearTimeout(timer);}
-      }
-      return reply({error:"Os provedores de IA configurados não responderam ao diagnóstico."},502);
+      // Valida autenticação sem enviar planilhas.
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 9500);
+      try {
+        const response = await fetch(endpoint+"/models",{
+          method:"GET",headers:{Authorization:"Bearer "+key},signal:ctrl.signal
+        });
+        if (!response.ok) return reply({error:"Não foi possível autenticar o serviço de IA."},502);
+        return reply({ok:true,provider:"Groq",
+          message:"Autenticação da Groq confirmada. Faça uma pergunta para verificar o modelo."});
+      } finally {clearTimeout(timer);}
     }
     const mode = ["chat","insights","interpret","interpret-batch","plan","review"].includes(input?.mode) ? input.mode : "chat";
     const question = safeText(input?.message,1800).trim();
@@ -123,52 +114,26 @@ export default async function handler(request) {
     const structured = ["interpret","interpret-batch","plan","review"].includes(mode);
     const maxTokens = mode==="review"?3800:mode==="plan"?3600:
       mode==="interpret-batch"?3100:mode==="interpret"?650:mode==="insights"?540:340;
+    const ctrl=new AbortController();
+    const timer=setTimeout(()=>ctrl.abort(),mode==="review"?55000:mode==="interpret-batch"?36000:23000);
     let out, answer;
-    // O cliente aguarda 27s (chat/plano), 44s (lote) ou 60s (revisão).
-    // Distribuir o tempo entre provedores evita estourar o timeout do navegador.
-    for (let i=0;i<providers.length;i++) {
-      const provider=providers[i];
-      const timeLimit = providers.length===1
-        ? (mode==="review"?55000:mode==="interpret-batch"?36000:23000)
-        : i===0 ? (mode==="review"?20000:mode==="interpret-batch"?14000:9000)
-          : (mode==="review"?34000:mode==="interpret-batch"?26000:16000);
-      const ctrl=new AbortController();
-      const timer=setTimeout(()=>ctrl.abort(),timeLimit);
-      try {
-        const options={
-          model:provider.model,messages,temperature:mode==="chat"?0.6:["plan","review"].includes(mode)?0.2:0.35,
+    try {
+      const response=await fetch(endpoint+"/chat/completions",{
+        method:"POST",signal:ctrl.signal,
+        headers:{"Authorization":"Bearer "+key,"Content-Type":"application/json"},
+        body:JSON.stringify({
+          model,messages,temperature:mode==="chat"?0.6:["plan","review"].includes(mode)?0.2:0.35,
+          reasoning_effort:"low",reasoning_format:"hidden",
+          max_completion_tokens:maxTokens+(structured?1200:900),
           ...(structured?{response_format:{type:"json_object"}}:{})
-        };
-        if (provider.name==="DeepSeek") {
-          options.thinking={type:"disabled"};
-          options.max_tokens=maxTokens;
-        } else {
-          // O GPT-OSS consome tokens internos de raciocínio além da resposta.
-          options.reasoning_effort="low";
-          options.reasoning_format="hidden";
-          options.max_completion_tokens=maxTokens+(structured?1200:900);
-        }
-        const remote=await fetch(provider.base+"/chat/completions",{
-          method:"POST",signal:ctrl.signal,
-          headers:{"Authorization":"Bearer "+provider.key,"Content-Type":"application/json"},
-          body:JSON.stringify(options)
-        });
-        if (!remote.ok) continue;
-        const candidate=await remote.json();
-        const content=safeText(candidate?.choices?.[0]?.message?.content,
-          ["plan","review","interpret-batch"].includes(mode)?24000:8500).trim();
-        if (!content) continue;
-        if (structured) {
-          try { JSON.parse(content); } catch (_) { continue; }
-        }
-        out=candidate;
-        answer=content;
-        break;
-      } catch (_) {
-        // Erro HTTP, rede, timeout ou payload: consultar o próximo provedor.
-      } finally {clearTimeout(timer);}
-    }
-    if (!out) return reply({error:"Infelizmente, por problemas técnicos, a inteligência artificial está temporariamente indisponível. Pedimos desculpas. Estamos trabalhando para restabelecer o serviço. O painel continua funcionando normalmente."},503);
+        })
+      });
+      if (!response.ok) return reply({error:"Infelizmente, por problemas técnicos, a inteligência artificial está temporariamente indisponível. Pedimos desculpas. Estamos trabalhando para restabelecer o serviço. O painel continua funcionando normalmente."},503);
+      out=await response.json();
+      answer=safeText(out?.choices?.[0]?.message?.content,
+        ["plan","review","interpret-batch"].includes(mode)?24000:8500).trim();
+      if (!answer) return reply({error:"A inteligência artificial está temporariamente indisponível. O painel continua funcionando normalmente."},503);
+    } finally {clearTimeout(timer);}
     if (mode === "review") {
       try { return reply({mode,review:validateReview(JSON.parse(answer),context),usage:out?.usage?{total_tokens:out.usage.total_tokens}:null}); }
       catch(error) { return reply({error:error instanceof SyntaxError?"A IA retornou uma revisão inválida. Tente novamente.":error.message},502); }
