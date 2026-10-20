@@ -173,7 +173,7 @@
       '<div class="mc-source-view-switch" role="group" aria-label="Formato da visualização">'+viewControls+'</div></header>'+
       metricTiles+'<div class="mc-source-visual">'+(V&&visual?V.chart(visual,allowedView,esc):
       '<p>Visualização indisponível. Consulte a lista de colunas abaixo.</p>')+'</div>'+metricDetail+
-      (suggestions?'<details class="mc-source-recommendation"><summary>✦ Recomendações da IA para esta fonte</summary>'+
+      (suggestions?'<details class="mc-source-recommendation"><summary>✦ Recomendações da '+(root.MCAutoReview?.current()?.localMode?'análise local':'IA')+' para esta fonte</summary>'+
         '<p>'+esc(suggestions.purpose)+'</p><p><b>Unidade de análise:</b> '+esc(suggestions.grain)+'</p>'+
         '<p><b>Gráfico sugerido:</b> '+esc(suggestions.chart||"A conferir")+'</p>'+
         (suggestions.warnings.length?'<p>'+esc(suggestions.warnings.join(" · "))+'</p>':"")+
@@ -187,7 +187,7 @@
     let result="";
     if(state.plan) {
       const p=state.plan;
-      result='<div class="dash-readings" aria-label="Plano sugerido pela IA">'+
+      result='<div class="dash-readings" aria-label="Plano de análise">'+
         '<p><strong>Proposta do agente:</strong> '+esc(p.summary||"Fontes lidas independentemente.")+'</p>'+
         p.sources.map(s=>'<details><summary>'+esc(profiles.find(x=>x.id===s.id)?.file||s.id)+' · '+esc(s.subject)+'</summary>'+
           '<p>'+esc(s.purpose)+'</p><p>Unidade por registro: '+esc(s.grain)+'</p>'+
@@ -212,8 +212,8 @@
       '<p class="dash-note">Cada arquivo e aba é analisado por si. A comparação entre eles é opcional, auditável e nunca cria vínculos automaticamente.</p>'+
       workspace+overlap+
       '<button type="button" class="btn" data-mc-source-plan '+(state.busy?"disabled":"")+'>'+
-        (state.busy?"Planejando dashboard…":"✦ Planejar dashboard com IA")+'</button>'+
-      '<small>Ao tocar, apenas nomes, cabeçalhos e formatos agregados serão enviados à IA. Nenhuma célula original será transmitida.'+(!root.MCAutoReview&&lots.filter(l=>!l.deleted&&!l.archived&&!l.supersededBy).length>MAX_SOURCES?" Limite desta análise: as primeiras "+MAX_SOURCES+" fontes ativas; demais devem ser avaliadas em lotes.":"")+'</small>'+
+        (state.busy?"Calculando…":root.MCAI?.available===false?"✦ Atualizar análise por algoritmos":"✦ Planejar dashboard com IA")+'</button>'+
+      '<small>'+(root.MCAI?.available===false?"Indicadores calculados localmente, sem enviar arquivos a serviços externos.":"Se a IA estiver disponível, somente informações agregadas poderão complementar a leitura; nenhuma célula original será transmitida.")+(!root.MCAutoReview&&lots.filter(l=>!l.deleted&&!l.archived&&!l.supersededBy).length>MAX_SOURCES?" Limite desta análise: as primeiras "+MAX_SOURCES+" fontes ativas; demais devem ser avaliadas em lotes.":"")+'</small>'+
       (state.error?'<p role="alert">'+esc(state.error)+'</p>':"")+result+'</section>';
   }
   async function onPlan() {
@@ -230,7 +230,7 @@
       const r=await root.MCAI.request("plan",{context:{sources}});
       if(!r.plan || !Array.isArray(r.plan.sources))throw Error("Esta versão da API ainda não suporta o agente de planilhas. É necessário publicar a função atualizada no Netlify.");
       state.plan=validatePlan(r.plan,state.catalog);
-    }catch(e){state.error=e?.message||"Não foi possível consultar a IA.";}
+    }catch(e){state.error=root.MCAI?.unavailableMessage||"Inteligência artificial temporariamente indisponível. Os indicadores locais seguem funcionando.";}
     finally{state.busy=false;root.MichelleBridge?.render();}
   }
   if(root.document) root.document.addEventListener("click",event=>{
