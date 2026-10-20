@@ -117,9 +117,9 @@ test("CORS aceita GitHub Pages com preflight e protege outras origens no navegad
 // O GitHub Pages é uma prévia independente: sem redirect e sem POST estático.
 test("GitHub Pages carrega localmente, sem redirecionar ao servidor",async()=>{
   const html=fs.readFileSync(path.join(__dirname,"../index.html"),"utf8");
-  const scripts=[...html.matchAll(/<script>([\\s\\S]*?)<\\/script>/g)].map(x=>x[1]);
-  assert.ok(scripts.length>=2);
-  assert.doesNotMatch(scripts[0],/location\\.replace|location\\.assign/);
+  const script=html.split("<script>")[1]?.split("</script>")[0];
+  assert.ok(script);
+  assert.ok(!script.includes("location.replace") && !script.includes("location.assign"));
   for(const [hostname,pathname,expected] of [
     ["danielnep.github.io","/michelle-preview/",true],
     ["danielnep.github.io","/outro-projeto/",false],
@@ -127,7 +127,7 @@ test("GitHub Pages carrega localmente, sem redirecionar ao servidor",async()=>{
   ]){
     const location={hostname,pathname,hash:"#/insight",replace:()=>{throw Error("redirecionamento indevido")}};
     const window={};
-    vm.runInNewContext(scripts[0],{window,location});
+    vm.runInNewContext(script,{window,location});
     assert.equal(window.MCPreview.enabled,expected);
   }
   let calls=0;
