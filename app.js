@@ -234,7 +234,7 @@
     const actions=[];
     if(can("filesView")||can("filesDownload")||can("filesDelete"))actions.push('<button type="button" class="nav" data-cloud-library>'+icon("files",18)+'<span>Biblioteca de arquivos</span></button>');
     if(can("reportsExport"))actions.push('<button type="button" class="nav" data-cloud-export>'+icon("down",18)+'<span>Exportar análises</span></button>');
-    if(access.owner)actions.push('<a class="nav" href="/colaboradores.html">'+icon("rh",18)+'<span>Colaboradores</span></a>');
+    if(access.owner && !window.MCPreview?.enabled)actions.push('<a class="nav" href="/colaboradores.html">'+icon("rh",18)+'<span>Colaboradores</span></a>');
     return actions.join("");
   }
   function sidebarUtilities(){
