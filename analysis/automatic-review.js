@@ -130,14 +130,65 @@
       if(!res.ok)throw Error("Não foi possível guardar a revisão.");state.persistenceError="";
     }catch(error){state.persistenceError=error.message;}
   }
+  // Revisão inteiramente determinística: cada fonte permanece independente.
+  // Não inventa causalidade, SLA, metas nem agregados de unidades incompatíveis.
+  function buildLocalReview(lots,rows){
+    const catalog=profiles(lots,rows);
+    const registry=catalog.flatMap(source=>source.metrics);
+    const metrics=[],insights=[];
+    for(const source of catalog){
+      const chosen=source.metrics.filter(metric=>["count","quantity","rate","averageDuration","sum"].includes(metric.operation)).slice(0,5);
+      for(const metric of chosen)metrics.push({
+        metricId:metric.id,title:source.titleHint+" · "+metric.label,
+        description:"Calculado apenas na origem "+source.file+" / "+source.sheet+"."
+      });
+      const rate=source.metrics.find(metric=>metric.operation==="rate");
+      if(rate)insights.push({
+        id:source.id+":status",kind:"idea",title:source.titleHint+" · situação dos registros",
+        interpretation:"Conclusão entre os registros com status reconhecido: "+new Intl.NumberFormat("pt-BR",{maximumFractionDigits:1}).format(rate.value)+"%. A taxa não representa SLA.",
+        action:"Conferir o período, o preenchimento do status e a meta antes de avaliar desempenho.",
+        confidence:"Alta",evidenceIds:[rate.id],comparison:null,relatedIndicators:[]
+      });
+      else if(source.rows)insights.push({
+        id:source.id+":coverage",kind:"idea",title:source.titleHint+" · cobertura",
+        interpretation:source.rows+" registros lidos nesta fonte. Não há status suficientes para calcular uma taxa de conclusão.",
+        action:"Verificar se a planilha oferece uma coluna de situação operacional.",
+        confidence:"Alta",evidenceIds:[source.metrics[0]?.id].filter(Boolean),comparison:null,relatedIndicators:[]
+      });
+    }
+    return {
+      localMode:true,summary:"Indicadores apurados por algoritmos locais e regras de consistência.",
+      sources:catalog.map(source=>({id:source.id,title:source.titleHint,partId:source.id+"/local"})),
+      insights,dashboard:{
+        title:"Indicadores calculados automaticamente",
+        description:"Análise local com fontes separadas, sem inteligência artificial.",
+        order:["metrics","insights","reading","records"],metrics,blocks:[]
+      },registry,coverage:{
+        sources:catalog.length,files:new Set(lots.map(l=>l.fileId||l.hash||l.id)).size,
+        rows:catalog.reduce((n,p)=>n+p.rows,0),
+        columns:catalog.reduce((n,p)=>n+p.columns.length,0),
+        completedAt:new Date().toISOString()
+      }
+    };
+  }
+  function useLocalReview(lots,signature){
+    const result=buildLocalReview(lots,bridge().getAll());
+    state.registry=result.registry;delete result.registry;
+    state.result=result;state.signature=signature;state.phase="local";state.error="";
+    state.completed=lots.length;state.total=lots.length;
+    refresh();
+  }
   async function run(){
     if(running){pending=true;return;}
-    if(!allowed()||!root.MCAI?.request||!bridge()?.getState().ready||(!root.MCAI.consent()&&!manualRequested))return;
+    if(!allowed()||!bridge()?.getState().ready||(!root.MCAI?.consent()&&!manualRequested))return;
     manualRequested=false;
     const lots=active(bridge().getImports());
     if(!lots.length){state.result=null;state.phase="idle";state.signature="";state.registry=[];refresh();return;}
     const generation=state.generation,signature=fingerprint(lots);
-    if(state.result&&signature===state.signature&&state.phase==="ready")return;
+    if(state.result&&signature===state.signature&&["ready","local"].includes(state.phase))return;
+    if(!root.MCAI?.request||root.MCAI.available===false){
+      useLocalReview(lots,signature);return;
+    }
     running=true;pending=false;state.phase="analyzing";state.completed=0;state.error="";
     state.result=null;state.registry=[];state.total=lots.length;refresh();
     try{
@@ -184,7 +235,10 @@
       if(!state.result.dashboard.metrics.length)state.result.dashboard.metrics=catalog.map(p=>({metricId:p.metrics[0].id,title:(state.result.sources.find(s=>s.id===p.id)?.title||p.titleHint)+" · registros",description:"Contagem desta fonte, sem somar outras planilhas."}));
       root.dispatchEvent?.(new root.CustomEvent("mc:automatic-review-ready",{detail:state.result}));
       refresh();await persist();refresh();
-    }catch(error){if(generation===state.generation){state.phase="error";state.error=error.message;refresh();}}
+    }catch(error){if(generation===state.generation){
+      if(error.temporary||root.MCAI?.available===false)useLocalReview(lots,signature);
+      else {state.phase="error";state.error="Não foi possível concluir a revisão. Os indicadores locais continuam disponíveis.";refresh();}
+    }}
     finally{running=false;if(pending){pending=false;timer=root.setTimeout(()=>void run(),400);}}
   }
   function schedule(force=false){
@@ -205,7 +259,7 @@
     if(!allowed())return "";
     const busy=["queued","analyzing"].includes(state.phase);
     if(!busy&&state.phase!=="error"&&!current())return "";
-    return '<section class="mc-review-status '+(busy?'is-working':'')+'" role="status" aria-live="polite"><span class="mc-review-spark" aria-hidden="true">✦</span><div><strong>'+(busy?'Copiloto conferindo os arquivos':state.phase==='error'?'Revisão precisa de atenção':'Leitura inteligente concluída')+'</strong><p>'+esc(busy?(state.completed+' de '+state.total+' fontes conferidas. A importação já está salva.'):state.phase==='error'?state.error:state.result.coverage.files+' arquivos · '+state.result.coverage.sources+' abas/fontes · '+fmt(state.result.coverage.rows)+' linhas lidas')+'</p></div>'+(!busy?'<button class="btn" type="button" data-auto-review-retry>Revisar novamente</button>':'')+'</section>';
+    return '<section class="mc-review-status '+(busy?'is-working':'')+'" role="status" aria-live="polite"><span class="mc-review-spark" aria-hidden="true">✦</span><div><strong>'+(busy?'Copiloto conferindo os arquivos':state.phase==='error'?'Revisão precisa de atenção':state.phase==='local'?'Leitura por algoritmos concluída':'Leitura inteligente concluída')+'</strong><p>'+esc(busy?(state.completed+' de '+state.total+' fontes conferidas. A importação já está salva.'):state.phase==='error'?state.error:state.result.coverage.files+' arquivos · '+state.result.coverage.sources+' abas/fontes · '+fmt(state.result.coverage.rows)+' linhas lidas')+'</p></div>'+(!busy?'<button class="btn" type="button" data-auto-review-retry>'+(state.phase==='local'?'Atualizar cálculos':'Revisar novamente')+'</button>':'')+'</section>';
   }
   function metricsHTML(rows){
     const list=values(rows);if(!list.length)return "";
@@ -215,7 +269,7 @@
     if(!state.result||state.signature!==fingerprint(bridge()?.getImports()||[]))return "";
     const names={attention:'Ponto de atenção',positive:'Ponto positivo',negative:'Ponto negativo',comparison:'Comparativo',idea:'Ideia e percepção'};
     const registry=new Map(state.registry.map(m=>[m.id,m]));
-    return '<section class="mc-review-insights" aria-label="Percepções do Copiloto"><header><h2>'+esc(state.result.dashboard.title)+'</h2><p>'+esc(state.result.dashboard.description)+'</p><small>Análise do conjunto importado. Os indicadores abaixo acompanham os filtros do painel.</small></header>'+(!state.result.insights.length?'<p>Nenhuma percepção adicional foi sustentada nesta revisão. Os indicadores foram organizados por fonte.</p>':'<div class="mc-review-findings">'+state.result.insights.map(i=>{
+    return '<section class="mc-review-insights" aria-label="'+(state.phase==='local'?'Análises por algoritmos':'Percepções do Copiloto')+'"><header><h2>'+esc(state.result.dashboard.title)+'</h2><p>'+esc(state.result.dashboard.description)+'</p><small>Análise do conjunto importado. Os indicadores abaixo acompanham os filtros do painel.</small></header>'+(!state.result.insights.length?'<p>Nenhuma percepção adicional foi sustentada nesta revisão. Os indicadores foram organizados por fonte.</p>':'<div class="mc-review-findings">'+state.result.insights.map(i=>{
       const evidence=i.evidenceIds.map(id=>registry.get(id)).filter(Boolean),comparison=i.comparison;
       let difference='';if(comparison){const a=registry.get(comparison.leftId),b=registry.get(comparison.rightId);if(a&&b)difference='<p>Diferença entre as fontes: '+fmt(b.value-a.value)+' '+esc(b.unit)+(a.value?'; variação de '+fmt((b.value-a.value)/Math.abs(a.value)*100)+'%':'')+'.</p>';}
       return '<article class="mc-review-finding '+i.kind+'"><span class="mc-review-kind">'+names[i.kind]+'</span><h3>'+esc(i.title)+'</h3><p>'+esc(i.interpretation)+'</p>'+(i.action?'<p class="mc-review-action">'+esc(i.action)+'</p>':'')+'<details><summary>Evidências e limites · confiança '+esc(i.confidence)+'</summary>'+evidence.map(m=>'<p>'+esc(m.label)+': '+fmt(m.value)+' '+esc(m.unit)+' · '+esc(m.file)+' / '+esc(m.sheet)+'</p>').join('')+difference+'<p>As causas sugeridas são hipóteses; não foram executadas mudanças nos dados.</p>'+i.relatedIndicators.map(r=>'<p>Para aprofundar: '+esc(r.name)+' — '+esc(r.reason)+' (indicador a coletar).</p>').join('')+'</details></article>';
@@ -236,6 +290,6 @@
     root.document.addEventListener('click',e=>{if(e.target.closest('[data-auto-review-retry]')){state.signature='';schedule(true);}});
     root.addEventListener('mc:app-ready',()=>void restore());
   }
-  return {profiles,batches,fingerprint,combine,number,plain,state,schedule,run,invalidate,status,metricsHTML,insightsHTML,textSummary,restore,
+  return {profiles,batches,buildLocalReview,fingerprint,combine,number,plain,state,schedule,run,invalidate,status,metricsHTML,insightsHTML,textSummary,restore,
     current,block:id=>current()?.dashboard.blocks.find(b=>b.id===id)};
 });
