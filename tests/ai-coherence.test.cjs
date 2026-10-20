@@ -67,9 +67,9 @@ test("títulos e explicações de origem são contextuais, sem exibir fórmula c
   assert.match(dashboard,/b\.generateAIInsights/);
 });
 
-test("Copiloto usa somente a API própria do Railway na mesma origem",async()=>{
+test("Copiloto usa somente a API da mesma origem quando há backend",async()=>{
   for(const [hostname,expected] of [
-    ["danielnep.github.io","/api/michelle-ai"],
+    ["powerbi-completo-mc.up.railway.app","/api/michelle-ai"],
     ["powerbicompleto.netlify.app","/api/michelle-ai"]
   ]){
     let called="";
@@ -112,4 +112,32 @@ test("CORS aceita GitHub Pages com preflight e protege outras origens no navegad
   }));
   assert.equal(blocked.status,403);
   assert.equal(blocked.headers.get("access-control-allow-origin"),null);
+});
+
+// Regressão: GitHub Pages não suporta POST na rota /api/michelle-ai (405).
+test("GitHub Pages encaminha para o Railway e não tenta POST no servidor estático",async()=>{
+  const html=fs.readFileSync(path.join(__dirname,"../index.html"),"utf8");
+  const client=fs.readFileSync(path.join(__dirname,"../michelle-ai-client.js"),"utf8");
+  let redirectUrl,called=0;
+  const location={hostname:"danielnep.github.io",hash:"#/insight",replace:url=>{redirectUrl=url;}};
+  assert.match(html,/location\.hostname === "danielnep\.github\.io"/);
+  assert.match(html,/location\.replace\("https:\/\/powerbi-completo-mc\.up\.railway\.app\/" \+ location\.hash\)/);
+  const window={location};
+  vm.runInNewContext(client,{
+    window,localStorage:{getItem:()=>null,setItem:()=>{}},
+    fetch:async()=>{called++;return {ok:true,json:async()=>({})}},
+    AbortController,setTimeout,clearTimeout
+  });
+  await assert.rejects(window.MCAI.request("chat",{message:"Olá"}),/painel oficial/);
+  assert.equal(called,0);
+  // Também protege usuários que ainda têm a versão antiga da página em cache.
+  assert.equal(location.hostname,"danielnep.github.io");
+  assert.equal(redirectUrl,undefined);
+});
+test("interface do Copiloto não cita DeepSeek e usa quebras de linha reais",()=>{
+  const app=fs.readFileSync(path.join(__dirname,"../app.js"),"utf8");
+  assert.doesNotMatch(app,/DeepSeek/);
+  assert.match(app,/Dados agregados enviados à Groq/);
+  assert.match(app,/\\n\\nConsulta local \(sem IA generativa\):\\n/);
+  assert.doesNotMatch(app,/\\\\n\\\\nConsulta local/);
 });
