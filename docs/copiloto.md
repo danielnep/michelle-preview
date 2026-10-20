@@ -1,9 +1,9 @@
 # Copiloto · configuração de personalidade e integração
 **Projeto:** Power BI | Painel Completo / Michelle Cândido.
-**Status:** código implementado nesta revisão; conexão remota depende do segredo Netlify válido, saldo de API e publicação bem-sucedida.
+**Status:** backend protegido no servidor de produção com API Groq. Testes de integração real exigem conta autorizada e resposta válida do provedor.
 
 ## 1. Prompt de conversação (sistema)
-> O prompt operacional atual está no arquivo `netlify/functions/michelle-ai.mjs`, na constante `SYSTEM`.
+> O prompt operacional atual está no arquivo `server/michelle-ai.mjs`, na constante `SYSTEM`.
 > Esta é a descrição humana do comportamento que deve ser preservado ao ajustar o prompt:
 
 Você é o Copiloto, assistente de IA integrado ao painel de dados da Michelle Cândido. Fale português brasileiro, com entusiasmo natural, humor moderado e profissionalismo. Seja extremamente carismática sem soar artificial, paternalista ou tagarela. Esclareça dúvidas, ajude em tarefas, explique funções do painel e apresente sugestões quando realmente úteis.
@@ -17,8 +17,8 @@ Ao receber planilhas, os nomes e títulos são pistas: considere nome do arquivo
 Seja proativa quando houver uma descoberta real, sem criar alertas decorativos. Recomende próximos passos; alterações importantes precisam de aprovação da usuária. Nunca modifique planilhas originais silenciosamente.
 
 ## 2. Instruções técnicas de atuação dentro do painel
-- **Arquitetura:** GitHub (código e GitHub Pages para interface) → backend protegido no Railway (ou Netlify Functions legado) → Groq (resposta). A versão Netlify da interface continua funcionando.
-- **Chave:** `Netlify.env.get("API_IA_GROQ")` (com suporte ao nome anterior `GROQ_API_KEY`) somente na função `netlify/functions/michelle-ai.mjs`, jamais no HTML ou JavaScript público.
+- **Arquitetura:** GitHub Pages é prévia isolada no navegador; o backend autenticado de produção atende a API da Groq, com PostgreSQL e arquivos privados.
+- **Chave:** `process.env.API_IA_GROQ` (ou `GROQ_API_KEY`) somente no servidor `server/michelle-ai.mjs`, nunca no HTML ou JavaScript público.
 - **Endpoint interno:** `POST /api/michelle-ai`. Modos de trabalho: `chat`, `insights`, `interpret`.
 - **Modelo selecionado:** `openai/gpt-oss-120b` via Groq, sem API da OpenAI. A variável `GROQ_MODEL` permite ajustes futuros. Os modos simples usam raciocínio baixo, planejamento/revisão usam médio; respostas estruturadas continuam em JSON, sem expor o raciocínio nem credenciais.
 - **Entrada analítica:** `MCAI.context()` manda totais, unidades, recortes, lista de fontes e evidências do motor local, não o arquivo bruto.
@@ -28,24 +28,21 @@ Seja proativa quando houver uma descoberta real, sem criar alertas decorativos. 
 - **Memória:** temas mais consultados são contados em armazenamento do navegador, podem sugerir atalhos e ser apagados nas configurações. Isto não é treinamento de modelo nem sincronização entre aparelhos.
 - **Chat desktop:** botão flutuante arrastável, encaixe magnético nas bordas, janela que pode ser movida pelo cabeçalho e botão "Barra lateral".
 - **Chat celular:** bolinha menor arrastável; ao arrastá-la até a parte inferior ela se oculta e aparece uma bolinha para reativar o chat.
-- **Segurança:** atualmente os perfis são modos visuais, NÃO autenticação. O endpoint tem limitação de taxa por IP mas não substitui autenticação. Para liberar dados corporativos reais em produção, criar autenticação server-side. A variável opcional `MICHELLE_AI_ACCESS_TOKEN` protege a função mas exige adaptação de um fluxo de sessão seguro antes de usá-la com vários usuários; jamais publicar esse token no frontend.
+- **Segurança:** a produção autentica sessões no servidor e verifica a permissão `ai`; perfis de visualização não concedem autorização. O segredo Groq nunca é exposto no cliente. O Pages usa somente dados locais de teste.
 - **API externa:** verifique finalidade e compartilhamento de dados, obrigações contratuais e LGPD antes de importar documentos confidenciais.
 - **Falhas:** se o Groq falhar no modo dados, exibir explicitamente a resposta local (não atribuí-la à IA online). Na conversa geral, exibir erro recuperável.
 
-## 3. Instalação no Netlify (sem servidor separado)
-1. Conectar repositório `danielnep/michelle-preview` à plataforma Netlify.
-2. Criar variável de ambiente com **nome exato** `API_IA_GROQ`, valor igual à chave da Groq (não compartilhar nem commitar).
-3. Publicar nova implantação do commit da versão principal. O Netlify faz deploy da função automaticamente em `netlify/functions`.
-4. Abrir site do Netlify e testar o modo "Conversa geral" com a pergunta "Olá, quem é você?". Abrir "Análises do painel" com dados de teste.
-5. Abrir importação de planilha sintética e clicar "Analisar identificação com IA" para obter e conferir uma proposta de mapeamento.
-6. Testar botões, histórico, arraste e barra lateral em desktop, bolinha e reativação em celular.
-7. Conferir logs da função no Netlify em caso de resposta 503 (chave ausente), 429 (limite) ou 502 (erro do serviço).
+## 3. Publicação no servidor de produção
 
-**Configuração confirmada:** o código procura primeiro `API_IA_GROQ`, nome já cadastrado no Netlify. `GROQ_API_KEY` é uma alternativa de nomenclatura. Não é necessário duplicar a chave. Confirme que o escopo inclui Functions e republique após alterações.
+1. Usar o serviço existente `power-bi-michelle-app`, repositório `danielnep/michelle-preview`, branch `main`.
+2. Manter `API_IA_GROQ` como segredo de runtime no servidor e o modelo padrão `openai/gpt-oss-120b`. Não expor chave em GitHub Pages ou logs.
+3. Validar compilação e `/health`, autenticar uma conta com permissão de IA e testar o chat, diagnóstico Groq e importação de planilha sintética.
+4. Confirmar as respostas reais do endpoint protegido `/api/michelle-ai` e registros HTTP antes de informar que a IA está disponível.
+5. Manter GitHub Pages independente, sem login remoto e sem redirecionar para a produção.
 
 ## 4. Limitações conscientemente preservadas
-O painel armazena planilhas no IndexedDB por navegador e origem. A migração de GitHub Pages para domínio Netlify **não** copia esses arquivos; utilize a exportação/restauração de backup.
-A inclusão de IA não adiciona login real, banco compartilhado nem notificações push do sistema operacional. Os avisos proativos previstos são dentro da interface ao usar o app.
+O painel armazena planilhas no IndexedDB por navegador e origem. A migração de GitHub Pages para o domínio de produção **não** copia esses arquivos; utilize a exportação/restauração de backup.
+A prévia GitHub Pages não adiciona login real, banco compartilhado nem notificações push do sistema operacional. A produção possui autenticação real no servidor e PostgreSQL. Os avisos proativos previstos são dentro da interface ao usar o app.
 
 ## 5. GitHub Pages: prévia independente do cliente
 
