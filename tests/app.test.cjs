@@ -47,6 +47,48 @@ test("importação conta arquivos separadamente das abas e preserva erro isolado
     assert.equal(t.errors.length, 0);
   } finally { w.XLSX.utils.sheet_to_json = original; t.w.close(); }
 });
+test("Explorar separa indicadores, registros e origens, mantendo filtros e unidades", async () => {
+  const t = await boot(), b = t.w.MichelleBridge, d = t.w.document;
+  dashboardLots(t);
+  b.navigate("dashboard");
+  assert.deepEqual([...d.querySelectorAll("[data-mc-dash-tab]")].map(el => el.dataset.mcDashTab),
+    ["overview", "records", "sources"]);
+  assert.ok(d.querySelector('[data-dash-quick-type="ligacoes"]'));
+  t.click('[data-mc-dash-tab="records"]');
+  assert.ok(d.querySelector(".mc-dash-records-page"));
+  assert.ok(d.querySelector(".dash-table-scroll tbody tr"));
+  assert.equal(t.w.MichelleDashboard.getState().tab,"records");
+  t.click('[data-dash-quick-type="ligacoes"]');
+  assert.equal(t.w.MichelleDashboard.model().rows.length,2);
+  assert.equal(d.querySelector('[data-dash-quick-type="ligacoes"]').getAttribute("aria-pressed"),"true");
+  assert.ok(d.querySelector(".mc-dash-records-page"));
+  t.click('[data-mc-dash-tab="sources"]');
+  assert.ok(d.querySelector(".mc-dash-source-page"));
+  t.click('[data-mc-dash-tab="overview"]');
+  assert.ok(d.querySelector(".dash-grid"));
+  assert.equal(t.errors.length,0);
+  t.w.close();
+});
+test("Insights informa cobertura comprovada e abre diretamente registros ou origens", async () => {
+  const t = await boot(), b = t.w.MichelleBridge, d = t.w.document;
+  const lots=dashboardLots(t);
+  for (const lot of lots) for (const row of lot.rows) row.lotId=lot.id;
+  b.navigate("insight");
+  const summary=d.querySelector(".mc-insight-coverage");
+  assert.ok(summary);
+  assert.match(summary.textContent,/5/);
+  assert.match(summary.textContent,/3/);
+  assert.match(summary.textContent,/ordens/i);
+  t.click('[data-insight-open-tab="records"]');
+  assert.equal(b.getState().page,"dashboard");
+  assert.equal(t.w.MichelleDashboard.getState().tab,"records");
+  b.navigate("insight");
+  t.click('[data-insight-open-tab="sources"]');
+  assert.equal(b.getState().page,"dashboard");
+  assert.equal(t.w.MichelleDashboard.getState().tab,"sources");
+  assert.equal(t.errors.length,0);
+  t.w.close();
+});
 test("COI abre importação no destino escolhido e exclusão sai da base, persiste e pode ser restaurada", async () => {
   const t = await boot(), b = t.w.MichelleBridge;
   b.navigate("coi"); t.click("[data-import-coi]");
