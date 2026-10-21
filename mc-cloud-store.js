@@ -83,13 +83,19 @@
  }
  async function batch(ops){
    const fileOps=ops.filter(o=>o.store==="files");
-   for(const op of fileOps) {
-     if(op.remove)throw Error("A remoção definitiva de originais não está disponível.");
-     await uploadFile(op.value);
-   }
-   const others=ops.filter(o=>o.store!=="files");
-   if(others.length)await request("/api/store/batch",json({ops:others}));
-   if(fileOps.length)await refreshFiles();
+   let uploaded=0, failure=null;
+   try{
+     for(const op of fileOps) {
+       if(op.remove)throw Error("A remoção definitiva de originais não está disponível.");
+       await uploadFile(op.value);
+       uploaded++;
+     }
+     const others=ops.filter(o=>o.store!=="files");
+     if(others.length)await request("/api/store/batch",json({ops:others}));
+   }catch(error){failure=error;}
+   // Original confirmado no servidor, mas o lote pode falhar depois: reconciliar o catálogo.
+   if(uploaded)try{await refreshFiles();}catch(error){if(!failure)failure=error;}
+   if(failure)throw failure;
  }
  const put=(store,value)=>batch([{store,value}]);
  const remove=(store,id)=>batch([{store,id,remove:true}]);
