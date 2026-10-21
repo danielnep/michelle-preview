@@ -449,6 +449,6 @@
     config={...config,order:[...new Set([...chosen,"insights","metrics","reading","records"])],hidden:[]};
     persist();b.render();
   });
-  window.MichelleDashboard = { page, wire, model, expand, collapse, openSector(sector) { config = { ...config, sector, type: "all", status: "all", period: "all", start: "", end: "", query: "", member: null, accountKey: null, reportView: "local" }; b.getState().query = ""; persist(); b.navigate("dashboard"); }, getConfig: () => structuredClone(config), getState: () => ({ ...state }) };
+  window.MichelleDashboard = { page, wire, model, expand, collapse, showTab(tab) { if(["overview","records","sources"].includes(tab))state.tab=tab; }, openSector(sector) { config = { ...config, sector, type: "all", status: "all", period: "all", start: "", end: "", query: "", member: null, accountKey: null, reportView: "local" }; b.getState().query = ""; persist(); b.navigate("dashboard"); }, getConfig: () => structuredClone(config), getState: () => ({ ...state }) };
   b.render();
 })();
