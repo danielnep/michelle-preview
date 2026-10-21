@@ -7,6 +7,119 @@ const { JSDOM, VirtualConsole } = require("jsdom");
 const { IDBFactory, IDBKeyRange } = require("fake-indexeddb");
 const X = require("../vendor/xlsx.full.min.js");
 const root = path.join(__dirname, "..");
+test("experiência mobile prioriza indicadores, setores, exploração e insights", async () => {
+  const t = await boot(), b = t.w.MichelleBridge, doc = t.w.document;
+  assert.deepEqual([...doc.querySelectorAll(".mobile-nav [data-nav]")].map(el => el.dataset.nav),
+    ["geral", "sectors", "dashboard", "insight", "more"]);
+  assert.ok(doc.querySelector(".mc-overview-lead [data-nav='dashboard']"));
+  b.navigate("sectors");
+  assert.ok(doc.querySelector(".mc-sector-list"));
+  b.navigate("dashboard");
+  assert.ok(doc.querySelector(".dash-grid"));
+  b.navigate("insight");
+  assert.ok(doc.querySelector(".insight-actions"));
+  b.navigate("more");
+  assert.ok(doc.querySelector('.content [data-nav="data"]'));
+  assert.ok(doc.querySelector('.content [data-nav="report"]'));
+  assert.equal(t.errors.length, 0);
+  t.w.close();
+});
+test("importação conta arquivos separadamente das abas e preserva erro isolado de leitura", async () => {
+  const t = await boot(), b = t.w.MichelleBridge, w = t.w;
+  const wb = X.utils.book_new();
+  X.utils.book_append_sheet(wb, X.utils.aoa_to_sheet([["Número da OS","Status"],["001","Concluído"],["002","Pendente"]]), "Ordens");
+  X.utils.book_append_sheet(wb, X.utils.aoa_to_sheet([["ERRO-TESTE","Status"],["A","Pendente"]]), "AbaFalha");
+  const original = w.XLSX.utils.sheet_to_json;
+  w.XLSX.utils.sheet_to_json = (sheet, options) => {
+    if(sheet?.A1?.v === "ERRO-TESTE" && !Object.hasOwn(options || {}, "range"))
+      throw Error("Falha de leitura simulada");
+    return original(sheet, options);
+  };
+  try {
+    b.navigate("data");
+    await b.handleFiles([file(w, "multiplas_abas.xlsx", X.write(wb, { type:"buffer", bookType:"xlsx" }))]);
+    assert.equal(b.getImports().length, 1);
+    const line = w.document.querySelector(".upload-list-heading").textContent;
+    assert.match(line, /1 arquivo\(s\)/);
+    assert.match(line, /1 aba\(s\) salva\(s\)/);
+    assert.match(line, /1 erro\(s\)/);
+    assert.match(w.document.querySelector(".upload-file.has-error").textContent, /AbaFalha/);
+    assert.equal(t.errors.length, 0);
+  } finally { w.XLSX.utils.sheet_to_json = original; t.w.close(); }
+});
+test("Explorar separa indicadores, registros e origens, mantendo filtros e unidades", async () => {
+  const t = await boot(), b = t.w.MichelleBridge, d = t.w.document;
+  dashboardLots(t);
+  b.navigate("dashboard");
+  assert.deepEqual([...d.querySelectorAll("[data-mc-dash-tab]")].map(el => el.dataset.mcDashTab),
+    ["overview", "records", "sources"]);
+  assert.ok(d.querySelector('[data-dash-quick-type="ligacoes"]'));
+  t.click('[data-mc-dash-tab="records"]');
+  assert.ok(d.querySelector(".mc-dash-records-page"));
+  assert.ok(d.querySelector(".dash-table-scroll tbody tr"));
+  assert.equal(t.w.MichelleDashboard.getState().tab,"records");
+  t.click('[data-dash-quick-type="ligacoes"]');
+  assert.equal(t.w.MichelleDashboard.model().rows.length,2);
+  assert.equal(d.querySelector('[data-dash-quick-type="ligacoes"]').getAttribute("aria-pressed"),"true");
+  assert.ok(d.querySelector(".mc-dash-records-page"));
+  t.click('[data-mc-dash-tab="sources"]');
+  assert.ok(d.querySelector(".mc-dash-source-page"));
+  t.click('[data-mc-dash-tab="overview"]');
+  assert.ok(d.querySelector(".dash-grid"));
+  assert.equal(t.errors.length,0);
+  t.w.close();
+});
+test("Insights informa cobertura comprovada e abre diretamente registros ou origens", async () => {
+  const t = await boot(), b = t.w.MichelleBridge, d = t.w.document;
+  const lots=dashboardLots(t);
+  for (const lot of lots) for (const row of lot.rows) row.lotId=lot.id;
+  b.navigate("insight");
+  const summary=d.querySelector(".mc-insight-coverage");
+  assert.ok(summary);
+  assert.match(summary.textContent,/5/);
+  assert.match(summary.textContent,/3/);
+  assert.match(summary.textContent,/ordens/i);
+  t.click('[data-insight-open-tab="records"]');
+  assert.equal(b.getState().page,"dashboard");
+  assert.equal(t.w.MichelleDashboard.getState().tab,"records");
+  b.navigate("insight");
+  t.click('[data-insight-open-tab="sources"]');
+  assert.equal(b.getState().page,"dashboard");
+  assert.equal(t.w.MichelleDashboard.getState().tab,"sources");
+  assert.equal(t.errors.length,0);
+  t.w.close();
+});
+test("original na biblioteca sem aba importada é sinalizado e pode ser reprocessado", async () => {
+  const t=await boot(), w=t.w, b=w.MichelleBridge;
+  const bytes=workbook();
+  const hash=Buffer.from(await webcrypto.subtle.digest("SHA-256",bytes)).toString("hex");
+  await w.MCStore.put("files",{id:hash,name:"recuperavel.xlsx",bytes:new Uint8Array(bytes)});
+  const fromStore=await w.MCStore.read("files",hash);
+  assert.deepEqual(Buffer.from(fromStore.bytes),Buffer.from(bytes));
+  const copy=fromStore.bytes instanceof w.ArrayBuffer?fromStore.bytes:
+    w.ArrayBuffer.isView(fromStore.bytes)?fromStore.bytes.buffer.slice(
+      fromStore.bytes.byteOffset,fromStore.bytes.byteOffset+fromStore.bytes.byteLength):null;
+  assert.ok(copy);
+  const restored=new w.Uint8Array(copy).buffer;
+  assert.deepEqual(Buffer.from(restored),Buffer.from(bytes));
+  const loaded=w.XLSX.read(new w.Uint8Array(restored),{type:"array"}),sheets=loaded.SheetNames;
+  assert.ok(sheets.includes("Registros"),JSON.stringify({sheets,bytes:restored.byteLength,original:bytes.byteLength}));
+  const inspected=w.MCWorkbookSheets.inspect(loaded,w.XLSX,w.MCData.detect,"recuperavel.xlsx");
+  assert.ok(inspected.some(x=>x.selected),JSON.stringify({sheets,inspected}));
+  w.MCAccess={owner:true,rights:{filesView:true,filesUpload:true}};
+  w.MCCloudFiles={list:()=>[{id:hash,name:"recuperavel.xlsx"}]};
+  b.navigate("data");
+  const section=w.document.querySelector(".mc-file-reconciliation");
+  assert.ok(section);
+  assert.match(section.textContent,/sem aba importada/);
+  t.click('[data-reprocess-orphan]');
+  await wait(()=>b.getImports().length===1&&!b.getState().readingFiles);
+  assert.equal(b.getImports().length,1);
+  assert.equal(b.getImports()[0].fileId,hash);
+  assert.equal(w.document.querySelectorAll("[data-reprocess-orphan]").length,0);
+  assert.equal(t.errors.length,0);
+  w.close();
+});
 test("COI abre importação no destino escolhido e exclusão sai da base, persiste e pode ser restaurada", async () => {
   const t = await boot(), b = t.w.MichelleBridge;
   b.navigate("coi"); t.click("[data-import-coi]");

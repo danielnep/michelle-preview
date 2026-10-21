@@ -267,6 +267,7 @@
   }
   function shell() {
     let sec = idSector(state.page);
+    const mobileCurrentPage = sec ? "sectors" : ["data", "report", "present", "settings"].includes(state.page) ? "more" : state.page;
     let title = sec
       ? sec.name
       : {
@@ -281,15 +282,15 @@
           settings: "Configurações",
         }[state.page] || "Visão geral";
     return `<div class="app"><div class="backdrop ${state.sidebar ? "open" : ""}" data-close="1"></div><aside id="panel-navigation" class="sidebar ${state.sidebar ? "open" : ""}" aria-label="Navegação do painel"><button type="button" class="sidebar-close small-icon-btn" data-close-nav aria-label="Fechar menu">${icon("close", 20)}</button><div class="brand"><span class="panel-logo" aria-hidden="true">${icon("brand", 26)}</span><strong class="panel-brand-title">PowerBI Completo MC</strong></div><label class="searchbox sidebar-search">${icon("search", 18)}<input aria-label="Pesquisar registros" id="global-search" placeholder="Pesquisar dados..." value="${esc(state.query)}" /></label><div class="nav-scroll"><div class="nav-group nav-group-primary"><div class="side-label">VISÃO E DADOS</div>${nav("geral", "Início")}${nav("dashboard", "Dashboard")}${nav("sectors", "Setores")}</div><div class="nav-group mc-nav-group-data"><div class="side-label">ARQUIVOS</div>${nav("data", "Importar planilhas")}${fileActions()}</div><div class="nav-group mc-nav-group-intelligence"><div class="side-label">ANÁLISES E RESULTADOS</div>${nav("insight", "Insights e análises")}${nav("report", "Relatórios")}${nav("present", "Apresentações")}</div><div class="nav-group mc-nav-group-departments"><details class="mc-sector-tree" ${state.navSectorsExpanded || !!idSector(state.page) ? "open" : ""}><summary>${icon("sectors", 17)}<span>DEPARTAMENTOS</span><span class="mc-sector-count">${visibleSectors().length}</span><span class="mc-sector-chevron" aria-hidden="true">⌄</span></summary><div class="mc-department-list">${visibleSectors().map(s => nav(s.id, s.name)).join("")}</div></details></div><div class="nav-group mc-nav-group-tools"><div class="side-label">PREFERÊNCIAS</div>${nav("settings", "Configurações")}</div>${sidebarUtilities()}</div><div class="side-bottom"><div class="side-credit">PowerBI Completo MC</div></div></aside><div class="main"><header class="topbar"><button aria-label="${state.sidebar ? "Fechar menu" : "Abrir menu"}" aria-expanded="${state.sidebar}" aria-controls="panel-navigation" class="small-icon-btn mob-toggle" data-toggle="1">${icon("menu", 20)}</button><div class="header-identity"><span class="panel-logo panel-logo-small" aria-hidden="true">${icon("brand", 19)}</span><div class="crumb"><strong class="app-title">PowerBI Completo MC</strong>${window.MCPreview?.enabled?'<span class="mc-preview-label" role="status">PRÉVIA GITHUB · DADOS LOCAIS</span>':""}<span class="app-caption crumb-page">${esc(title)}</span></div>${headerUpload()}</div>${headerActions()}</header><main class="content"><div class="print-header">PowerBI Completo MC</div>${window.MCAutoReview?.status()||""}${body()}</main><footer class="footer"><span>PowerBI Completo MC</span></footer></div><nav class="mobile-nav" aria-label="Navegação principal">${[
-      ["geral", "Resumo", "grid"],
+      ["geral", "Início", "grid"],
       ["sectors", "Setores", "coi"],
-      ["data", "Dados", "up"],
-      ["report", "Relatórios", "report"],
+      ["dashboard", "Explorar", "chart"],
+      ["insight", "Insights", "insight"],
       ["more", "Mais", "menu"],
     ]
       .map(
         ([id, label, ico]) =>
-          `<button class="${state.page === id ? "active" : ""}" data-nav="${id}" ${state.page === id ? 'aria-current="page"' : ""}>${icon(ico, 22)}<span>${label}</span></button>`,
+          `<button class="${mobileCurrentPage === id ? "active" : ""}" data-nav="${id}" ${mobileCurrentPage === id ? 'aria-current="page"' : ""}>${icon(ico, 22)}<span>${label}</span></button>`,
       )
       .join("")}</nav></div>${assistantDock()}`;
   }
@@ -497,12 +498,19 @@
       return essential + aiHome + statCards(rs) + recentActivity(rs) +
         '<section class="mc-role-next card panel"><h2>Próximo passo</h2><p>Selecione arquivos Excel ou CSV. A importação e a identificação são automáticas. O painel dos demais perfis é atualizado com os mesmos dados.</p><button class="btn btn-primary" data-nav="data">Enviar dados</button></section>';
     }
+    const lead = '<section class="mc-overview-lead" aria-labelledby="mc-overview-title">' +
+      '<div><span class="eyebrow">VISÃO GERAL · PAINEL MC</span><h1 id="mc-overview-title">Resultados da operação</h1>' +
+      '<p>' + (rs.length ? 'Explore indicadores, compare setores e consulte a origem de cada resultado.' :
+        'Aguardando dados. Consulte os arquivos disponíveis ou importe planilhas para iniciar.') +
+      '</p></div><button type="button" class="btn btn-primary" data-nav="dashboard">' +
+      icon("chart", 17) + ' Explorar dados</button></section>';
     if (role === "supervisora") {
-      return essential + aiHome + managerialHighlights(rs) + statCards(rs) + homeSectors(rs) +
-        recentActivity(rs);
+      return lead + statCards(rs) + homeSectors(rs) + managerialHighlights(rs) +
+        essential + aiHome + recentActivity(rs);
     }
-    return essential + aiHome + managerialHighlights(rs) + statCards(rs) + graphPanels(rs) +
-      homeSectors(rs) + '<div class="mc-role-actions"><button class="btn" data-nav="dashboard">Ver dashboard completo</button>' +
+    return lead + statCards(rs) + graphPanels(rs) + homeSectors(rs) +
+      managerialHighlights(rs) + aiHome + essential +
+      '<div class="mc-role-actions"><button class="btn" data-nav="dashboard">Ver dashboard completo</button>' +
       '<button class="btn" data-nav="insight">Explorar análises</button></div>';
   }
   function pageSector(sec) {
@@ -536,6 +544,8 @@
   function uploadBox() {
     const visibleImports=imports.filter(l=>!l.deleted);
     const queued=state.uploadQueue.filter(p=>!p.lotId);
+    const fileCount=new Set([...visibleImports.map(l=>l.fileId||l.hash||l.name), ...queued.map(p=>p.hash||p.name+":"+p.size)]).size;
+    const failures=queued.filter(p=>p.status==="error").length;
     const statuses={reading:"Lendo arquivo",analyzing:"IA identificando colunas",
       uploading:"Salvando na nuvem",ready:"Processando",skipped:"Resumo identificado e não somado",
       error:"Erro no arquivo",duplicate:"Já importado"};
@@ -552,7 +562,7 @@
         ${state.readingFiles?'<p class="upload-hint" role="status">Analisando e salvando os arquivos selecionados, sem confirmação adicional…</p>':""}
       </div>
       <div class="upload-file-list" aria-live="polite">
-        <div class="upload-list-heading"><strong>Arquivos e status de importação</strong><span>${queued.length+visibleImports.length}</span></div>
+        <div class="upload-list-heading"><strong>Recebimento e processamento</strong><span>${fileCount} arquivo(s) · ${visibleImports.length} aba(s) salva(s)${failures ? " · "+failures+" erro(s)" : ""}</span></div>
         ${queued.map(p=>`<article class="upload-file ${p.status==="error"?"has-error":""}">
           <span class="upload-file-icon">${icon(p.status==="error"?"alert":"files",20)}</span>
           <div class="upload-file-info"><strong>${esc(p.name)}</strong>
@@ -588,8 +598,27 @@
   function importGuide() {
     return '<section class="import-journey" aria-label="Como usar o painel"><div class="import-journey-head"><span>'+icon("brand",19)+'</span><div><strong>Da planilha ao painel, automaticamente</strong><small>Sem configurar abas, períodos ou confirmações</small></div></div><ol><li><b>1. Selecione</b><span>Escolha um ou vários arquivos Excel/CSV.</span></li><li><b>2. O Copiloto analisa</b><span>Identifica arquivos, abas, colunas e possíveis problemas.</span></li><li><b>3. Visualize</b><span>Os arquivos válidos alimentam os indicadores; erros individuais aparecem acima.</span></li></ol></section>';
   }
+  function fileInventoryStatus() {
+    const catalog=window.MCCloudFiles?.list?.();
+    if(!Array.isArray(catalog))return "";
+    const linked=new Set(imports.filter(l=>!l.deleted).map(l=>l.fileId).filter(Boolean));
+    const orphaned=catalog.filter(file=>file.id&&!linked.has(file.id));
+    const sheets=imports.filter(l=>!l.deleted).length;
+    const access=window.MCAccess;
+    const canRetry=!!(access?.owner||(access?.rights?.filesView&&access?.rights?.filesUpload));
+    return '<section class="mc-file-reconciliation" aria-label="Conferência dos arquivos salvos">'+
+      '<header><strong>Conferência do armazenamento</strong><span>'+catalog.length+
+      ' original(is) no acervo · '+sheets+' aba(s) no histórico</span></header>'+
+      (orphaned.length ? '<p role="status">'+orphaned.length+' arquivo(s) guardado(s) sem aba importada. O original existe, mas seus dados não estão confirmados nos indicadores.</p>'+
+        '<ul>'+orphaned.map(file=>'<li><span>'+esc(file.name||"Arquivo sem nome")+
+        '</span>'+(canRetry?'<button class="btn" data-reprocess-orphan="'+esc(file.id)+'"'+(state.readingFiles||state.importBusy?' disabled':'')+'>Reprocessar</button>':'')+
+        '</li>').join("")+'</ul>' :
+        '<p>'+ (catalog.length ? 'Todos os originais listados possuem ao menos uma aba no histórico. Confira cada aba na lista abaixo.' :
+        'Nenhum arquivo original encontrado na biblioteca.')+'</p>')+
+      '</section>';
+  }
   function pageData() {
-    return header(state.importSector === "coi" ? "Importar planilhas · COI" : "Importar planilhas", "Selecione os arquivos: leitura, classificação e envio são automáticos.") + `<section class="card panel data-import-panel">${importGuide()}${uploadBox()}${dataNextActions()}<details class="section-space"><summary>Backup e histórico</summary><p class="panel-sub">Os arquivos enviados são mantidos na nuvem do Power BI MC até serem excluídos. Exporte um backup adicional quando desejar.</p><div class="backup-actions"><button class="btn" data-backup>Exportar backup completo</button><label class="btn">Restaurar backup<input type="file" id="restore-backup" accept=".json" hidden></label><button class="btn" data-export="geral" ${getAll().length ? "" : "disabled"}>Exportar Excel (.xlsx)</button></div><div class="file-list">${imports.filter(l => !l.deleted).reverse().map(l => `<div class="file-row"><div><strong>${esc(l.name)}</strong><small>${l.rows.length} linhas · ${l.archived ? "Arquivado" : l.supersededBy ? "Versão anterior" : "Ativo"}</small></div><button class="btn" data-view-lot="${l.id}">Consultar</button>${!l.supersededBy ? `<button class="btn" data-archive-lot="${l.id}">${l.archived ? "Reativar" : "Arquivar"}</button>` : ""}</div>`).join("")}</div></details>${deletedFiles()}</section>${state.viewLot ? `<section id="lot-preview" class="card panel section-space"><h3>Dados do arquivo importado</h3>${table(D.allRows(imports.filter(l => l.id === state.viewLot)), 100)}</section>` : ""}`;
+    return header(state.importSector === "coi" ? "Arquivos do COI" : "Arquivos e processamento", "Originais armazenados, abas reconhecidas e dados disponíveis nos indicadores.") + fileInventoryStatus() + `<section class="card panel data-import-panel">${importGuide()}${uploadBox()}${dataNextActions()}<details class="section-space"><summary>Backup e histórico</summary><p class="panel-sub">Os arquivos enviados são mantidos na nuvem do Power BI MC até serem excluídos. Exporte um backup adicional quando desejar.</p><div class="backup-actions"><button class="btn" data-backup>Exportar backup completo</button><label class="btn">Restaurar backup<input type="file" id="restore-backup" accept=".json" hidden></label><button class="btn" data-export="geral" ${getAll().length ? "" : "disabled"}>Exportar Excel (.xlsx)</button></div><div class="file-list">${imports.filter(l => !l.deleted).reverse().map(l => `<div class="file-row"><div><strong>${esc(l.name)}</strong><small>${l.rows.length} linhas · ${l.archived ? "Arquivado" : l.supersededBy ? "Versão anterior" : "Ativo"}</small></div><button class="btn" data-view-lot="${l.id}">Consultar</button>${!l.supersededBy ? `<button class="btn" data-archive-lot="${l.id}">${l.archived ? "Reativar" : "Arquivar"}</button>` : ""}</div>`).join("")}</div></details>${deletedFiles()}</section>${state.viewLot ? `<section id="lot-preview" class="card panel section-space"><h3>Dados do arquivo importado</h3>${table(D.allRows(imports.filter(l => l.id === state.viewLot)), 100)}</section>` : ""}`;
   }
   function importReview() {
     if (!state.importReviewOpen) return "";
@@ -675,12 +704,37 @@
       <div class="assistant-header-actions"><button type="button" data-mc-ai-pin aria-label="Fixar ou desafixar Copiloto" title="Fixar ou desafixar">${icon("target",18)}</button><button type="button" data-assistant-clear="1" title="Limpar conversa" aria-label="Limpar conversa">${icon("trash",17)}</button></div></header>
       <div class="assistant-chat-root" data-assistant-root="dock">${assistantChat()}</div><button type="button" class="mc-ai-resize-handle" data-mc-ai-resize title="Arraste para ajustar a largura" aria-label="Ajustar largura do Copiloto: arraste ou use as setas"></button></section></div>`;
   }
+  function insightCoverage(rs) {
+    const ids=new Set(rs.map(r=>r.lotId).filter(Boolean));
+    const lots=imports.filter(l=>ids.has(l.id)&&!l.deleted&&!l.archived&&!l.supersededBy);
+    const files=new Set(lots.map(l=>l.fileId||l.hash||l.name));
+    const dates=rs.filter(r=>r.date||r.periodStart||r.periodEnd).length;
+    const missingDates=rs.length-dates;
+    const types=[...new Set(rs.map(r=>r.type).filter(Boolean))];
+    return '<section class="mc-insight-coverage" aria-labelledby="mc-insight-coverage-title">'+
+      '<div class="mc-insight-coverage-head"><div><span class="eyebrow">BASE DOS RESULTADOS</span>'+
+      '<h2 id="mc-insight-coverage-title">O que foi realmente analisado</h2></div>'+
+      '<button type="button" class="btn" data-insight-open-tab="records">Ver registros</button></div>'+
+      '<dl><div><dt>Linhas no recorte</dt><dd>'+fmtNum(rs.length)+'</dd></div>'+
+      '<div><dt>Arquivos de origem</dt><dd>'+fmtNum(files.size)+'</dd></div>'+
+      '<div><dt>Abas identificadas</dt><dd>'+fmtNum(lots.length)+'</dd></div>'+
+      '<div><dt>Sem data informada</dt><dd>'+fmtNum(missingDates)+'</dd></div></dl>'+
+      '<p>'+ (types.length ? 'Fontes presentes: '+esc(types.map(t=>D.types[t]||t).join(", "))+'.' :
+      'Não há dados disponíveis para analisar neste recorte.')+
+      ' Valores de naturezas diferentes não são somados.</p>'+
+      '<details><summary>Conferir arquivos e abas usados</summary>'+
+      (lots.length ? '<ul>'+lots.map(l=>'<li>'+esc(l.name||"Arquivo")+' · '+esc(l.sheet||"Aba não informada")+'</li>').join("")+'</ul>' :
+      '<p>Não há arquivo com origem identificada neste recorte.</p>')+
+      '<button type="button" class="btn" data-insight-open-tab="sources">Explorar origens</button></details></section>';
+  }
   function pageInsight() {
+    const rs=recordsFor();
     return (
       header(
         "Insights e Análises",
-        "Diagnósticos gerenciais calculados com os dados disponíveis.",
+        "Conclusões, evidências e alertas sobre os dados importados.",
       ) +
+      insightCoverage(rs) +
       (window.MCAutoReview?.insightsHTML()||"") +
       managerialHighlights(recordsFor()) +
       insightsPanel(recordsFor(), null, true) +
@@ -697,16 +751,24 @@
     );
   }
   function pageSectorDirectory() {
-    return header("Setores", "Abra os indicadores do setor desejado.") +
-      '<section class="sector-grid">' + visibleSectors().map(sec => {
-        const n = recordsFor(sec.id).length;
-        return '<button class="sector-tile" data-nav="' + esc(sec.id) + '"><div class="tile-top">' + icon(sec.id, 18) + ' ' + esc(sec.name) + '</div><div class="tile-bottom"><strong>' + fmtNum(n) + '</strong><small>linhas disponíveis · ver setor</small></div></button>';
-      }).join("") + '</section>';
+    return header("Setores", "Escolha um departamento para consultar indicadores, tendências e registros.") +
+      '<section class="mc-sector-list" aria-label="Departamentos com dados disponíveis">' +
+      visibleSectors().map(sec => {
+        const rows = recordsFor(sec.id);
+        const types = new Set(rows.map(r => r.type));
+        const detail = rows.length
+          ? fmtNum(rows.length) + ' linhas de origem · ' + types.size + (types.size === 1 ? ' tipo de fonte' : ' tipos de fonte')
+          : 'Nenhum registro disponível';
+        return '<button type="button" class="mc-sector-line" data-nav="' + esc(sec.id) + '">' +
+          '<span class="mc-sector-line-icon" aria-hidden="true">' + icon(sec.id, 19) + '</span>' +
+          '<span class="mc-sector-line-text"><strong>' + esc(sec.name) + '</strong><small>' + detail + '</small></span>' +
+          '<span class="mc-sector-line-arrow" aria-hidden="true">' + icon("arrow", 18) + '</span></button>';
+      }).join('') + '</section>';
   }
   function pageMore() {
     return header("Mais opções", "Ferramentas avançadas e configuração.") +
       '<section class="sector-grid">' +
-      [["dashboard","Dashboard completo","chart"],["insight","Análises e assistente","insight"],["present","Estúdio de apresentações","files"],["settings","Configurações e instalação","settings"]].map(x => '<button class="sector-tile" data-nav="' + x[0] + '"><div class="tile-top">' + icon(x[2], 18) + ' ' + x[1] + '</div><div class="tile-bottom"><small>Abrir ferramenta</small></div></button>').join("") +
+      [["data","Arquivos e importações","files"],["report","Relatórios","report"],["present","Estúdio de apresentações","files"],["settings","Configurações e instalação","settings"]].map(x => '<button class="sector-tile" data-nav="' + x[0] + '"><div class="tile-top">' + icon(x[2], 18) + ' ' + x[1] + '</div><div class="tile-bottom"><small>Abrir ferramenta</small></div></button>').join("") +
       '</section>';
   }
   function managerialHighlights(rows) {
@@ -1060,7 +1122,8 @@
           const bytes=await file.arrayBuffer();
           const digest=await crypto.subtle.digest("SHA-256",bytes);
           const hash=Array.from(new Uint8Array(digest)).map(n=>n.toString(16).padStart(2,"0")).join("");
-          const wb=XLSX.read(bytes,{type:"array",cellDates:false});
+          // SheetJS interpreta Uint8Array sem depender da origem/realm do ArrayBuffer recuperado.
+          const wb=XLSX.read(new Uint8Array(bytes),{type:"array",cellDates:false});
           const inspected=window.MCWorkbookSheets?.inspect(wb,XLSX,D.detect,file.name) ||
             wb.SheetNames.map(name=>{
               const sheet=wb.Sheets[name],ref=sheet?.["!ref"];
@@ -1084,12 +1147,19 @@
             };
             state.uploadQueue.push(item);
             state.pending=item;
-            selectImportSheet();
+            try {
+              selectImportSheet();
+            } catch (sheetError) {
+              item.status="error";
+              item.selected=false;
+              item.error="Falha ao ler a aba "+info.name+": "+sheetError.message;
+            }
             if(first)first=false;
           }
         }catch(error){
           placeholder.status="error";
           placeholder.error="Não foi possível ler "+file.name+": "+error.message;
+          if(!state.uploadQueue.some(item=>item.queueId===placeholder.queueId))state.uploadQueue.push(placeholder);
         }
       }
       const selected=state.uploadQueue.filter(p=>p.batchId===batchId&&p.grid&&p.selected!==false);
@@ -1341,6 +1411,25 @@
     });
   }
   function wire() {
+    document.querySelectorAll("[data-reprocess-orphan]").forEach(button=>button.addEventListener("click",async()=>{
+      const originalId=button.dataset.reprocessOrphan;
+      if(state.readingFiles||state.importBusy)return;
+      button.disabled=true;
+      try{
+        const saved=await S.read("files",originalId);
+        const bytes=saved?.bytes;
+        const buffer=bytes instanceof ArrayBuffer?bytes:ArrayBuffer.isView(bytes)?
+          bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength):null;
+        if(!buffer)throw Error("O arquivo original não está disponível para leitura.");
+        // Recria o ArrayBuffer no contexto do navegador, preservando os bytes.
+        const restored=new Uint8Array(buffer).buffer;
+        await handleFiles([{name:saved.name||"planilha.xlsx",size:restored.byteLength,arrayBuffer:async()=>restored}]);
+      }catch(error){
+        notify("Não foi possível reprocessar o arquivo: "+error.message,true);
+      }finally{
+        if(button.isConnected)button.disabled=false;
+      }
+    }));
     document.querySelectorAll("[data-cloud-upload]").forEach(button=>button.addEventListener("click",()=>document.getElementById("mc-cloud-upload")?.click()));
     document.getElementById("mc-cloud-upload")?.addEventListener("change",(event)=>handleFiles(event.target.files));
     document.querySelector("[data-cloud-export]")?.addEventListener("click",()=>exportCSV("geral"));
@@ -1404,6 +1493,10 @@
     document.querySelector(".mc-sector-tree")?.addEventListener("toggle", (event) => {
       state.navSectorsExpanded = event.currentTarget.open;
     });
+    document.querySelectorAll("[data-insight-open-tab]").forEach(el=>el.addEventListener("click",()=>{
+      window.MichelleDashboard?.showTab?.(el.dataset.insightOpenTab);
+      navigate("dashboard");
+    }));
     document.querySelectorAll("[data-nav]").forEach(
       (el) =>
         (el.onclick = () => {
