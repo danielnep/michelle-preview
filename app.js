@@ -217,6 +217,11 @@
       query: state.query,
     });
   }
+  function currentAnalysisRows() {
+    if (state.page === "dashboard" && window.MichelleDashboard?.model)
+      return window.MichelleDashboard.model().rows;
+    return recordsFor(idSector(state.page)?.id || "geral");
+  }
   const counts = D.counts;
   const percent = (a, b) => (b ? Math.round((a / b) * 100) : 0);
   const rate = (rs) =>
@@ -927,7 +932,7 @@
     state.aiInsightBusy = true;
     if (!silent) render();
     try {
-      const active = viewRows || (state.page === "dashboard" && window.MichelleDashboard?.model ? window.MichelleDashboard.model().rows : recordsFor());
+      const active = viewRows || currentAnalysisRows();
       const result = await window.MCAI.request("insights", {
         context: window.MCAI.context(active, imports, sectors, {allRows:getAll()})
       });
@@ -978,7 +983,7 @@
     try {
       const reply = await window.MCAI.request("chat",{
         channel: mode, message: question, history,
-        context: mode === "dados" ? window.MCAI.context(state.page === "dashboard" && window.MichelleDashboard?.model ? window.MichelleDashboard.model().rows : recordsFor(),imports,sectors,{allRows:getAll(),question}) : {}
+        context: mode === "dados" ? window.MCAI.context(currentAnalysisRows(),imports,sectors,{allRows:getAll(),question}) : {}
       });
       state.chatModes[mode].push({role:"bot",text:reply.answer});
       window.MCAI.rememberQuestion(question);

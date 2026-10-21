@@ -935,3 +935,29 @@ test("gestos das duas barras respeitam direção e cancelamento; atualizações 
  assert.equal(b.getState().assistantOpen,false);
  assert.equal(t.errors.length,0);w.close();
 });
+
+
+test("chat do setor envia o recorte visível e mantém histórico separado",async()=>{
+ const t=await boot(),w=t.w,b=w.MichelleBridge;
+ try{
+  b.getImports().push({id:'port-ai',name:'Chamadas.xlsx',sector:'port',type:'ligacoes',rows:[
+   {id:'p1',sector:'port',type:'ligacoes',status:'Concluído',title:'Recebida'}]},
+   {id:'coi-ai',name:'Eventos.xlsx',sector:'coi',type:'cuc',rows:[
+   {id:'c1',sector:'coi',type:'cuc',status:'Não informado',title:'Evento',value:999}]});
+  b.getState().period='all';
+  let captured;
+  w.fetch=async()=>({ok:true});
+  w.MCAI={context:(selected,imports,sectors,options)=>{
+   captured={selected,all:options.allRows};return {};
+  },request:async()=>({answer:'Resposta sintética'}),rememberQuestion:()=>{}};
+  b.navigate('port');
+  t.click('.sidebar [data-assistant-open]');
+  const form=w.document.querySelector('.assistant-window form');
+  form.querySelector('textarea').value='Analise esta tela';
+  form.dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));
+  await wait(()=>!!captured&&!b.getState().assistantBusy);
+  assert.equal(captured.selected.length,1);
+  assert.equal(captured.selected[0].sector,'port');
+  assert.equal(captured.all.length,2);
+ }finally{w.close();}
+});
