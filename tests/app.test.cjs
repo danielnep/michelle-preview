@@ -113,14 +113,8 @@ test("original na biblioteca sem aba importada é sinalizado e pode ser reproces
   assert.ok(section);
   assert.match(section.textContent,/sem aba importada/);
   t.click('[data-reprocess-orphan]');
-  await new Promise(resolve=>setTimeout(resolve,150));
-  assert.equal(b.getImports().length,1,JSON.stringify({
-    queue:b.getState().uploadQueue?.map(x=>({status:x.status,error:x.error,sheet:x.sheet})),
-    busy:b.getState().readingFiles,
-    toast:w.document.querySelector(".toast")?.textContent,
-    importStatus:w.document.querySelector(".mc-file-reconciliation")?.textContent,
-    parseError:t.errors.map(x=>x.message)
-  }));
+  await wait(()=>b.getImports().length===1&&!b.getState().readingFiles);
+  assert.equal(b.getImports().length,1);
   assert.equal(b.getImports()[0].fileId,hash);
   assert.equal(w.document.querySelectorAll("[data-reprocess-orphan]").length,0);
   assert.equal(t.errors.length,0);
