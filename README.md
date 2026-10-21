@@ -101,3 +101,7 @@ A seleção de arquivos XLSX/XLS agora enumera suas abas separadamente. Cada aba
 ### Visualização tipo BI para múltiplas fontes
 
 No dashboard, use as abas **Visão geral** e **Explorar fontes**. Em Explorar fontes, cada arquivo/aba tem um espaço próprio, com contagem de linhas, cobertura de datas, lista de colunas e gráficos verificáveis de categorias e datas, além de tabela acessível. Não há cruzamento implícito. O layout possui navegação lateral no desktop e seletor horizontal no celular, com foco em leitura sem excesso de cartões. A IA propõe planos, mas os gráficos básicos são calculados no navegador mesmo sem a API. As recomendações e indicadores adicionais dependem do clique explícito em **Planejar dashboard com IA** e da função servidor publicada.
+
+## Copiloto: análise numérica por fonte (20/10/2026)
+
+O contexto do chat inclui medidas calculadas das colunas citadas na pergunta, com cobertura, unidade, arquivo/aba e separação entre recorte e histórico. Rankings usam denominadores da própria unidade; telas setoriais enviam somente o recorte exibido. Fontes/categorias perguntadas têm prioridade dentro do limite de 17 mil caracteres. O servidor Railway executa um autoteste analítico sintético, além do teste de conexão, sem acessar arquivos da cliente. Detalhes e regressões em [docs/copiloto.md](docs/copiloto.md).

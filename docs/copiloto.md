@@ -71,3 +71,15 @@ O servidor de produção é independente e possui autenticação, PostgreSQL, ar
 - Layout adaptativo: seletor lateral no desktop, seletor horizontal no celular; indicação de origem, quantidade de linhas e cobertura.
 - Visualizações locais não dependem do retorno da IA; o modo `plan` acrescenta hipóteses documentadas e indicadores calculáveis, sem mesclar fontes.
 - Padrões de UI informados por documentação oficial do Power BI, Metabase e Tableau; a composição visual é própria.
+
+## Correção de evidências analíticas — 20/10/2026
+
+O chat passa a receber agregações numéricas das colunas pertinentes à pergunta, calculadas em `analysis/ai-question-evidence.js`, separadas por arquivo/aba e por recorte atual/histórico. Campos identificadores e datas não viram medidas; taxas, saldos e estoques não são somados. Dados ausentes, mistos ou unidades contraditórias trazem cobertura explícita. Somar o conteúdo de arquivos distintos exige critério de negócio e não ocorre por semelhança dos cabeçalhos.
+
+Os rankings informam tipo, unidade e denominador próprio. Um registro de telefonia e 999 eventos CUC não tornam essa ligação 0,1% das ligações. Fontes e categorias citadas na pergunta recebem prioridade; o contexto completo fica abaixo de 17 mil caracteres, incluindo recibos de omissão. O contexto setorial acompanha a tela e seus filtros; o histórico continua separado.
+
+Evidências: regressões em `ai-context-grounding.test.cjs`, `ai-question-evidence.test.cjs`, `ai-analysis-self-test.test.cjs` e no cenário de chat setorial de `app.test.cjs`. As reproduções originais mostraram denominador incompatível, ausência de rankings globais, fonte relevante omitida, contexto acima de 18 mil caracteres e falta de valores financeiros. Os testes não usam dados de clientes.
+
+No Railway, após a verificação de conexão, um autoteste chama o mesmo handler do Copiloto com contexto produzido pelo cliente real a partir de uma fonte sintética. Confere 300 no recorte e 450 no histórico e registra somente `MICHELLE_AI_ANALYSIS_SELFTEST status=ok` ou um código de falha. O healthcheck não depende desse teste. Essa prova limitada cobre o percurso cliente → contexto → handler → Groq no Railway; não comprova todas as perguntas possíveis nem substitui validação com os arquivos e permissões da conta.
+
+Diretriz aprendida e testada: conexão de IA aprovada não comprova análise correta. Antes de entregar uma correção analítica, reproduzir o número esperado, conferir fonte/unidade/recorte no contexto e verificar a resposta. Alterações na análise exigem regressões de fontes independentes e de cobertura, além do teste de conexão.
