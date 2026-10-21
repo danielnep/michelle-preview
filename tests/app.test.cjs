@@ -89,6 +89,24 @@ test("Insights informa cobertura comprovada e abre diretamente registros ou orig
   assert.equal(t.errors.length,0);
   t.w.close();
 });
+test("original na biblioteca sem aba importada é sinalizado e pode ser reprocessado", async () => {
+  const t=await boot(), w=t.w, b=w.MichelleBridge;
+  const bytes=workbook();
+  const hash=Buffer.from(await webcrypto.subtle.digest("SHA-256",bytes)).toString("hex");
+  await w.MCStore.put("files",{id:hash,name:"recuperavel.xlsx",bytes:new Uint8Array(bytes)});
+  w.MCAccess={owner:true,rights:{filesView:true,filesUpload:true}};
+  w.MCCloudFiles={list:()=>[{id:hash,name:"recuperavel.xlsx"}]};
+  b.navigate("data");
+  const section=w.document.querySelector(".mc-file-reconciliation");
+  assert.ok(section);
+  assert.match(section.textContent,/sem aba importada/);
+  t.click('[data-reprocess-orphan]');
+  await wait(()=>b.getImports().length===1&&!b.getState().readingFiles);
+  assert.equal(b.getImports()[0].fileId,hash);
+  assert.equal(w.document.querySelectorAll("[data-reprocess-orphan]").length,0);
+  assert.equal(t.errors.length,0);
+  w.close();
+});
 test("COI abre importação no destino escolhido e exclusão sai da base, persiste e pode ser restaurada", async () => {
   const t = await boot(), b = t.w.MichelleBridge;
   b.navigate("coi"); t.click("[data-import-coi]");
