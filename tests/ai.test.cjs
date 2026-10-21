@@ -128,7 +128,7 @@ test("função lê API_IA_GROQ antes da variável antiga, sem expor valor", asyn
 test("Groq mantém uma classificação por aba, prioriza confiança e orienta navegação atual",async()=>{
  const {default:handler}=await import("../server/michelle-ai.mjs");
  const fetcher=async(url,options)=>{
-   assert.match(options.body,/openai\/g);
+   assert.equal(url,"https://api.groq.com/openai/v1/chat/completions");
    const data=JSON.parse(options.body);
    assert.match(data.messages[0].content,/Início, Setores, Explorar, Insights e Mais/);
    return Response.json({choices:[{finish_reason:"stop",message:{content:JSON.stringify({
