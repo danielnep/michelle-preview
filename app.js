@@ -267,6 +267,7 @@
   }
   function shell() {
     let sec = idSector(state.page);
+    const mobileCurrentPage = sec ? "sectors" : ["data", "report", "present", "settings"].includes(state.page) ? "more" : state.page;
     let title = sec
       ? sec.name
       : {
@@ -289,7 +290,7 @@
     ]
       .map(
         ([id, label, ico]) =>
-          `<button class="${state.page === id ? "active" : ""}" data-nav="${id}" ${state.page === id ? 'aria-current="page"' : ""}>${icon(ico, 22)}<span>${label}</span></button>`,
+          `<button class="${mobileCurrentPage === id ? "active" : ""}" data-nav="${id}" ${mobileCurrentPage === id ? 'aria-current="page"' : ""}>${icon(ico, 22)}<span>${label}</span></button>`,
       )
       .join("")}</nav></div>${assistantDock()}`;
   }
