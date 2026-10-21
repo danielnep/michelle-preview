@@ -124,6 +124,33 @@ test("função lê API_IA_GROQ antes da variável antiga, sem expor valor", asyn
  }
 });
 
+
+test("Groq mantém uma classificação por aba, prioriza confiança e orienta navegação atual",async()=>{
+ const {default:handler}=await import("../server/michelle-ai.mjs");
+ const fetcher=async(url,options)=>{
+   assert.match(options.body,/openai\/g);
+   const data=JSON.parse(options.body);
+   assert.match(data.messages[0].content,/Início, Setores, Explorar, Insights e Mais/);
+   return Response.json({choices:[{finish_reason:"stop",message:{content:JSON.stringify({
+     sources:[
+       {id:"sheet-A",type:"geral",sector:"coi",mapping:{},confidence:"Baixa"},
+       {id:"sheet-A",type:"ligacoes",sector:"port",mapping:{number:1},confidence:"Alta"},
+       {id:"sheet-B",type:"ordens",sector:"tec",mapping:{status:1},confidence:"Moderada"}
+     ]})}}]});
+ };
+ const req=new Request("http://localhost/api/michelle-ai",{method:"POST",
+   headers:{"content-type":"application/json"},body:JSON.stringify({mode:"interpret-batch",context:{
+     sources:[{id:"sheet-A",headers:["Data","Telefone"]},{id:"sheet-B",headers:["OS","Status"]}],
+     allowedFields:["number","status"]
+   }})});
+ const response=await handler(req,{fetcher,environment:{API_IA_GROQ:"chave-sintetica"}});
+ assert.equal(response.status,200);
+ const data=await response.json();
+ assert.equal(data.sources.length,2);
+ assert.equal(data.sources[0].type,"ligacoes");
+ assert.deepEqual(data.sources[0].mapping,{number:1});
+ assert.equal(data.sources[1].type,"ordens");
+});
 test("Railway interpreta múltiplas fontes em uma solicitação sem aceitar campos inventados",async()=>{
   const {default:handler}=await import("../server/michelle-ai.mjs");
   const oldFetch=global.fetch,oldKey=process.env.API_IA_GROQ;
