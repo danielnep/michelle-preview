@@ -102,7 +102,7 @@ test("original na biblioteca sem aba importada é sinalizado e pode ser reproces
   assert.ok(copy);
   const restored=new w.Uint8Array(copy).buffer;
   assert.deepEqual(Buffer.from(restored),Buffer.from(bytes));
-  const loaded=w.XLSX.read(restored,{type:"array"}),sheets=loaded.SheetNames;
+  const loaded=w.XLSX.read(new w.Uint8Array(restored),{type:"array"}),sheets=loaded.SheetNames;
   assert.ok(sheets.includes("Registros"),JSON.stringify({sheets,bytes:restored.byteLength,original:bytes.byteLength}));
   const inspected=w.MCWorkbookSheets.inspect(loaded,w.XLSX,w.MCData.detect,"recuperavel.xlsx");
   assert.ok(inspected.some(x=>x.selected),JSON.stringify({sheets,inspected}));
