@@ -432,6 +432,26 @@
 .content .dash-table-scroll th { font-weight: 700; color: var(--ink); background: var(--surface-alt); }
 .content .dash-table-scroll tbody tr:hover { background: var(--mcux-soft); }
 .content .dash-table-scroll td { font-variant-numeric: tabular-nums; }
+/* Conciliação da biblioteca: não tratar original salvo como dado já processado. */
+.mc-file-reconciliation {
+  padding:14px 0 16px; margin:0 0 17px;
+  border-block:1px solid var(--line);
+}
+.mc-file-reconciliation header { display:flex; align-items:baseline; flex-wrap:wrap; gap:6px 18px; justify-content:space-between; }
+.mc-file-reconciliation header strong { font-size:15px; }
+.mc-file-reconciliation header span { font-size:12px; color:var(--muted); }
+.mc-file-reconciliation p { margin:10px 0; font-size:13px; line-height:1.6; color:var(--muted); }
+.mc-file-reconciliation ul { list-style:none; padding:0; margin:7px 0 0; }
+.mc-file-reconciliation li {
+  display:flex; justify-content:space-between; align-items:center;
+  gap:12px; padding:9px 0; border-top:1px solid var(--line);
+}
+.mc-file-reconciliation li span { min-width:0; overflow-wrap:anywhere; font-size:13px; font-weight:650; }
+.mc-file-reconciliation li button { flex:none; min-height:44px; }
+@media(max-width:700px) {
+  .mc-file-reconciliation header { display:grid; gap:5px; }
+  .mc-file-reconciliation li { align-items:flex-start; }
+}
 /* Importação: ação, processamento, biblioteca e histórico em sequência. */
 .content .data-import-panel { max-width: 1160px; margin-inline: auto; padding: clamp(15px,2vw,26px); }
 .content .import-journey { border-radius:12px; }
