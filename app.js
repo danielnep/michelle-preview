@@ -1122,7 +1122,8 @@
           const bytes=await file.arrayBuffer();
           const digest=await crypto.subtle.digest("SHA-256",bytes);
           const hash=Array.from(new Uint8Array(digest)).map(n=>n.toString(16).padStart(2,"0")).join("");
-          const wb=XLSX.read(bytes,{type:"array",cellDates:false});
+          // SheetJS interpreta Uint8Array sem depender da origem/realm do ArrayBuffer recuperado.
+          const wb=XLSX.read(new Uint8Array(bytes),{type:"array",cellDates:false});
           const inspected=window.MCWorkbookSheets?.inspect(wb,XLSX,D.detect,file.name) ||
             wb.SheetNames.map(name=>{
               const sheet=wb.Sheets[name],ref=sheet?.["!ref"];
