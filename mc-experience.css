@@ -263,6 +263,35 @@
 .content .stat-label { font-size: 12px; line-height: 1.55; }
 .content .stat-source-hint { display:block; line-height:1.55; color:var(--muted); }
 .content .stats .stat-icon { background: var(--mcux-soft); color: var(--mcux-text-accent); }
+/* Visão geral: primeiro os resultados; ferramentas e importação continuam acessíveis. */
+.mc-overview-lead {
+  display:flex; align-items:center; justify-content:space-between; gap:18px;
+  padding:4px 0 18px; margin-bottom:18px; border-bottom:1px solid var(--line);
+}
+.mc-overview-lead > div { min-width:0; }
+.mc-overview-lead h1 { margin:5px 0; font:750 clamp(22px,2.1vw,29px)/1.22 "Plus Jakarta Sans",Inter,sans-serif; letter-spacing:-.035em; }
+.mc-overview-lead p { margin:5px 0 0; color:var(--muted); font-size:13px; line-height:1.5; }
+.mc-overview-lead > button { flex:none; min-height:44px; }
+.mc-sector-list { display:grid; gap:0; max-width:1020px; border-top:1px solid var(--line); }
+.mc-sector-line {
+  width:100%; display:flex; align-items:center; gap:15px;
+  min-height:76px; padding:15px 12px; text-align:left; border:0;
+  border-bottom:1px solid var(--line); background:transparent; color:var(--ink);
+}
+.mc-sector-line:hover { background:var(--mcux-soft); }
+.mc-sector-line:focus-visible { outline:3px solid var(--mcux-focus); outline-offset:-3px; }
+.mc-sector-line-icon { display:flex; align-items:center; justify-content:center; flex:none; width:40px; height:40px; color:var(--brand); }
+.mc-sector-line-text { flex:1; display:grid; gap:5px; min-width:0; }
+.mc-sector-line-text strong { font-size:15px; font-weight:720; line-height:1.35; }
+.mc-sector-line-text small { font-size:12px; color:var(--muted); line-height:1.5; overflow-wrap:anywhere; }
+.mc-sector-line-arrow { display:flex; color:var(--brand); flex:none; }
+@media(max-width:700px) {
+  .mc-overview-lead { flex-direction:column; align-items:stretch; gap:12px; padding-bottom:14px; margin-bottom:13px; }
+  .mc-overview-lead h1 { font-size:23px; }
+  .mc-overview-lead > button { align-self:stretch; }
+  .mc-sector-line { min-height:72px; padding-inline:2px; gap:8px; }
+  .mc-sector-line-text strong { font-size:15px; }
+}
 /* Setores: linhas comparáveis e clicáveis em vez de cartões espalhados. */
 .content .sector-grid {
   display: grid;
