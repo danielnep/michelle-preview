@@ -70,6 +70,31 @@ test("falha no envio à nuvem não confirma registros nem recorre ao armazenamen
   } finally { dom.window.close(); }
 });
 
+test("falha depois de salvar o original reconcilia catálogo e mantém erro real", async () => {
+  const saved = new Map(), calls=[];
+  const dom=cloudSession(async (url,options) => {
+    calls.push(url);
+    if(url==="/api/me")return Response.json({owner:true});
+    if(url==="/api/files")return Response.json([...saved.values()]);
+    if(url==="/api/files/"+id && options.method==="PUT"){
+      saved.set(id,{id,name:"teste.xlsx"});return Response.json({id},{status:201});
+    }
+    if(url==="/api/store/batch")return Response.json({error:"Falha na gravação das abas"},{status:503});
+    throw Error("Chamada inesperada "+url);
+  });
+  try{
+    await dom.window.MCStore.open();
+    const bytes=new dom.window.Uint8Array([1,2,3]).buffer;
+    await assert.rejects(dom.window.MCStore.batch([
+      {store:"files",value:{id,name:"teste.xlsx",bytes}},
+      {store:"lots",value:{id:"aba",fileId:id,rows:[{id:"A"}]}}
+    ]),/Falha na gravação das abas/);
+    assert.equal(dom.window.MCCloudFiles.list()[0].id,id);
+    assert.deepEqual(calls,["/api/me","/api/files","/api/files/"+id,"/api/store/batch","/api/files"]);
+    assert.equal(dom.window.localStorage.length,0);
+  }finally{dom.window.close();}
+});
+
 test("originais novos são enviados à pasta do Power BI MC e preservam bytes e chaves próprias", async () => {
   const { uploadOriginal, downloadOriginal } = await import("../server/file-storage.mjs");
   const objects = new Map(), commands = [];
