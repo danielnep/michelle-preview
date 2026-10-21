@@ -96,6 +96,14 @@ test("original na biblioteca sem aba importada é sinalizado e pode ser reproces
   await w.MCStore.put("files",{id:hash,name:"recuperavel.xlsx",bytes:new Uint8Array(bytes)});
   const fromStore=await w.MCStore.read("files",hash);
   assert.deepEqual(Buffer.from(fromStore.bytes),Buffer.from(bytes));
+  const copy=fromStore.bytes instanceof w.ArrayBuffer?fromStore.bytes:
+    w.ArrayBuffer.isView(fromStore.bytes)?fromStore.bytes.buffer.slice(
+      fromStore.bytes.byteOffset,fromStore.bytes.byteOffset+fromStore.bytes.byteLength):null;
+  assert.ok(copy);
+  const restored=new w.Uint8Array(copy).buffer;
+  assert.deepEqual(Buffer.from(restored),Buffer.from(bytes));
+  const sheets=w.XLSX.read(restored,{type:"array"}).SheetNames;
+  assert.ok(sheets.includes("Registros"),JSON.stringify({sheets,bytes:restored.byteLength,original:bytes.byteLength}));
   w.MCAccess={owner:true,rights:{filesView:true,filesUpload:true}};
   w.MCCloudFiles={list:()=>[{id:hash,name:"recuperavel.xlsx"}]};
   b.navigate("data");
