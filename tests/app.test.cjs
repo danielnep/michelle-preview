@@ -961,3 +961,33 @@ test("chat do setor envia o recorte visível e mantém histórico separado",asyn
   assert.equal(captured.all.length,2);
  }finally{w.close();}
 });
+
+
+test('importação consulta Groq por aba após falha de lote e mantém título, unidade e dados originais',async()=>{
+  const t=await boot(),w=t.w,b=w.MichelleBridge,calls=[];
+  w.MCAI.request=async(mode,{context})=>{
+    calls.push(mode);
+    if(mode==='interpret-batch')throw Error('Falha temporária na interpretação conjunta');
+    if(mode==='interpret')return {interpretation:{type:'ligacoes',sector:'port',headerRow:0,
+      mapping:{date:0,client:1},confidence:'Alta',reason:'Nome do arquivo e dados da aba'}};
+    throw Error('Consulta inesperada: '+mode);
+  };
+  const wb=X.utils.book_new();
+  X.utils.book_append_sheet(wb,X.utils.aoa_to_sheet([
+    ['Data','Cliente','Observação'],
+    ['11/10/2026','Conta A','Atendida'],
+    ['12/10/2026','Conta B','Não atendida'],
+  ]),'Dados');
+  await b.handleFile(file(w,'Relatório de ligações.xlsx',X.write(wb,{type:'buffer',bookType:'xlsx'})));
+  assert.deepEqual(calls.slice(0,2),['interpret-batch','interpret']);
+  assert.equal(b.getImports().length,1);
+  const lot=b.getImports()[0];
+  assert.equal(lot.type,'ligacoes');
+  assert.equal(lot.sector,'port');
+  assert.equal(lot.rows.length,2);
+  assert.equal(lot.rows[0].value,1);
+  assert.equal(lot.rows[0].raw.Cliente,'Conta A');
+  assert.equal(lot.name,'Relatório de ligações.xlsx');
+  assert.equal(t.errors.length,0);
+  w.close();
+});
