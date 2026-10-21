@@ -94,6 +94,10 @@ test("original na biblioteca sem aba importada é sinalizado e pode ser reproces
   const bytes=workbook();
   const hash=Buffer.from(await webcrypto.subtle.digest("SHA-256",bytes)).toString("hex");
   await w.MCStore.put("files",{id:hash,name:"recuperavel.xlsx",bytes:new Uint8Array(bytes)});
+  const fromStore=await w.MCStore.read("files",hash);
+  assert.deepEqual(Buffer.from(fromStore.bytes),Buffer.from(bytes));
+  const decoded=w.XLSX.read(fromStore.bytes,{type:"array"});
+  assert.ok(decoded.SheetNames.includes("Registros"),JSON.stringify(decoded.SheetNames));
   w.MCAccess={owner:true,rights:{filesView:true,filesUpload:true}};
   w.MCCloudFiles={list:()=>[{id:hash,name:"recuperavel.xlsx"}]};
   b.navigate("data");
