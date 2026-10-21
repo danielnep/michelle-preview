@@ -40,9 +40,9 @@ test("importação conta arquivos separadamente das abas e preserva erro isolado
     await b.handleFiles([file(w, "multiplas_abas.xlsx", X.write(wb, { type:"buffer", bookType:"xlsx" }))]);
     assert.equal(b.getImports().length, 1);
     const line = w.document.querySelector(".upload-list-heading").textContent;
-    assert.match(line, /1 arquivo\\(s\\)/);
-    assert.match(line, /1 aba\\(s\\) salva\\(s\\)/);
-    assert.match(line, /1 erro\\(s\\)/);
+    assert.match(line, /1 arquivo\(s\)/);
+    assert.match(line, /1 aba\(s\) salva\(s\)/);
+    assert.match(line, /1 erro\(s\)/);
     assert.match(w.document.querySelector(".upload-file.has-error").textContent, /AbaFalha/);
     assert.equal(t.errors.length, 0);
   } finally { X.utils.sheet_to_json = original; t.w.close(); }
