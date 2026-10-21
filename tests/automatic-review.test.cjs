@@ -91,3 +91,40 @@ test('arquivos confirmados são analisados juntos; resposta de rodada antiga nã
   assert.ok(calls.slice(1).some(ids=>ids.includes('a')&&ids.includes('b')));assert.equal(w.MCAutoReview.current().sources.length,2);
   dom.window.close();
 });
+
+
+test('indicadores carregam unidade de negócio e não confundem linhas com ligações ou eventos CUC',()=>{
+  const calls={...lot('calls',2),type:'ligacoes',name:'Relatório de ligações.xlsx'};
+  const events={...lot('cuc',2),type:'cuc',name:'Motivos CUC.xlsx',
+    rows:[{lotId:'cuc',value:8,raw:{CUC:'Alarme','Número de Eventos':8}},
+          {lotId:'cuc',value:10,raw:{CUC:'Restabelecimento','Número de Eventos':10}}]};
+  const profiles=R.profiles([calls,events],[...calls.rows,...events.rows]);
+  const callMetric=profiles[0].metrics.find(m=>m.id==='calls:records');
+  assert.equal(callMetric.value,2);
+  assert.equal(callMetric.unit,'ligações');
+  assert.equal(callMetric.label,'Ligações registradas');
+  assert.equal(profiles[1].metrics.find(m=>m.id==='cuc:quantity').value,18);
+  assert.equal(profiles[1].metrics.find(m=>m.id==='cuc:records').unit,'categorias CUC');
+});
+test('revisão em lote incompleta recorre a chamadas isoladas e mantém a análise concluída',async()=>{
+  const dom=new JSDOM('<div></div>',{url:'https://example.test',runScripts:'outside-only'}),w=dom.window;
+  const lots=[lot('a'),lot('b')],requests=[];
+  w.MichelleBridge={getImports:()=>lots,getAll:()=>lots.flatMap(l=>l.rows),getState:()=>({ready:true}),render(){}};
+  w.MCAI={consent:()=>true,setConsent(){},request:async(_mode,{context})=>{
+    requests.push(context.sources.map(s=>s.partId));
+    const complete=context.sources.length===1?context.sources:context.sources.slice(0,1);
+    return {review:{sources:complete.map(p=>({id:p.id,partId:p.partId,title:p.file,description:'Fonte validada'})),
+      dashboard:{title:'Análise',description:'Fontes individuais',order:['metrics'],metrics:[],blocks:[]},insights:[]}};
+  }};
+  w.eval(fs.readFileSync(path.join(__dirname,'../analysis/automatic-review.js'),'utf8'));
+  w.MCAutoReview.schedule();
+  const begin=Date.now();
+  while(!['ready','error'].includes(w.MCAutoReview.state.phase)&&Date.now()-begin<4000)await new Promise(r=>setTimeout(r,20));
+  assert.equal(w.MCAutoReview.state.phase,'ready',w.MCAutoReview.state.error);
+  assert.equal(w.MCAutoReview.current().coverage.sources,2);
+  assert.ok(requests.some(ids=>ids.length>1));
+  assert.ok(requests.some(ids=>ids.length===1&&ids[0]==='a/0'));
+  assert.ok(requests.some(ids=>ids.length===1&&ids[0]==='b/0'));
+  assert.equal(w.MCAutoReview.state.reviewWarning,'Síntese geral indisponível; análises individuais concluídas.');
+  dom.window.close();
+});
