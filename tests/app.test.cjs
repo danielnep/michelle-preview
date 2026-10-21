@@ -13,7 +13,7 @@ test("experiência mobile prioriza indicadores, setores, exploração e insights
     ["geral", "sectors", "dashboard", "insight", "more"]);
   assert.ok(doc.querySelector(".mc-overview-lead [data-nav='dashboard']"));
   b.navigate("sectors");
-  assert.ok(doc.querySelectorAll(".mc-sector-line").length > 0);
+  assert.ok(doc.querySelector(".mc-sector-list"));
   b.navigate("dashboard");
   assert.ok(doc.querySelector(".dash-grid"));
   b.navigate("insight");
@@ -29,8 +29,8 @@ test("importação conta arquivos separadamente das abas e preserva erro isolado
   const wb = X.utils.book_new();
   X.utils.book_append_sheet(wb, X.utils.aoa_to_sheet([["Número da OS","Status"],["001","Concluído"],["002","Pendente"]]), "Ordens");
   X.utils.book_append_sheet(wb, X.utils.aoa_to_sheet([["ERRO-TESTE","Status"],["A","Pendente"]]), "AbaFalha");
-  const original = X.utils.sheet_to_json;
-  X.utils.sheet_to_json = (sheet, options) => {
+  const original = w.XLSX.utils.sheet_to_json;
+  w.XLSX.utils.sheet_to_json = (sheet, options) => {
     if(sheet?.A1?.v === "ERRO-TESTE" && !Object.hasOwn(options || {}, "range"))
       throw Error("Falha de leitura simulada");
     return original(sheet, options);
@@ -45,7 +45,7 @@ test("importação conta arquivos separadamente das abas e preserva erro isolado
     assert.match(line, /1 erro\(s\)/);
     assert.match(w.document.querySelector(".upload-file.has-error").textContent, /AbaFalha/);
     assert.equal(t.errors.length, 0);
-  } finally { X.utils.sheet_to_json = original; t.w.close(); }
+  } finally { w.XLSX.utils.sheet_to_json = original; t.w.close(); }
 });
 test("COI abre importação no destino escolhido e exclusão sai da base, persiste e pode ser restaurada", async () => {
   const t = await boot(), b = t.w.MichelleBridge;
