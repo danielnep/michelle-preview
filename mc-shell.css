@@ -205,7 +205,8 @@
   .topbar .header-identity .app-title { font-size: 14px; }
   .topbar .app-caption { display: none; }
   .topbar .panel-logo-small { width: 44px; height: 44px; }
-  .topbar .mc-header-upload { width: 44px; padding: 0; margin-left: 0; }
+  /* Envio é secundário no celular: acessível em Mais > Arquivos e importações. */
+  .topbar .mc-header-upload { display: none; }
   .topbar .mc-header-upload > span { display: none; }
   .topbar .mc-header-imports { padding-inline: 9px; font-size: 11px; }
   .topbar .mc-header-ai > span { font-size: 11px; }
