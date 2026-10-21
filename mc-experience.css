@@ -263,6 +263,41 @@
 .content .stat-label { font-size: 12px; line-height: 1.55; }
 .content .stat-source-hint { display:block; line-height:1.55; color:var(--muted); }
 .content .stats .stat-icon { background: var(--mcux-soft); color: var(--mcux-text-accent); }
+/* Evidência sempre antes das interpretações no espaço de Insights. */
+.mc-insight-coverage {
+  border-block:1px solid var(--line); padding:18px 0;
+  margin:0 0 23px; min-width:0;
+}
+.mc-insight-coverage-head {
+  display:flex; justify-content:space-between; align-items:center;
+  flex-wrap:wrap; gap:12px; margin-bottom:15px;
+}
+.mc-insight-coverage-head h2 {
+  font:750 clamp(18px,1.9vw,22px)/1.3 "Plus Jakarta Sans",Inter,sans-serif;
+  margin:5px 0 0; letter-spacing:-.025em;
+}
+.mc-insight-coverage dl {
+  display:grid; grid-template-columns:repeat(4,minmax(0,1fr));
+  margin:0 0 12px; padding:11px 0; gap:0;
+  border-block:1px solid var(--line);
+}
+.mc-insight-coverage dl>div { padding:6px 15px; display:grid; gap:6px; min-width:0; }
+.mc-insight-coverage dl>div:first-child { padding-left:0; }
+.mc-insight-coverage dl>div+div { border-left:1px solid var(--line); }
+.mc-insight-coverage dt { font-size:12px; color:var(--muted); line-height:1.5; }
+.mc-insight-coverage dd {
+  font-size:clamp(18px,2vw,25px); font-weight:750; margin:0;
+  font-variant-numeric:tabular-nums;
+}
+.mc-insight-coverage p { color:var(--muted); font-size:13px; line-height:1.55; }
+.mc-insight-coverage details { padding:12px 0 0; color:var(--muted); font-size:13px; }
+.mc-insight-coverage summary { color:var(--brand); cursor:pointer; min-height:42px; }
+.mc-insight-coverage li { padding:3px 0; overflow-wrap:anywhere; }
+@media(max-width:700px) {
+  .mc-insight-coverage dl { grid-template-columns:repeat(2,minmax(0,1fr)); row-gap:13px; }
+  .mc-insight-coverage dl>div:nth-child(3) { padding-left:0; border-left:0; }
+  .mc-insight-coverage .btn { min-height:44px; }
+}
 /* Visão geral: primeiro os resultados; ferramentas e importação continuam acessíveis. */
 .mc-overview-lead {
   display:flex; align-items:center; justify-content:space-between; gap:18px;
