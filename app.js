@@ -1420,7 +1420,9 @@
         const buffer=bytes instanceof ArrayBuffer?bytes:ArrayBuffer.isView(bytes)?
           bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength):null;
         if(!buffer)throw Error("O arquivo original não está disponível para leitura.");
-        await handleFiles([{name:saved.name||"planilha.xlsx",size:buffer.byteLength,arrayBuffer:async()=>buffer}]);
+        // Recria o ArrayBuffer no contexto do navegador, preservando os bytes.
+        const restored=new Uint8Array(buffer).buffer;
+        await handleFiles([{name:saved.name||"planilha.xlsx",size:restored.byteLength,arrayBuffer:async()=>restored}]);
       }catch(error){
         notify("Não foi possível reprocessar o arquivo: "+error.message,true);
       }finally{
