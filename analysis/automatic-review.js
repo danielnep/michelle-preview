@@ -1,7 +1,7 @@
 /* Revisão por todas as linhas/fontes. IA escolhe a leitura; o software calcula. */
 (function(root,factory){const api=factory(root);if(typeof module==="object"&&module.exports)module.exports=api;else root.MCAutoReview=api;})(typeof window!=="undefined"?window:globalThis,function(root){
   "use strict";
-  const state={phase:"idle",completed:0,total:0,error:"",result:null,signature:"",registry:[],generation:0,persistenceError:""};
+  const state={phase:"idle",completed:0,total:0,error:"",result:null,signature:"",registry:[],generation:0,persistenceError:"",reviewWarning:""};
   let timer=null,running=false,pending=false,restored=false,manualRequested=false;
   const active=lots=>(lots||[]).filter(l=>!l.deleted&&!l.archived&&!l.supersededBy);
   const plain=(v,n=500)=>String(v??"").replace(/\*/g,"").replace(/`/g,"").replace(/^\s*#{1,6}\s+/gm,"").trim().slice(0,n);
@@ -57,7 +57,10 @@
           coverage,rows:list.length,periodStart:firstDate,periodEnd:lastDate,
           comparisonKey:[l.type||"geral",schema,operation,norm(column),unit].join(":"),file:plain(l.name||l.filename,160),sheet:plain(l.sheet,100)});
       };
-      add("records","Registros da fonte",list.length,"registros","count");
+      // A unidade acompanha a entidade de cada registro, nao o formato fisico da planilha.
+      const entities={ligacoes:["Ligações registradas","ligações"],ordens:["Ordens de serviço registradas","ordens de serviço"],geral:["Registros da fonte","registros"],cuc:["Categorias CUC registradas","categorias CUC"],deslocamentos:["Contas ou categorias de deslocamento","registros de deslocamento"],indicadores:["Indicadores registrados","indicadores"]};
+      const [recordLabel,recordUnit]=entities[l.type]||entities.geral;
+      add("records",recordLabel,list.length,recordUnit,"count");
       if(["cuc","deslocamentos"].includes(l.type))add("quantity",l.type==="cuc"?"Eventos registrados":"Deslocamentos registrados",quantity,l.type==="cuc"?"eventos":"deslocamentos","quantity");
       if(known){add("done","Registros concluídos",done,"registros","done");add("pending","Registros em aberto",pendingCount,"registros","pending");add("rate","Conclusão entre status conhecidos",done/known*100,"%","rate","status",known);}
       if(timed)add("duration","Duração média registrada",minutes/timed,"minutos","averageDuration","duration",timed);
@@ -76,8 +79,8 @@
         return {name:c.name,filled:c.filled,missing:list.length-c.filled,shape:identifier(original)?"identificador":compatible?"medida numérica":c.numeric?"conteúdo misto":"texto ou data",unit:compatible?unit:null,index};
       });
       if(months.size>1)for(const month of [...months.values()].sort((a,b)=>a.period.localeCompare(b.period))){
-        const weighted=["cuc","deslocamentos"].includes(l.type),unit=weighted?(l.type==="cuc"?"eventos":"deslocamentos"):"registros";
-        add("month:"+month.period,(weighted?"Quantidade":"Registros")+" em "+month.period,weighted?month.quantity:month.rows,unit,"monthly", "",month.rows);
+        const weighted=["cuc","deslocamentos"].includes(l.type),unit=weighted?(l.type==="cuc"?"eventos":"deslocamentos"):recordUnit;
+        add("month:"+month.period,(weighted?"Quantidade":recordLabel.replace(/ registrados?$| registradas$/,""))+" em "+month.period,weighted?month.quantity:month.rows,unit,"monthly", "",month.rows);
         const metric=listMetrics.at(-1);metric.domain="temporal";metric.periodStart=month.first;metric.periodEnd=month.last;
       }
       return {id:l.id,file:plain(l.name||l.filename||"Arquivo importado",160),sheet:plain(l.sheet||"Aba não informada",100),type:l.type||"geral",sector:l.sector||"",rows:list.length,
@@ -139,25 +142,48 @@
     if(!lots.length){state.result=null;state.phase="idle";state.signature="";state.registry=[];refresh();return;}
     const generation=state.generation,signature=fingerprint(lots);
     if(state.result&&signature===state.signature&&state.phase==="ready")return;
-    running=true;pending=false;state.phase="analyzing";state.completed=0;state.error="";
+    running=true;pending=false;state.phase="analyzing";state.completed=0;state.error="";state.reviewWarning="";
     state.result=null;state.registry=[];state.total=lots.length;refresh();
     try{
       const catalog=profiles(lots,bridge().getAll()),groups=batches(catalog),reviews=[],completed=new Set();
       const partsDone=new Map();
+      async function requestReview(sources){
+        let lastError;
+        for(let attempt=0;attempt<3;attempt++){
+          try{
+            const response=await root.MCAI.request("review",{context:{
+              scope:"Fontes e partes independentes; números calculados pelo sistema, sem células pessoais.",
+              totalSources:catalog.length,sources
+            }});
+            if(!response?.review||sources.some(part=>!response.review.sources?.some(s=>s.id===part.id&&s.partId===part.partId)))
+              throw Error("A revisão não cobriu todas as fontes desta etapa.");
+            return response.review;
+          }catch(error){
+            lastError=error;
+            if(error.status!==429||attempt===2)break;
+            await new Promise(resolve=>root.setTimeout(resolve,attempt===0?15000:45000));
+          }
+        }
+        throw lastError;
+      }
       for(const sources of groups){
         if(generation!==state.generation)break;
-        let response;
-        for(let attempt=0;attempt<3;attempt++){
-          try{response=await root.MCAI.request("review",{context:{scope:"Todas as linhas de cada fonte/parte, sem células pessoais. Fontes independentes; unidades e cálculos preservados.",totalSources:catalog.length,sources}});break;}
-          catch(error){if(error.status!==429||attempt===2)throw error;await new Promise(resolve=>root.setTimeout(resolve,attempt===0?15000:45000));}
+        let groupReviews;
+        try{groupReviews=[await requestReview(sources)];}
+        catch(error){
+          // Uma resposta incompleta nao deve eliminar as outras fontes do lote.
+          if(sources.length===1)throw error;
+          groupReviews=[];
+          for(const part of sources){
+            if(generation!==state.generation)break;
+            groupReviews.push(await requestReview([part]));
+          }
         }
         if(generation!==state.generation)break;
-        if(!response?.review)throw Error("A IA não retornou a revisão dos arquivos.");
         for(const part of sources){
-          if(!response.review.sources.some(s=>s.id===part.id&&s.partId===part.partId))throw Error("A revisão deixou uma fonte pendente.");
           const count=(partsDone.get(part.id)||0)+1;partsDone.set(part.id,count);if(count===part.parts)completed.add(part.id);
         }
-        reviews.push(response.review);state.completed=completed.size;refresh();
+        reviews.push(...groupReviews);state.completed=completed.size;refresh();
       }
       if(generation!==state.generation || signature!==fingerprint(bridge().getImports())){pending=true;return;}
       if(completed.size!==catalog.length)throw Error("A revisão ainda não cobriu todos os arquivos.");
@@ -173,10 +199,15 @@
         if(packet.length)packets.push(packet);
         const consolidated=[];
         for(const sources of packets){
-          const global=await root.MCAI.request("review",{context:{scope:"SÍNTESE: fontes já revisadas. Procure comparativos válidos, indicadores que se influenciam como hipótese e ideias além dos totais. Nenhuma fonte é excluída da revisão por grupos.",sources}});
-          if(!global.review||sources.some(p=>!global.review.sources.some(s=>s.partId===p.partId)))throw Error("A síntese deixou uma fonte pendente.");
-          if(generation!==state.generation||signature!==fingerprint(bridge().getImports())){pending=true;return;}
-          consolidated.push(global.review);
+          try{
+            const global=await requestReview(sources);
+            if(generation!==state.generation||signature!==fingerprint(bridge().getImports())){pending=true;return;}
+            consolidated.push(global);
+          }catch(error){
+            // A sintese e complementar; nao invalida os arquivos ja analisados.
+            state.reviewWarning="Síntese geral indisponível; análises individuais concluídas.";
+            break;
+          }
         }
         reviews.unshift(...consolidated);
       }
