@@ -598,8 +598,27 @@
   function importGuide() {
     return '<section class="import-journey" aria-label="Como usar o painel"><div class="import-journey-head"><span>'+icon("brand",19)+'</span><div><strong>Da planilha ao painel, automaticamente</strong><small>Sem configurar abas, períodos ou confirmações</small></div></div><ol><li><b>1. Selecione</b><span>Escolha um ou vários arquivos Excel/CSV.</span></li><li><b>2. O Copiloto analisa</b><span>Identifica arquivos, abas, colunas e possíveis problemas.</span></li><li><b>3. Visualize</b><span>Os arquivos válidos alimentam os indicadores; erros individuais aparecem acima.</span></li></ol></section>';
   }
+  function fileInventoryStatus() {
+    const catalog=window.MCCloudFiles?.list?.();
+    if(!Array.isArray(catalog))return "";
+    const linked=new Set(imports.filter(l=>!l.deleted).map(l=>l.fileId).filter(Boolean));
+    const orphaned=catalog.filter(file=>file.id&&!linked.has(file.id));
+    const sheets=imports.filter(l=>!l.deleted).length;
+    const access=window.MCAccess;
+    const canRetry=!!(access?.owner||(access?.rights?.filesView&&access?.rights?.filesUpload));
+    return '<section class="mc-file-reconciliation" aria-label="Conferência dos arquivos salvos">'+
+      '<header><strong>Conferência do armazenamento</strong><span>'+catalog.length+
+      ' original(is) no acervo · '+sheets+' aba(s) no histórico</span></header>'+
+      (orphaned.length ? '<p role="status">'+orphaned.length+' arquivo(s) guardado(s) sem aba importada. O original existe, mas seus dados não estão confirmados nos indicadores.</p>'+
+        '<ul>'+orphaned.map(file=>'<li><span>'+esc(file.name||"Arquivo sem nome")+
+        '</span>'+(canRetry?'<button class="btn" data-reprocess-orphan="'+esc(file.id)+'"'+(state.readingFiles||state.importBusy?' disabled':'')+'>Reprocessar</button>':'')+
+        '</li>').join("")+'</ul>' :
+        '<p>'+ (catalog.length ? 'Todos os originais listados possuem ao menos uma aba no histórico. Confira cada aba na lista abaixo.' :
+        'Nenhum arquivo original encontrado na biblioteca.')+'</p>')+
+      '</section>';
+  }
   function pageData() {
-    return header(state.importSector === "coi" ? "Importar planilhas · COI" : "Importar planilhas", "Selecione os arquivos: leitura, classificação e envio são automáticos.") + `<section class="card panel data-import-panel">${importGuide()}${uploadBox()}${dataNextActions()}<details class="section-space"><summary>Backup e histórico</summary><p class="panel-sub">Os arquivos enviados são mantidos na nuvem do Power BI MC até serem excluídos. Exporte um backup adicional quando desejar.</p><div class="backup-actions"><button class="btn" data-backup>Exportar backup completo</button><label class="btn">Restaurar backup<input type="file" id="restore-backup" accept=".json" hidden></label><button class="btn" data-export="geral" ${getAll().length ? "" : "disabled"}>Exportar Excel (.xlsx)</button></div><div class="file-list">${imports.filter(l => !l.deleted).reverse().map(l => `<div class="file-row"><div><strong>${esc(l.name)}</strong><small>${l.rows.length} linhas · ${l.archived ? "Arquivado" : l.supersededBy ? "Versão anterior" : "Ativo"}</small></div><button class="btn" data-view-lot="${l.id}">Consultar</button>${!l.supersededBy ? `<button class="btn" data-archive-lot="${l.id}">${l.archived ? "Reativar" : "Arquivar"}</button>` : ""}</div>`).join("")}</div></details>${deletedFiles()}</section>${state.viewLot ? `<section id="lot-preview" class="card panel section-space"><h3>Dados do arquivo importado</h3>${table(D.allRows(imports.filter(l => l.id === state.viewLot)), 100)}</section>` : ""}`;
+    return header(state.importSector === "coi" ? "Arquivos do COI" : "Arquivos e processamento", "Originais armazenados, abas reconhecidas e dados disponíveis nos indicadores.") + fileInventoryStatus() + `<section class="card panel data-import-panel">${importGuide()}${uploadBox()}${dataNextActions()}<details class="section-space"><summary>Backup e histórico</summary><p class="panel-sub">Os arquivos enviados são mantidos na nuvem do Power BI MC até serem excluídos. Exporte um backup adicional quando desejar.</p><div class="backup-actions"><button class="btn" data-backup>Exportar backup completo</button><label class="btn">Restaurar backup<input type="file" id="restore-backup" accept=".json" hidden></label><button class="btn" data-export="geral" ${getAll().length ? "" : "disabled"}>Exportar Excel (.xlsx)</button></div><div class="file-list">${imports.filter(l => !l.deleted).reverse().map(l => `<div class="file-row"><div><strong>${esc(l.name)}</strong><small>${l.rows.length} linhas · ${l.archived ? "Arquivado" : l.supersededBy ? "Versão anterior" : "Ativo"}</small></div><button class="btn" data-view-lot="${l.id}">Consultar</button>${!l.supersededBy ? `<button class="btn" data-archive-lot="${l.id}">${l.archived ? "Reativar" : "Arquivar"}</button>` : ""}</div>`).join("")}</div></details>${deletedFiles()}</section>${state.viewLot ? `<section id="lot-preview" class="card panel section-space"><h3>Dados do arquivo importado</h3>${table(D.allRows(imports.filter(l => l.id === state.viewLot)), 100)}</section>` : ""}`;
   }
   function importReview() {
     if (!state.importReviewOpen) return "";
@@ -1391,6 +1410,23 @@
     });
   }
   function wire() {
+    document.querySelectorAll("[data-reprocess-orphan]").forEach(button=>button.addEventListener("click",async()=>{
+      const originalId=button.dataset.reprocessOrphan;
+      if(state.readingFiles||state.importBusy)return;
+      button.disabled=true;
+      try{
+        const saved=await S.read("files",originalId);
+        const bytes=saved?.bytes;
+        const buffer=bytes instanceof ArrayBuffer?bytes:ArrayBuffer.isView(bytes)?
+          bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength):null;
+        if(!buffer)throw Error("O arquivo original não está disponível para leitura.");
+        await handleFiles([{name:saved.name||"planilha.xlsx",size:buffer.byteLength,arrayBuffer:async()=>buffer}]);
+      }catch(error){
+        notify("Não foi possível reprocessar o arquivo: "+error.message,true);
+      }finally{
+        if(button.isConnected)button.disabled=false;
+      }
+    }));
     document.querySelectorAll("[data-cloud-upload]").forEach(button=>button.addEventListener("click",()=>document.getElementById("mc-cloud-upload")?.click()));
     document.getElementById("mc-cloud-upload")?.addEventListener("change",(event)=>handleFiles(event.target.files));
     document.querySelector("[data-cloud-export]")?.addEventListener("click",()=>exportCSV("geral"));
