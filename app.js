@@ -685,12 +685,37 @@
       <div class="assistant-header-actions"><button type="button" data-mc-ai-pin aria-label="Fixar ou desafixar Copiloto" title="Fixar ou desafixar">${icon("target",18)}</button><button type="button" data-assistant-clear="1" title="Limpar conversa" aria-label="Limpar conversa">${icon("trash",17)}</button></div></header>
       <div class="assistant-chat-root" data-assistant-root="dock">${assistantChat()}</div><button type="button" class="mc-ai-resize-handle" data-mc-ai-resize title="Arraste para ajustar a largura" aria-label="Ajustar largura do Copiloto: arraste ou use as setas"></button></section></div>`;
   }
+  function insightCoverage(rs) {
+    const ids=new Set(rs.map(r=>r.lotId).filter(Boolean));
+    const lots=imports.filter(l=>ids.has(l.id)&&!l.deleted&&!l.archived&&!l.supersededBy);
+    const files=new Set(lots.map(l=>l.fileId||l.hash||l.name));
+    const dates=rs.filter(r=>r.date||r.periodStart||r.periodEnd).length;
+    const missingDates=rs.length-dates;
+    const types=[...new Set(rs.map(r=>r.type).filter(Boolean))];
+    return '<section class="mc-insight-coverage" aria-labelledby="mc-insight-coverage-title">'+
+      '<div class="mc-insight-coverage-head"><div><span class="eyebrow">BASE DOS RESULTADOS</span>'+
+      '<h2 id="mc-insight-coverage-title">O que foi realmente analisado</h2></div>'+
+      '<button type="button" class="btn" data-insight-open-tab="records">Ver registros</button></div>'+
+      '<dl><div><dt>Linhas no recorte</dt><dd>'+fmtNum(rs.length)+'</dd></div>'+
+      '<div><dt>Arquivos de origem</dt><dd>'+fmtNum(files.size)+'</dd></div>'+
+      '<div><dt>Abas identificadas</dt><dd>'+fmtNum(lots.length)+'</dd></div>'+
+      '<div><dt>Sem data informada</dt><dd>'+fmtNum(missingDates)+'</dd></div></dl>'+
+      '<p>'+ (types.length ? 'Fontes presentes: '+esc(types.map(t=>D.types[t]||t).join(", "))+'.' :
+      'Não há dados disponíveis para analisar neste recorte.')+
+      ' Valores de naturezas diferentes não são somados.</p>'+
+      '<details><summary>Conferir arquivos e abas usados</summary>'+
+      (lots.length ? '<ul>'+lots.map(l=>'<li>'+esc(l.name||"Arquivo")+' · '+esc(l.sheet||"Aba não informada")+'</li>').join("")+'</ul>' :
+      '<p>Não há arquivo com origem identificada neste recorte.</p>')+
+      '<button type="button" class="btn" data-insight-open-tab="sources">Explorar origens</button></details></section>';
+  }
   function pageInsight() {
+    const rs=recordsFor();
     return (
       header(
         "Insights e Análises",
-        "Diagnósticos gerenciais calculados com os dados disponíveis.",
+        "Conclusões, evidências e alertas sobre os dados importados.",
       ) +
+      insightCoverage(rs) +
       (window.MCAutoReview?.insightsHTML()||"") +
       managerialHighlights(recordsFor()) +
       insightsPanel(recordsFor(), null, true) +
@@ -1429,6 +1454,10 @@
     document.querySelector(".mc-sector-tree")?.addEventListener("toggle", (event) => {
       state.navSectorsExpanded = event.currentTarget.open;
     });
+    document.querySelectorAll("[data-insight-open-tab]").forEach(el=>el.addEventListener("click",()=>{
+      window.MichelleDashboard?.showTab?.(el.dataset.insightOpenTab);
+      navigate("dashboard");
+    }));
     document.querySelectorAll("[data-nav]").forEach(
       (el) =>
         (el.onclick = () => {
