@@ -147,12 +147,12 @@
     try{
       const catalog=profiles(lots,bridge().getAll()),groups=batches(catalog),reviews=[],completed=new Set();
       const partsDone=new Map();
-      async function requestReview(sources){
+      async function requestReview(sources,scope="Fontes e partes independentes; números calculados pelo sistema, sem células pessoais."){
         let lastError;
         for(let attempt=0;attempt<3;attempt++){
           try{
             const response=await root.MCAI.request("review",{context:{
-              scope:"Fontes e partes independentes; números calculados pelo sistema, sem células pessoais.",
+              scope,
               totalSources:catalog.length,sources
             }});
             if(!response?.review||sources.some(part=>!response.review.sources?.some(s=>s.id===part.id&&s.partId===part.partId)))
@@ -200,7 +200,7 @@
         const consolidated=[];
         for(const sources of packets){
           try{
-            const global=await requestReview(sources);
+            const global=await requestReview(sources,"SÍNTESE: fontes revisadas. Procure comparativos válidos, conclusões sustentadas e ações específicas. Não misture unidades ou dados independentes.");
             if(generation!==state.generation||signature!==fingerprint(bridge().getImports())){pending=true;return;}
             consolidated.push(global);
           }catch(error){
