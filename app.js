@@ -1116,51 +1116,81 @@
     }
   }
   async function automaticInterpret(items){
-    if(!items.length||!window.MCAI?.request)return;
+    if(!items.length)return;
     const allowedFields=Object.keys(D.labels);
-    for(let i=0;i<items.length;i+=10){
-      const group=items.slice(i,i+10);
+    const sectorDefault=type=>type==="ligacoes"?"port":type==="cuc"?"coi":
+      ["ordens","deslocamentos"].includes(type)?"tec":"coi";
+    const sourceContext=p=>{
+      const columns=p.grid[p.headerRow]||[];
+      const ctx=window.MCAI.interpretationContext(p,columns,sectors,allowedFields);
+      return {id:p.queueId,name:ctx.name,sheet:ctx.sheet,
+        headers:ctx.headers.slice(0,30),columnShapes:ctx.columnShapes.slice(0,30).map(a=>a.slice(0,3)),
+        headerRow:ctx.headerRow,localDetection:ctx.localDetection};
+    };
+    const apply=(p,proposal)=>{
+      if(!proposal||proposal.confidence==="Baixa"||!Object.hasOwn(D.types,proposal.type))return false;
+      if(p.userEdited||p.savedPreferenceUsed)return false;
+      const local=p.detectInfo;
+      // Uma resposta genérica não apaga uma classificação específica sustentada pela origem.
+      if(proposal.type==="geral"&&local?.type!=="geral"&&!local?.conflict)return false;
+      // Um cabecalho contraditorio continua exigindo cautela; IA nao substitui evidencias.
+      if(local?.conflict&&proposal.confidence!=="Alta")return false;
+      const row=Number.isInteger(proposal.headerRow)&&proposal.headerRow>=0&&proposal.headerRow<p.grid.length?
+        proposal.headerRow:p.headerRow;
+      const heads=p.grid[row]||[];
+      if(heads.filter(x=>/[a-zA-ZÀ-ÿ]/.test(String(x||""))).length<2)return false;
+      const mapping={...D.suggest(heads)};
+      for(const [key,pos]of Object.entries(proposal.mapping||{})){
+        if(Object.hasOwn(D.labels,key)&&Number.isInteger(pos)&&pos>=0&&pos<heads.length)mapping[key]=pos;
+      }
+      const sector=sectors.some(x=>x.id===proposal.sector)?proposal.sector:
+        sectorDefault(proposal.type);
+      const existing=D.parse(p.grid,{...p,filename:p.name});
+      const candidate={...p,type:proposal.type,sector,row,headerRow:row,mapping};
+      const parsed=D.parse(p.grid,{...candidate,filename:p.name});
+      // Nunca sacrificar os dados para aceitar uma classificação devolvida pela IA.
+      if(!parsed.rows.length||(existing.rows.length&&parsed.rows.length<existing.rows.length*0.8))return false;
+      p.headerRow=row;p.mapping=mapping;p.type=proposal.type;
+      p.sector=local?.type===proposal.type&&!local?.conflict?p.sector:sector;
+      p.aiProposal=proposal;p.validationKey=null;
+      return true;
+    };
+    for(let i=0;i<items.length;i+=3){
+      const group=items.slice(i,i+3);
       for(const p of group)p.status="analyzing";
       render();
-      try{
-        const sources=group.map(p=>{
-          const columns=p.grid[p.headerRow]||[];
-          const ctx=window.MCAI.interpretationContext(p,columns,sectors,allowedFields);
-          return {id:p.queueId,name:ctx.name,sheet:ctx.sheet,
-            headers:ctx.headers.slice(0,18),columnShapes:ctx.columnShapes.slice(0,18).map(a=>a.slice(0,2)),
-            headerRow:ctx.headerRow,localDetection:ctx.localDetection};
-        });
-        const response=await window.MCAI.request("interpret-batch",{context:{sources,allowedFields}});
-        const byId=new Map((response.sources||[]).map(p=>[p.id,p]));
-        for(const p of group){
-          const proposal=byId.get(p.queueId);
-          if(!proposal||proposal.confidence==="Baixa")continue;
-          if(!Object.hasOwn(D.types,proposal.type)||!sectors.some(x=>x.id===proposal.sector))continue;
-          if(Number.isInteger(proposal.headerRow)&&proposal.headerRow>=0&&proposal.headerRow<p.grid.length){
-            p.headerRow=proposal.headerRow;
-          }
-          const heads=p.grid[p.headerRow]||[];
-          const mapping=Object.fromEntries(Object.entries(proposal.mapping||{}).filter(([key,pos])=>
-            Object.hasOwn(D.labels,key)&&Number.isInteger(pos)&&pos>=0&&pos<heads.length));
-          p.type=proposal.type;p.sector=proposal.sector;
-          p.mapping={...D.suggest(heads),...mapping};
-          p.aiProposal=proposal;
+      let proposals=new Map(),batchError=null;
+      if(window.MCAI?.request){
+        try{
+          const response=await window.MCAI.request("interpret-batch",{
+            context:{sources:group.map(sourceContext),allowedFields,
+              allowedSectors:sectors.map(s=>({id:s.id,name:s.name}))}
+          });
+          proposals=new Map((response.sources||[]).map(p=>[p.id,p]));
+        }catch(error){batchError=error;}
+      }
+      for(const p of group){
+        let proposal=proposals.get(p.queueId),lastError=batchError;
+        // Caso o lote falhe ou devolva resposta incompleta, consultar cada aba separadamente.
+        if((!proposal||proposal.confidence==="Baixa")&&window.MCAI?.request){
+          try{
+            const ctx=window.MCAI.interpretationContext(p,p.grid[p.headerRow]||[],sectors,allowedFields);
+            const response=await window.MCAI.request("interpret",{context:ctx});
+            proposal=response.interpretation||proposal;
+            lastError=null;
+          }catch(error){lastError=error;}
+        }
+        if(!apply(p,proposal)){
+          if(lastError)p.aiWarning="A análise por IA não foi concluída. A classificação local foi preservada.";
+          else if(proposal&&proposal.confidence==="Baixa")p.aiWarning="Classificação incerta; dados preservados para conferência.";
+        }
+        if(p.detectInfo?.conflict&&!p.aiProposal){
+          p.type="geral";p.mapping=D.suggest(p.grid[p.headerRow]||[]);
+          p.aiWarning=(p.aiWarning?p.aiWarning+" ":"")+"Fontes com sinais contraditórios; registros preservados sem atribuir assunto incorreto.";
           p.validationKey=null;
         }
-      }catch(error){
-        // A classificação determinística permanece disponível; não bloquear importações por indisponibilidade da IA.
-        group.forEach(p=>{p.aiWarning="IA temporariamente indisponível: "+error.message;});
+        p.status="ready";
       }
-    }
-    // Conflitos não resolvidos pela IA preservam registros brutos como dados gerais.
-    for(const p of items){
-      if(p.detectInfo?.conflict&&!p.aiProposal){
-        p.type="geral";
-        p.mapping=D.suggest(p.grid[p.headerRow]||[]);
-        p.aiWarning=(p.aiWarning?p.aiWarning+" ":"")+"Identificação incerta; registros preservados sem classificação específica.";
-        p.validationKey=null;
-      }
-      p.status="ready";
     }
   }
   async function saveImports() {
