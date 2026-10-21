@@ -7,6 +7,46 @@ const { JSDOM, VirtualConsole } = require("jsdom");
 const { IDBFactory, IDBKeyRange } = require("fake-indexeddb");
 const X = require("../vendor/xlsx.full.min.js");
 const root = path.join(__dirname, "..");
+test("experiência mobile prioriza indicadores, setores, exploração e insights", async () => {
+  const t = await boot(), b = t.w.MichelleBridge, doc = t.w.document;
+  assert.deepEqual([...doc.querySelectorAll(".mobile-nav [data-nav]")].map(el => el.dataset.nav),
+    ["geral", "sectors", "dashboard", "insight", "more"]);
+  assert.ok(doc.querySelector(".mc-overview-lead [data-nav='dashboard']"));
+  b.navigate("sectors");
+  assert.ok(doc.querySelectorAll(".mc-sector-line").length > 0);
+  b.navigate("dashboard");
+  assert.ok(doc.querySelector(".dash-grid"));
+  b.navigate("insight");
+  assert.ok(doc.querySelector(".insight-actions"));
+  b.navigate("more");
+  assert.ok(doc.querySelector('.content [data-nav="data"]'));
+  assert.ok(doc.querySelector('.content [data-nav="report"]'));
+  assert.equal(t.errors.length, 0);
+  t.w.close();
+});
+test("importação conta arquivos separadamente das abas e preserva erro isolado de leitura", async () => {
+  const t = await boot(), b = t.w.MichelleBridge, w = t.w;
+  const wb = X.utils.book_new();
+  X.utils.book_append_sheet(wb, X.utils.aoa_to_sheet([["Número da OS","Status"],["001","Concluído"],["002","Pendente"]]), "Ordens");
+  X.utils.book_append_sheet(wb, X.utils.aoa_to_sheet([["ERRO-TESTE","Status"],["A","Pendente"]]), "AbaFalha");
+  const original = X.utils.sheet_to_json;
+  X.utils.sheet_to_json = (sheet, options) => {
+    if(sheet?.A1?.v === "ERRO-TESTE" && !Object.hasOwn(options || {}, "range"))
+      throw Error("Falha de leitura simulada");
+    return original(sheet, options);
+  };
+  try {
+    b.navigate("data");
+    await b.handleFiles([file(w, "multiplas_abas.xlsx", X.write(wb, { type:"buffer", bookType:"xlsx" }))]);
+    assert.equal(b.getImports().length, 1);
+    const line = w.document.querySelector(".upload-list-heading").textContent;
+    assert.match(line, /1 arquivo\\(s\\)/);
+    assert.match(line, /1 aba\\(s\\) salva\\(s\\)/);
+    assert.match(line, /1 erro\\(s\\)/);
+    assert.match(w.document.querySelector(".upload-file.has-error").textContent, /AbaFalha/);
+    assert.equal(t.errors.length, 0);
+  } finally { X.utils.sheet_to_json = original; t.w.close(); }
+});
 test("COI abre importação no destino escolhido e exclusão sai da base, persiste e pode ser restaurada", async () => {
   const t = await boot(), b = t.w.MichelleBridge;
   b.navigate("coi"); t.click("[data-import-coi]");
